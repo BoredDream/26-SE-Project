@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>校园花卉地图后端 API 测试台</title>
+    <style>
+        :root {
+            --primary-color: #4CAF50;
+            --bg-color: #f5f5f5;
+            --card-bg: #ffffff;
+            --text-color: #333;
+            --border-color: #ddd;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 900px;
+            background: var(--card-bg);
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        h1, h2 {
+            text-align: center;
+            color: var(--primary-color);
+        }
+
+        .config-section {
+            background: #e8f5e9;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            border: 1px solid #c8e6c9;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        input, select, textarea {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-family: monospace;
+        }
+
+        button {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.3s;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+
+        button.secondary {
+            background-color: #607d8b;
+        }
+
+        button.secondary:hover {
+            background-color: #546e7a;
+        }
+
+        .api-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .api-card {
+            border: 1px solid var(--border-color);
+            padding: 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .api-card:hover {
+            border-color: var(--primary-color);
+            background-color: #f1f8e9;
+        }
+
+        .api-card.active {
+            background-color: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+        }
+
+        .method-tag {
+            display: inline-block;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-right: 5px;
+        }
+
+        .method-get { background-color: #61affe; color: white; }
+        .method-post { background-color: #49cc90; color: white; }
+        .method-put { background-color: #fca130; color: white; }
+        .method-delete { background-color: #f93e3e; color: white; }
+        .method-patch { background-color: #50e3c2; color: white; }
+
+        .request-panel {
+            border-top: 2px solid var(--border-color);
+            padding-top: 20px;
+            margin-top: 20px;
+        }
+
+        .response-area {
+            background: #2d2d2d;
+            color: #f8f8f2;
+            padding: 15px;
+            border-radius: 4px;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            font-family: 'Consolas', 'Monaco', monospace;
+            min-height: 150px;
+            margin-top: 10px;
+        }
+
+        .hidden { display: none; }
+        
+        .param-row {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        .param-row input:first-child { flex: 1; }
+        .param-row input:last-child { flex: 2; }
+
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>🌸 校园花卉地图 API 测试台</h1>
+
+    <!-- 配置区域 -->
+    <div class="config-section">
+        <div class="form-group">
+            <label for="baseUrl">后端基础 URL (例如: http://localhost:3000/v1)</label>
+            <input type="text" id="baseUrl" value="http://localhost:3000/v1" placeholder="http://localhost:3000/v1">
+        </div>
+        <div class="form-group">
+            <label for="authToken">JWT Token (可选，用于需要认证的接口)</label>
+            <input type="text" id="authToken" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6...">
+        </div>
+    </div>
+
+    <!-- API 选择区域 -->
+    <h2>选择接口</h2>
+    <div class="api-grid" id="apiGrid">
+        <!-- JS 动态生成 -->
+    </div>
+
+    <!-- 请求构建区域 -->
+    <div id="requestPanel" class="request-panel hidden">
+        <h2 id="selectedApiTitle">接口详情</h2>
+        <div class="form-group">
+            <label>完整 URL</label>
+            <input type="text" id="fullUrl" readonly>
+        </div>
+
+        <div id="dynamicParams">
+            <!-- 动态参数输入框 -->
+        </div>
+
+        <div class="form-group" id="jsonBodyGroup" style="display:none;">
+            <label>JSON Body</label>
+            <textarea id="jsonBody" rows="6"></textarea>
+        </div>
+
+        <div class="form-group" id="fileGroup" style="display:none;">
+            <label>文件上传 (图片)</label>
+            <input type="file" id="fileInput" accept="image/*">
+        </div>
+
+        <button onclick="sendRequest()">发送请求</button>
+        <button class="secondary" onclick="clearResponse()">清空结果</button>
+    </div>
+
+    <!-- 响应区域 -->
+    <div id="responseSection" class="hidden" style="margin-top: 20px;">
+        <h2>响应结果</h2>
+        <div id="statusLine" style="font-weight: bold; margin-bottom: 5px;"></div>
+        <div id="timeLine" style="font-size: 12px; color: #666; margin-bottom: 10px;"></div>
+        <div class="response-area" id="responseBody"></div>
+    </div>
+
+    <!-- 日志区域 -->
+    <div id="logSection" style="margin-top: 30px; border-top: 2px solid var(--border-color); padding-top: 20px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+            <h2>测试日志</h2>
+            <div>
+                <button onclick="toggleLogPanel()" id="logToggle">显示日志</button>
+                <button class="secondary" onclick="clearLogs()">清空日志</button>
+            </div>
+        </div>
+        
+        <div id="logPanel" style="display: none; margin-top: 15px; border: 1px solid var(--border-color); border-radius: 4px; overflow: hidden;">
+            <div id="logContainer" style="max-height: 500px; overflow-y: auto; padding: 15px; background-color: #fafafa;"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // 基于 README.md 定义的 API 列表
+    const apiDefinitions = [
+        // 健康检查
+        { group: '系统', method: 'GET', path: '/health', desc: '健康检查', needsAuth: false, hasBody: false },
+        
+        // 认证相关
+        { group: '认证', method: 'POST', path: '/auth/login', desc: '微信登录', needsAuth: false, hasBody: true, example: { "code": "wx_code_here" } },
+        { group: '认证', method: 'GET', path: '/auth/me', desc: '获取当前用户信息', needsAuth: true, hasBody: false },
+        { group: '认证', method: 'PUT', path: '/auth/me', desc: '更新用户信息', needsAuth: true, hasBody: true, example: { "nickname": "新昵称", "avatar": "头像URL" } },
+
+        // 地点相关
+        { group: '地点', method: 'GET', path: '/locations', desc: '获取地点列表', needsAuth: false, hasBody: false },
+        { group: '地点', method: 'GET', path: '/locations/:id', desc: '获取地点详情', needsAuth: false, hasBody: false, params: ['id'] },
+        { group: '地点', method: 'GET', path: '/locations/nearby', desc: '获取附近地点', needsAuth: false, hasBody: false, params: ['lat', 'lng', 'radius'] },
+        { group: '地点', method: 'POST', path: '/locations', desc: '创建地点 (管理员)', needsAuth: true, hasBody: true, example: { "name": "樱花大道", "lat": 30.0, "lng": 120.0, "description": "美丽的樱花大道" } },
+        { group: '地点', method: 'PUT', path: '/locations/:id', desc: '更新地点 (管理员)', needsAuth: true, hasBody: true, params: ['id'], example: { "name": "更新后的名称", "description": "更新后的描述" } },
+        { group: '地点', method: 'DELETE', path: '/locations/:id', desc: '删除地点 (管理员)', needsAuth: true, hasBody: false, params: ['id'] },
+        
+        // 打卡相关
+        { group: '打卡', method: 'POST', path: '/checkins', desc: '创建打卡记录', needsAuth: true, hasBody: true, example: { "locationId": 1, "content": "花开了！", "images": ["url1"] } },
+        { group: '打卡', method: 'GET', path: '/checkins/:id', desc: '获取打卡详情', needsAuth: false, hasBody: false, params: ['id'] },
+        { group: '打卡', method: 'GET', path: '/checkins/location/:locationId', desc: '地点打卡记录', needsAuth: false, hasBody: false, params: ['locationId'] },
+        { group: '打卡', method: 'GET', path: '/checkins/user/me', desc: '获取用户打卡记录', needsAuth: true, hasBody: false },
+
+        // 订阅相关
+        { group: '订阅', method: 'POST', path: '/subscriptions', desc: '订阅地点', needsAuth: true, hasBody: true, example: { "locationId": 1 } },
+        { group: '订阅', method: 'DELETE', path: '/subscriptions/:locationId', desc: '取消订阅', needsAuth: true, hasBody: false, params: ['locationId'] },
+        { group: '订阅', method: 'GET', path: '/subscriptions/:locationId/check', desc: '检查是否已订阅', needsAuth: true, hasBody: false, params: ['locationId'] },
+        { group: '订阅', method: 'GET', path: '/subscriptions/user/me', desc: '获取用户订阅列表', needsAuth: true, hasBody: false },
+
+        // 点赞相关
+        { group: '互动', method: 'POST', path: '/likes/:checkinId', desc: '点赞打卡记录', needsAuth: true, hasBody: false, params: ['checkinId'] },
+        { group: '互动', method: 'DELETE', path: '/likes/:checkinId', desc: '取消点赞', needsAuth: true, hasBody: false, params: ['checkinId'] },
+        { group: '互动', method: 'GET', path: '/likes/:checkinId/check', desc: '检查是否已点赞', needsAuth: true, hasBody: false, params: ['checkinId'] },
+        { group: '互动', method: 'GET', path: '/likes/:checkinId/list', desc: '获取打卡记录的点赞列表', needsAuth: false, hasBody: false, params: ['checkinId'] },
+        { group: '互动', method: 'GET', path: '/likes/user/me', desc: '获取用户的点赞记录', needsAuth: true, hasBody: false },
+
+        // 成就相关
+        { group: '成就', method: 'GET', path: '/achievements/user/me', desc: '获取用户成就列表', needsAuth: true, hasBody: false },
+        { group: '成就', method: 'GET', path: '/achievements/user/me/stats', desc: '获取用户成就统计', needsAuth: true, hasBody: false },
+        { group: '成就', method: 'GET', path: '/achievements/user/me/location/:locationId', desc: '获取用户在特定地点的成就', needsAuth: true, hasBody: false, params: ['locationId'] },
+        { group: '成就', method: 'GET', path: '/achievements/users/:id/achievements', desc: '查看他人花圃', needsAuth: false, hasBody: false, params: ['id'] },
+
+        // 上传相关
+        { group: '上传', method: 'POST', path: '/upload/image', desc: '图片上传', needsAuth: true, hasBody: false, isFile: true },
+        { group: '上传', method: 'POST', path: '/upload/images', desc: '批量图片上传', needsAuth: true, hasBody: false, isFile: true, isMultiple: true },
+        
+        // 举报相关
+        { group: '举报', method: 'POST', path: '/checkins/:id/report', desc: '举报打卡记录', needsAuth: true, hasBody: true, params: ['id'], example: { "reason": "内容违规" } },
+
+        // 排行榜相关
+        { group: '排行', method: 'GET', path: '/leaderboard/checkins', desc: '打卡王榜', needsAuth: false, hasBody: false },
+        { group: '排行', method: 'GET', path: '/leaderboard/likes', desc: '点赞榜', needsAuth: false, hasBody: false },
+        { group: '排行', method: 'GET', path: '/leaderboard/heatmap', desc: '地图热力数据', needsAuth: false, hasBody: false },
+
+        // 管理员相关
+        { group: '管理', method: 'GET', path: '/admin/checkins/pending', desc: '待复核打卡列表', needsAuth: true, hasBody: false },
+        { group: '管理', method: 'PATCH', path: '/admin/checkins/:id/audit', desc: '审核打卡记录', needsAuth: true, hasBody: true, params: ['id'], example: { "status": "approved", "reason": "" } },
+        { group: '管理', method: 'GET', path: '/admin/reports/pending', desc: '待复核举报列表', needsAuth: true, hasBody: false },
+        { group: '管理', method: 'PATCH', path: '/admin/reports/:id/handle', desc: '处理举报', needsAuth: true, hasBody: true, params: ['id'], example: { "status": "handled", "result": "举报有效" } },
+        { group: '管理', method: 'PATCH', path: '/admin/locations/:id/status', desc: '更新花期状态', needsAuth: true, hasBody: true, params: ['id'], example: { "status": "blooming" } }
+    ];
+
+    let currentApi = null;
+    let testLogs = [];
+    let logIdCounter = 0;
+
+    // 记录日志
+    function logMessage(level, message, details = {}) {
+        const logEntry = {
+            id: ++logIdCounter,
+            timestamp: new Date().toISOString(),
+            level: level,
+            message: message,
+            details: details
+        };
+        testLogs.push(logEntry);
+        renderLogs();
+        return logEntry;
+    }
+
+    // 初始化 API 列表
+    function initApiGrid() {
+        const grid = document.getElementById('apiGrid');
+        grid.innerHTML = '';
+        
+        apiDefinitions.forEach((api, index) => {
+            const card = document.createElement('div');
+            card.className = 'api-card';
+            card.onclick = () => selectApi(index);
+            
+            const methodSpan = document.createElement('span');
+            methodSpan.className = `method-tag method-${api.method.toLowerCase()}`;
+            methodSpan.textContent = api.method;
+            
+            card.innerHTML = `
+                <div>${methodSpan} ${api.path}</div>
+                <div style="font-size:12px; color:#666; margin-top:4px;">${api.desc}</div>
+            `;
+            grid.appendChild(card);
+        });
+    }
+
+    // 选择 API
+    function selectApi(index) {
+        currentApi = apiDefinitions[index];
+        document.getElementById('requestPanel').classList.remove('hidden');
+        document.getElementById('responseSection').classList.add('hidden');
+        
+        // 高亮选中
+        document.querySelectorAll('.api-card').forEach((c, i) => {
+            c.classList.toggle('active', i === index);
+        });
+
+        document.getElementById('selectedApiTitle').textContent = `${currentApi.method} ${currentApi.path} - ${currentApi.desc}`;
+        
+        renderParams();
+        renderBody();
+        renderFile();
+        updateFullUrl();
+        
+        // 检查是否需要认证
+        const authNote = document.getElementById('authNote');
+        if (authNote) {
+            authNote.remove();
+        }
+        
+        if (currentApi.needsAuth) {
+            const note = document.createElement('div');
+            note.id = 'authNote';
+            note.style.cssText = 'background-color: #fff3cd; border: 1px solid #ffeeba; color: #856404; padding: 10px; border-radius: 4px; margin-top: 15px;';
+            note.innerHTML = '<strong>提示:</strong> 此 API 需要认证，请在顶部配置 JWT Token。';
+            document.getElementById('requestPanel').appendChild(note);
+        }
+    }
+
+    // 渲染路径参数输入框
+    function renderParams() {
+        const container = document.getElementById('dynamicParams');
+        container.innerHTML = '';
+        
+        if (currentApi.params && currentApi.params.length > 0) {
+            currentApi.params.forEach(param => {
+                const row = document.createElement('div');
+                row.className = 'param-row';
+                row.innerHTML = `
+                    <input type="text" placeholder="Param: ${param}" value="${param}" disabled style="background:#eee;">
+                    <input type="text" class="param-value" data-param="${param}" placeholder="请输入 ${param} 的值">
+                `;
+                row.querySelector('input.param-value').addEventListener('input', updateFullUrl);
+                container.appendChild(row);
+            });
+        } else {
+            container.innerHTML = '<div style="color:#999; font-style:italic;">无路径参数</div>';
+        }
+    }
+
+    // 渲染 JSON Body
+    function renderBody() {
+        const group = document.getElementById('jsonBodyGroup');
+        const textarea = document.getElementById('jsonBody');
+        
+        if (currentApi.hasBody && !currentApi.isFile) {
+            group.style.display = 'block';
+            textarea.value = currentApi.example ? JSON.stringify(currentApi.example, null, 2) : '{}';
+        } else {
+            group.style.display = 'none';
+        }
+    }
+
+    // 渲染文件上传
+    function renderFile() {
+        const group = document.getElementById('fileGroup');
+        const fileInput = document.getElementById('fileInput');
+        
+        if (currentApi.isFile) {
+            group.style.display = 'block';
+            // 设置是否支持多文件选择
+            fileInput.multiple = currentApi.isMultiple || false;
+            // 更新标签文本
+            const label = fileInput.previousElementSibling;
+            if (label) {
+                label.textContent = currentApi.isMultiple ? '批量文件上传 (图片)' : '文件上传 (图片)';
+            }
+        } else {
+            group.style.display = 'none';
+            fileInput.multiple = false;
+        }
+    }
+
+    // 更新完整 URL 预览
+    function updateFullUrl() {
+        const baseUrl = document.getElementById('baseUrl').value.replace(/\/$/, '');
+        let path = currentApi.path;
+        
+        if (currentApi.params) {
+            currentApi.params.forEach(param => {
+                const input = document.querySelector(`input.param-value[data-param="${param}"]`);
+                const val = input ? input.value : `:${param}`;
+                path = path.replace(`:${param}`, val);
+            });
+        }
+        
+        document.getElementById('fullUrl').value = `${baseUrl}${path}`;
+    }
+
+    // 监听 Base URL 变化
+    document.getElementById('baseUrl').addEventListener('input', updateFullUrl);
+
+    // 发送请求
+    async function sendRequest() {
+        if (!currentApi) return;
+
+        const fullUrl = document.getElementById('fullUrl').value;
+        const token = document.getElementById('authToken').value;
+        const method = currentApi.method;
+        
+        const headers = {
+            'Content-Type': 'application/json'
+        };
+
+        if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
+        }
+
+        let body = null;
+        let requestBodyLog = null;
+
+        // 处理文件上传
+        if (currentApi.isFile) {
+            const fileInput = document.getElementById('fileInput');
+            if (fileInput.files.length === 0) {
+                logMessage('error', '文件上传失败', { reason: '未选择文件' });
+                alert('请选择一个文件');
+                return;
+            }
+            
+            // 验证文件格式和大小
+            const maxSize = 10 * 1024 * 1024; // 10MB
+            const allowedTypes = ['image/jpeg', 'image/png', 'image/gif'];
+            
+            for (let i = 0; i < fileInput.files.length; i++) {
+                const file = fileInput.files[i];
+                
+                // 检查文件大小
+                if (file.size > maxSize) {
+                    logMessage('error', '文件上传失败', { reason: `文件大小超过限制 (${file.name})`, maxSize: '10MB', actualSize: `${(file.size / (1024 * 1024)).toFixed(2)}MB` });
+                    alert(`文件 ${file.name} 大小超过限制 (最大 10MB)`);
+                    return;
+                }
+                
+                // 检查文件格式
+                if (!allowedTypes.includes(file.type)) {
+                    logMessage('error', '文件上传失败', { reason: `文件格式不支持 (${file.name})`, allowedTypes: allowedTypes, actualType: file.type });
+                    alert(`文件 ${file.name} 格式不支持 (仅支持 JPEG/PNG/GIF)`);
+                    return;
+                }
+            }
+            
+            const formData = new FormData();
+            if (currentApi.isMultiple) {
+                for (let i = 0; i < fileInput.files.length; i++) {
+                    formData.append('images', fileInput.files[i]);
+                }
+                requestBodyLog = `批量上传 ${fileInput.files.length} 个文件`;
+            } else {
+                formData.append('image', fileInput.files[0]);
+                requestBodyLog = `上传单个文件: ${fileInput.files[0].name}`;
+            }
+            
+            // 移除 Content-Type 让浏览器自动设置 boundary
+            delete headers['Content-Type']; 
+            body = formData;
+        } 
+        // 处理 JSON Body
+        else if (currentApi.hasBody) {
+            try {
+                const rawBody = document.getElementById('jsonBody').value;
+                if (rawBody.trim()) {
+                    // 先解析验证 JSON 格式是否正确
+                    const parsedBody = JSON.parse(rawBody);
+                    body = JSON.stringify(parsedBody); // 转换为有效的 JSON 字符串
+                    requestBodyLog = rawBody;
+                }
+            } catch (e) {
+                logMessage('error', 'JSON 格式错误', { error: e.message });
+                alert('JSON 格式错误: ' + e.message);
+                return;
+            }
+        }
+
+        const startTime = performance.now();
+        const statusLine = document.getElementById('statusLine');
+        const timeLine = document.getElementById('timeLine');
+        const responseDiv = document.getElementById('responseBody');
+        const responseSection = document.getElementById('responseSection');
+
+        statusLine.textContent = '请求中...';
+        timeLine.textContent = '';
+        responseDiv.textContent = '';
+        responseSection.classList.remove('hidden');
+
+        // 记录请求日志
+        const requestLog = logMessage('info', '发送 API 请求', {
+            method: method,
+            url: fullUrl,
+            headers: headers,
+            body: requestBodyLog
+        });
+
+        try {
+            const options = {
+                method: method,
+                headers: headers
+            };
+            if (body && (method === 'POST' || method === 'PUT' || method === 'PATCH')) {
+                options.body = body;
+            }
+
+            logMessage('debug', '请求参数', {
+                options: options,
+                fullUrl: fullUrl
+            });
+
+            const res = await fetch(fullUrl, options);
+            const endTime = performance.now();
+            
+            const contentType = res.headers.get("content-type");
+            let data;
+            let responseDataLog;
+            if (contentType && contentType.indexOf("application/json") !== -1) {
+                data = await res.json();
+                responseDataLog = JSON.stringify(data, null, 2);
+                responseDiv.textContent = responseDataLog;
+            } else {
+                data = await res.text();
+                responseDataLog = data;
+                responseDiv.textContent = data;
+            }
+
+            statusLine.textContent = `状态码: ${res.status} ${res.statusText}`;
+            statusLine.style.color = res.ok ? 'green' : 'red';
+            timeLine.textContent = `耗时: ${(endTime - startTime).toFixed(2)} ms`;
+
+            // 记录响应日志
+            logMessage(res.ok ? 'success' : 'error', 'API 请求完成', {
+                requestId: requestLog.id,
+                statusCode: res.status,
+                statusText: res.statusText,
+                headers: Object.fromEntries(res.headers.entries()),
+                response: responseDataLog,
+                duration: (endTime - startTime).toFixed(2) + ' ms'
+            });
+
+        } catch (error) {
+            statusLine.textContent = '请求失败';
+            statusLine.style.color = 'red';
+            const errorMsg = error.toString();
+            responseDiv.textContent = errorMsg;
+            
+            // 记录错误日志
+            logMessage('error', 'API 请求失败', {
+                requestId: requestLog.id,
+                error: errorMsg,
+                stack: error.stack
+            });
+            console.error(error);
+        }
+    }
+
+    function clearResponse() {
+        document.getElementById('responseSection').classList.add('hidden');
+    }
+
+    // 渲染日志
+    function renderLogs() {
+        const logContainer = document.getElementById('logContainer');
+        if (!logContainer) return;
+        
+        logContainer.innerHTML = '';
+        
+        if (testLogs.length === 0) {
+            logContainer.innerHTML = '<div style="text-align: center; color: #999; padding: 20px;">暂无日志记录</div>';
+            return;
+        }
+        
+        // 按时间倒序显示
+        const sortedLogs = [...testLogs].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+        
+        sortedLogs.forEach(log => {
+            const logItem = document.createElement('div');
+            logItem.className = `log-item log-${log.level}`;
+            
+            const levelColor = {
+                'success': '#4CAF50',
+                'error': '#f44336',
+                'info': '#2196F3',
+                'debug': '#FF9800'
+            };
+            
+            const timestamp = new Date(log.timestamp).toLocaleString('zh-CN', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                millisecond: '3-digit'
+            });
+            
+            logItem.innerHTML = `
+                <div style="display: flex; align-items: center; margin-bottom: 5px;">
+                    <div style="width: 8px; height: 8px; background-color: ${levelColor[log.level]}; border-radius: 50%; margin-right: 8px;"></div>
+                    <span style="font-weight: bold; color: ${levelColor[log.level]};">${log.level.toUpperCase()}</span>
+                    <span style="margin-left: 10px; font-size: 12px; color: #666;">${timestamp}</span>
+                    <span style="margin-left: 15px; flex: 1;">${log.message}</span>
+                    <button onclick="toggleLogDetails(${log.id})" style="background: none; border: none; color: #666; cursor: pointer; font-size: 12px;">详细</button>
+                </div>
+                <div id="log-details-${log.id}" class="log-details" style="display: none; margin-left: 26px; margin-bottom: 15px; padding: 10px; background: #f5f5f5; border-radius: 4px; font-family: monospace; font-size: 12px;"></div>
+            `;
+            
+            logContainer.appendChild(logItem);
+        });
+    }
+
+    // 切换日志详情显示
+    function toggleLogDetails(logId) {
+        const detailsDiv = document.getElementById(`log-details-${logId}`);
+        const log = testLogs.find(l => l.id === logId);
+        
+        if (!detailsDiv || !log) return;
+        
+        if (detailsDiv.style.display === 'none') {
+            // 显示详情
+            detailsDiv.style.display = 'block';
+            let detailsHTML = '';
+            
+            Object.keys(log.details).forEach(key => {
+                const value = log.details[key];
+                let displayValue;
+                
+                if (typeof value === 'object' && value !== null) {
+                    displayValue = JSON.stringify(value, null, 2);
+                } else {
+                    displayValue = String(value);
+                }
+                
+                detailsHTML += `<div style="margin-bottom: 5px;"><strong>${key}:</strong><pre style="margin: 5px 0; white-space: pre-wrap; word-break: break-all;">${displayValue}</pre></div>`;
+            });
+            
+            detailsDiv.innerHTML = detailsHTML;
+        } else {
+            // 隐藏详情
+            detailsDiv.style.display = 'none';
+        }
+    }
+
+    // 清空日志
+    function clearLogs() {
+        testLogs = [];
+        renderLogs();
+    }
+
+    // 切换日志面板显示
+    function toggleLogPanel() {
+        const logPanel = document.getElementById('logPanel');
+        const responsePanel = document.getElementById('responseSection');
+        const logToggle = document.getElementById('logToggle');
+        
+        if (logPanel.style.display === 'none') {
+            logPanel.style.display = 'block';
+            logToggle.textContent = '隐藏日志';
+            renderLogs();
+        } else {
+            logPanel.style.display = 'none';
+            logToggle.textContent = '显示日志';
+        }
+    }
+
+    // 启动
+    initApiGrid();
+</script>
+
+</body>
+</html>
