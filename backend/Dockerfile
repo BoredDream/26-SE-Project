@@ -1,24 +1,20 @@
-# 使用官方 Node.js 18 镜像作为基础镜像
+# 使用 Node.js 18 基础镜像
 FROM node:18-alpine
 
 # 设置工作目录
 WORKDIR /app
 
-# 复制 package.json 和 package-lock.json 文件
+# 复制 package.json 和 package-lock.json
 COPY package*.json ./
 
-# 安装项目依赖
+# 安装依赖
 RUN npm install --production
 
-# 复制项目代码
-COPY src/ src/
-COPY .env.example .
-
-# 创建上传目录
-RUN mkdir -p uploads
+# 复制应用代码
+COPY . .
 
 # 暴露端口
-EXPOSE 3000
+EXPOSE 6000
 
-# 启动命令
-CMD ["npm", "start"]
+# 设置启动命令
+CMD ["node", "app.js"]
