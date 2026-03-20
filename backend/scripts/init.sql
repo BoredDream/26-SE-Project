@@ -101,5 +101,11 @@ CREATE TABLE IF NOT EXISTS pioneer_honors (
   FOREIGN KEY (location_id) REFERENCES locations(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- 插入初始数据（可选）
+-- 插入初始管理员用户
 INSERT INTO users (openid, nickname, role) VALUES ('admin_openid', '管理员', 'admin') ON DUPLICATE KEY UPDATE nickname='管理员';
+
+-- 插入测试数据：花卉地点
+INSERT INTO locations (name, description, latitude, longitude, flower_species, bloom_status, historical_bloom_start, historical_bloom_end, cover_image) VALUES
+('樱花大道', '校园里最美的樱花大道，每年三月绽放', 23.129163, 113.264435, '樱花', 'blooming', '03-01', '03-20', 'https://example.com/cherry.jpg'),
+('荷花池', '校园中心的荷花池，夏季荷花盛开', 23.128000, 113.265000, '荷花', 'dormant', '06-01', '09-01', 'https://example.com/lotus.jpg'),
+('菊花坛', '秋季菊花展览的主要场地', 23.127000, 113.264000, '菊花', 'dormant', '10-01', '11-30', 'https://example.com/chrysanthemum.jpg');

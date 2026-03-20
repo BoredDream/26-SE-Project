@@ -9,9 +9,10 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: password123
       MYSQL_DATABASE: campus_flower
+      MYSQL_INITDB_ARGS: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
       MYSQL_CHARSET: utf8mb4
       MYSQL_COLLATION: utf8mb4_unicode_ci
-    command: ["mysqld", "--character-set-server=utf8mb4", "--collation-server=utf8mb4_unicode_ci"]
+    command: ["mysqld", "--character-set-server=utf8mb4", "--collation-server=utf8mb4_unicode_ci", "--init-connect=SET NAMES utf8mb4", "--skip-character-set-client-handshake"]
     ports:
       - "3307:3306"
     volumes:
