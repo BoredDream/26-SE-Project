@@ -1,12 +1,12 @@
--- 创建数据库（如果不存在）
+-- 创建数据库
 CREATE DATABASE IF NOT EXISTS campus_flower CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 USE campus_flower;
 
--- 用户表
+-- 创建用户表
 CREATE TABLE IF NOT EXISTS users (
   id          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  openid      VARCHAR(64)  NOT NULL UNIQUE COMMENT '微信 openid',
+  openid      VARCHAR(64)  NOT NULL UNIQUE COMMENT '微信openid',
   nickname    VARCHAR(50)  NOT NULL DEFAULT '',
   avatar_url  VARCHAR(500) DEFAULT NULL,
   role        ENUM('user','admin') NOT NULL DEFAULT 'user',
@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS users (
   updated_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- 花卉地点表
+-- 创建花卉地点表
 CREATE TABLE IF NOT EXISTS locations (
   id                     INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   name                   VARCHAR(100)  NOT NULL COMMENT '地点名称',
@@ -22,7 +22,6 @@ CREATE TABLE IF NOT EXISTS locations (
   latitude               DECIMAL(10,7) NOT NULL,
   longitude              DECIMAL(10,7) NOT NULL,
   flower_species         VARCHAR(100)  NOT NULL COMMENT '花卉品种',
-  flower_species_en      VARCHAR(100)  DEFAULT NULL,
   bloom_status           ENUM('dormant','budding','blooming','withering') NOT NULL DEFAULT 'dormant',
   historical_bloom_start VARCHAR(20)   DEFAULT NULL COMMENT '如 03-01',
   historical_bloom_end   VARCHAR(20)   DEFAULT NULL COMMENT '如 03-20',
@@ -32,12 +31,12 @@ CREATE TABLE IF NOT EXISTS locations (
   created_at             DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- 用户打卡表
+-- 创建用户打卡表
 CREATE TABLE IF NOT EXISTS checkins (
   id             INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   user_id        INT UNSIGNED NOT NULL,
   location_id    INT UNSIGNED NOT NULL,
-  bloom_report   ENUM('budding','blooming','withering') DEFAULT NULL COMMENT '用户填写的花期状态，可为空',
+  bloom_report   ENUM('budding','blooming','withering') DEFAULT NULL COMMENT '用户报告的花期状态',
   content        TEXT         DEFAULT NULL COMMENT '图文描述，最多500字',
   images         JSON         DEFAULT NULL COMMENT '三级图片URL对象数组',
   likes_count    INT UNSIGNED NOT NULL DEFAULT 0,
@@ -45,7 +44,6 @@ CREATE TABLE IF NOT EXISTS checkins (
   user_latitude  DECIMAL(10,7) DEFAULT NULL,
   user_longitude DECIMAL(10,7) DEFAULT NULL,
   audit_status   ENUM('pending','approved','rejected') NOT NULL DEFAULT 'pending',
-  audit_reason   VARCHAR(200)  DEFAULT NULL,
   is_visible     TINYINT(1)    NOT NULL DEFAULT 1,
   created_at     DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (user_id)     REFERENCES users(id),
@@ -54,7 +52,7 @@ CREATE TABLE IF NOT EXISTS checkins (
   INDEX idx_audit_status (audit_status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- 订阅表
+-- 创建订阅表
 CREATE TABLE IF NOT EXISTS subscriptions (
   id          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   user_id     INT UNSIGNED NOT NULL,
@@ -65,16 +63,7 @@ CREATE TABLE IF NOT EXISTS subscriptions (
   FOREIGN KEY (location_id) REFERENCES locations(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- 点赞表
-CREATE TABLE IF NOT EXISTS likes (
-  id         INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  user_id    INT UNSIGNED NOT NULL,
-  checkin_id INT UNSIGNED NOT NULL,
-  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  UNIQUE KEY uq_user_checkin (user_id, checkin_id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
--- 成就/勋章表
+-- 创建成就表
 CREATE TABLE IF NOT EXISTS achievements (
   id             INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   user_id        INT UNSIGNED NOT NULL,
@@ -88,7 +77,7 @@ CREATE TABLE IF NOT EXISTS achievements (
   FOREIGN KEY (location_id) REFERENCES locations(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- 称号表
+-- 创建称号表
 CREATE TABLE IF NOT EXISTS titles (
   id         INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   user_id    INT UNSIGNED NOT NULL,
@@ -99,7 +88,7 @@ CREATE TABLE IF NOT EXISTS titles (
   FOREIGN KEY (user_id) REFERENCES users(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- 探花使荣誉表
+-- 创建探花使荣誉表
 CREATE TABLE IF NOT EXISTS pioneer_honors (
   id           INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   user_id      INT UNSIGNED NOT NULL,
@@ -112,5 +101,5 @@ CREATE TABLE IF NOT EXISTS pioneer_honors (
   FOREIGN KEY (location_id) REFERENCES locations(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- 插入默认管理员用户（openid 需替换为实际值）
-INSERT INTO users (openid, nickname, role) VALUES ('admin_openid', '管理员', 'admin') ON DUPLICATE KEY UPDATE nickname='管理员', role='admin';
+-- 插入初始数据（可选）
+INSERT INTO users (openid, nickname, role) VALUES ('admin_openid', '管理员', 'admin') ON DUPLICATE KEY UPDATE nickname='管理员';

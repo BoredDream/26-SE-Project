@@ -1,27 +1,23 @@
-# 使用Maven镜像进行构建
-FROM maven:3.8.5-openjdk-8 AS builder
+# 使用Node.js 18作为基础镜像
+FROM node:18-alpine
 
 # 设置工作目录
 WORKDIR /app
 
-# 复制pom.xml和源代码
-COPY pom.xml ./
-COPY src ./src
+# 复制package.json和package-lock.json
+COPY package*.json ./
 
-# 构建项目
-RUN mvn clean package -DskipTests
+# 安装依赖
+RUN npm install --production
 
-# 使用Eclipse Temurin的OpenJDK 8 JRE镜像
-FROM eclipse-temurin:8-jre-alpine
+# 复制项目文件
+COPY . .
 
-# 设置工作目录
-WORKDIR /app
-
-# 从构建阶段复制jar文件
-COPY --from=builder /app/target/backend-1.0.0.jar ./app.jar
+# 创建uploads目录
+RUN mkdir -p uploads
 
 # 暴露端口
-EXPOSE 8080
+EXPOSE 3000
 
-# 设置启动命令
-CMD ["java", "-jar", "app.jar"]
+# 启动应用
+CMD ["npm", "start"]
