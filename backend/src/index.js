@@ -9,6 +9,9 @@ dotenv.config();
 // 初始化Express应用
 const app = express();
 
+// 信任代理设置
+app.set('trust proxy', true);
+
 // 设置请求体解析
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
