@@ -10,11 +10,11 @@ dotenv.config();
 // 初始化Express应用
 const app = express();
 
-// 信任代理设置
-app.set('trust proxy', true);
-
 // 配置CORS
 app.use(cors());
+
+// 信任代理（因为应用在Nginx反向代理后面运行）
+app.set('trust proxy', true);
 
 // 设置请求体解析
 app.use(express.json());
@@ -27,12 +27,17 @@ app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 const limiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1小时
   max: 100, // 每个IP最多100个请求
-  message: { code: 429, message: '请求过于频繁，请稍后再试' }
+  message: { code: 429, message: '请求过于频繁，请稍后再试' },
+  // 使用客户端IP作为限制键
+  keyGenerator: (req) => {
+    return req.ip;
+  }
 });
 app.use(limiter);
 
 // 引入路由
 const authRoutes = require('./routes/auth');
+const usersRoutes = require('./routes/users');
 const locationRoutes = require('./routes/locations');
 const checkinRoutes = require('./routes/checkins');
 const subscriptionRoutes = require('./routes/subscriptions');
@@ -42,6 +47,7 @@ const adminRoutes = require('./routes/admin');
 
 // 注册路由
 app.use('/v1/auth', authRoutes);
+app.use('/v1/users', usersRoutes);
 app.use('/v1/locations', locationRoutes);
 app.use('/v1/checkins', checkinRoutes);
 app.use('/v1/subscriptions', subscriptionRoutes);
