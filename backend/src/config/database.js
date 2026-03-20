@@ -9,7 +9,9 @@ const pool = mysql.createPool({
   database: process.env.DB_NAME || 'campus_flower',
   waitForConnections: true,
   connectionLimit: 10,
-  queueLimit: 0
+  queueLimit: 0,
+  charset: 'utf8mb4',
+  collation: 'utf8mb4_unicode_ci'
 });
 
 module.exports = pool;

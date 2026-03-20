@@ -2,6 +2,7 @@ const express = require('express');
 const dotenv = require('dotenv');
 const rateLimit = require('express-rate-limit');
 const path = require('path');
+const cors = require('cors');
 
 // 加载环境变量
 dotenv.config();
@@ -11,6 +12,9 @@ const app = express();
 
 // 信任代理设置
 app.set('trust proxy', true);
+
+// 配置CORS
+app.use(cors());
 
 // 设置请求体解析
 app.use(express.json());
