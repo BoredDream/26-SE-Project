@@ -4,7 +4,7 @@
 校园花卉地图小程序后端服务，提供花卉地点管理、用户打卡、成就系统、排行榜等功能。
 
 ## 技术栈
-- **后端框架**：Node.js + Express
+- **后端框架**：Java Spring Boot 2.7.18
 - **数据库**：MySQL
 - **缓存**：Redis
 - **部署方式**：Docker + Docker Compose
@@ -13,53 +13,98 @@
 1. 安装 Docker 和 Docker Compose
 2. 克隆项目代码到本地
 
+## 本地开发
+
+### 开发环境要求
+- JDK 8 或以上版本
+- Maven 3.6 或以上版本
+- MySQL 8.0 或以上版本
+- Redis 7.0 或以上版本
+
+### 开发环境搭建
+
+#### 1. 配置本地数据库和Redis
+- 启动本地MySQL服务，创建数据库：`campus_flower`
+- 启动本地Redis服务
+
+#### 2. 配置应用属性
+修改 `src/main/resources/application.properties` 文件，配置本地开发环境：
+```properties
+# 数据库配置
+spring.datasource.url=jdbc:mysql://localhost:3306/campus_flower?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+spring.datasource.username=root
+spring.datasource.password=your_password
+
+# Redis配置
+spring.redis.host=localhost
+spring.redis.port=6379
+
+# 其他配置（微信小程序、COS等）
+```
+
+#### 3. 初始化数据库
+执行 `scripts/init.sql` 脚本初始化数据库表结构。
+
+#### 4. 启动项目
+使用Maven命令启动项目：
+```bash
+mvn spring-boot:run
+```
+或使用IDE（如IntelliJ IDEA、Eclipse）直接运行 `BackendApplication.java` 类。
+
+#### 5. 验证开发环境
+服务启动后，可以通过以下方式验证：
+- 访问 `http://localhost:6000/v1/locations` 测试API接口
+- 检查数据库连接和Redis连接是否正常
+
 ## 部署步骤
 
 ### 1. 配置环境变量
-根据需要修改 `.env.example` 文件中的配置，然后复制为 `.env` 文件：
-```bash
-cp .env.example .env
-```
+根据需要修改 `docker-compose.yml` 文件中的环境变量配置，主要包括：
+- 数据库连接信息
+- 微信小程序配置
+- 腾讯云COS配置
+- JWT密钥
 
 ### 2. 启动服务
-使用 Docker Compose 一键启动所有服务：
+使用 Docker Compose 一键构建并启动所有服务：
 ```bash
-docker-compose up -d
+docker-compose up -d --build
 ```
 
 ### 3. 验证服务
 服务启动后，可以通过以下方式验证：
-- 后端服务：`http://localhost:6000/health`
+- 后端服务：`http://localhost:6000/v1/locations`（获取地点列表，应返回空数组或地点列表）
 - 数据库：`mysql://localhost:3340/campus_flower`
 - Redis：`redis://localhost:6490`
 
 ## 环境变量说明
 
 ### 服务配置
-- `PORT`：后端服务端口（默认：6000）
+- `server.port`：后端服务在容器内的端口（默认：8080，外部访问端口映射为6000）
 
 ### 数据库配置
-- `DB_HOST`：数据库主机
-- `DB_PORT`：数据库端口（默认：3340）
-- `DB_NAME`：数据库名称
-- `DB_USER`：数据库用户名
-- `DB_PASSWORD`：数据库密码
+- `spring.datasource.url`：数据库连接URL
+- `spring.datasource.username`：数据库用户名
+- `spring.datasource.password`：数据库密码
 
 ### Redis配置
-- `REDIS_URL`：Redis连接地址
+- `spring.redis.host`：Redis主机
+- `spring.redis.port`：Redis端口（默认：6379）
 
 ### 微信小程序配置
-- `WX_APPID`：微信小程序AppID
-- `WX_SECRET`：微信小程序AppSecret
+- `wx.appid`：微信小程序AppID
+- `wx.secret`：微信小程序AppSecret
 
 ### 腾讯云COS配置
-- `COS_SECRET_ID`：腾讯云COS SecretId
-- `COS_SECRET_KEY`：腾讯云COS SecretKey
-- `COS_BUCKET`：COS存储桶名称
-- `COS_REGION`：COS存储桶地区
+- `cos.secret-id`：腾讯云COS SecretId
+- `cos.secret-key`：腾讯云COS SecretKey
+- `cos.bucket`：COS存储桶名称
+- `cos.region`：COS存储桶地区
 
 ### JWT配置
-- `JWT_SECRET`：JWT签名密钥
+- `jwt.secret`：JWT签名密钥
+- `jwt.expiration`：JWT过期时间（毫秒，默认：86400000）
 
 ## API接口
 
@@ -73,22 +118,33 @@ docker-compose up -d
 #### 用户模块
 - `POST /auth/login` - 微信登录
 - `GET /users/me` - 获取当前用户信息
+- `PATCH /users/me` - 更新用户信息
 
 #### 地点模块
 - `GET /locations` - 获取地点列表
 - `GET /locations/:id` - 获取地点详情
+- `PATCH /locations/{id}/status` - 更新花期状态（仅管理员）
+- `POST /locations` - 创建地点（仅管理员）
 
 #### 打卡模块
 - `POST /checkins` - 发布打卡
 - `GET /locations/:id/checkins` - 获取地点打卡列表
+- `POST /checkins/{id}/like` - 点赞打卡
+- `POST /checkins/{id}/report` - 举报打卡
+- `GET /users/me/checkins` - 获取我的打卡记录
 
 #### 订阅模块
 - `POST /subscriptions` - 订阅地点
+- `DELETE /subscriptions/{locationId}` - 取消订阅
 - `GET /subscriptions` - 获取我的订阅列表
 
 #### 成就模块
 - `GET /users/me/achievements` - 获取我的成就
 - `GET /users/me/titles` - 获取我的称号
+- `GET /users/{id}/achievements` - 查看他人成就
+
+#### 上传模块
+- `POST /upload/image` - 上传图片
 
 #### 排行榜模块
 - `GET /leaderboard/checkins` - 打卡王榜
@@ -98,24 +154,23 @@ docker-compose up -d
 ## 项目结构
 ```
 backend/
-├── app.js                    # 应用入口
-├── config/                   # 配置文件
-│   ├── database.js           # 数据库配置
-│   ├── redis.js              # Redis配置
-│   └── jwt.js                # JWT配置
-├── controllers/              # 控制器
-│   ├── userController.js     # 用户控制器
-│   ├── locationController.js # 地点控制器
-│   └── ...                   # 其他控制器
-├── models/                   # 数据库模型
-├── middleware/               # 中间件
-├── routes/                   # 路由
-├── utils/                    # 工具函数
-├── scripts/                  # 脚本文件
-│   └── init.sql              # 数据库初始化脚本
-├── Dockerfile                # Docker构建文件
-├── docker-compose.yml        # Docker Compose配置
-└── .env.example              # 环境变量模板
+├── src/main/java/com/example/backend/  # 源代码目录
+│   ├── BackendApplication.java         # 应用入口
+│   ├── model/                          # 数据库模型（JPA实体）
+│   ├── repository/                     # 数据访问层（Spring Data JPA）
+│   ├── service/                        # 业务逻辑层
+│   ├── controller/                     # REST控制器
+│   ├── config/                         # 配置类
+│   ├── security/                       # 安全和认证组件
+│   └── utils/                          # 工具类
+├── src/main/resources/                 # 资源文件
+│   └── application.properties          # 应用配置文件
+├── pom.xml                             # Maven依赖配置
+├── scripts/                            # 脚本文件
+│   └── init.sql                        # 数据库初始化脚本
+├── Dockerfile                          # Docker构建文件
+├── docker-compose.yml                  # Docker Compose配置
+└── README.md                           # 项目文档
 ```
 
 ## 注意事项

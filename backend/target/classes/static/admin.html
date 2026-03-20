@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>校园花卉地图 - 管理员后台</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="admin.css">
+</head>
+<body>
+    <!-- 登录界面 -->
+    <div id="login-container" class="container">
+        <div class="row justify-content-center align-items-center min-vh-100">
+            <div class="col-md-4">
+                <div class="card shadow-lg">
+                    <div class="card-body">
+                        <h3 class="card-title text-center mb-4">管理员登录</h3>
+                        <form id="login-form">
+                            <div class="mb-3">
+                                <label for="openid" class="form-label">OpenID</label>
+                                <input type="text" class="form-control" id="openid" placeholder="输入管理员OpenID" required>
+                            </div>
+                            <div class="d-grid gap-2">
+                                <button type="submit" class="btn btn-primary btn-lg">登录</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 主界面 -->
+    <div id="admin-container" class="container-fluid d-none">
+        <div class="row">
+            <!-- 侧边栏 -->
+            <nav id="sidebar" class="col-md-2 col-lg-2 d-md-block bg-light sidebar collapse">
+                <div class="position-sticky pt-3">
+                    <ul class="nav flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link active" aria-current="page" href="#" data-section="dashboard">
+                                <i class="fas fa-tachometer-alt"></i>
+                                控制台
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#" data-section="checkins">
+                                <i class="fas fa-check-circle"></i>
+                                打卡审核
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#" data-section="users">
+                                <i class="fas fa-users"></i>
+                                用户管理
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#" data-section="locations">
+                                <i class="fas fa-map-marker-alt"></i>
+                                地点管理
+                            </a>
+                        </li>
+                        <li class="nav-item mt-5">
+                            <a class="nav-link text-danger" href="#" id="logout-btn">
+                                <i class="fas fa-sign-out-alt"></i>
+                                退出登录
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </nav>
+
+            <!-- 主内容区 -->
+            <main class="col-md-10 ms-sm-auto col-lg-10 px-md-4">
+                <!-- 顶部导航栏 -->
+                <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm">
+                    <div class="container-fluid">
+                        <h2 class="navbar-brand mb-0">校园花卉地图 - 管理员后台</h2>
+                        <div class="navbar-nav ms-auto">
+                            <span class="nav-item nav-link" id="current-user"></span>
+                        </div>
+                    </div>
+                </nav>
+
+                <!-- 内容区域 -->
+                <div class="content mt-4">
+                    <!-- 仪表盘 -->
+                    <div id="dashboard-section" class="content-section">
+                        <h3>数据统计</h3>
+                        <div class="row mt-4">
+                            <div class="col-md-3">
+                                <div class="card bg-primary text-white">
+                                    <div class="card-body">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <div>
+                                                <h5 class="card-title">总用户数</h5>
+                                                <p class="card-text display-4" id="total-users">0</p>
+                                            </div>
+                                            <i class="fas fa-users fa-3x opacity-50"></i>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="card bg-success text-white">
+                                    <div class="card-body">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <div>
+                                                <h5 class="card-title">总地点数</h5>
+                                                <p class="card-text display-4" id="total-locations">0</p>
+                                            </div>
+                                            <i class="fas fa-map-marker-alt fa-3x opacity-50"></i>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="card bg-warning text-white">
+                                    <div class="card-body">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <div>
+                                                <h5 class="card-title">待审核打卡</h5>
+                                                <p class="card-text display-4" id="pending-checkins">0</p>
+                                            </div>
+                                            <i class="fas fa-clock fa-3x opacity-50"></i>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="card bg-info text-white">
+                                    <div class="card-body">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <div>
+                                                <h5 class="card-title">总打卡数</h5>
+                                                <p class="card-text display-4" id="total-checkins">0</p>
+                                            </div>
+                                            <i class="fas fa-calendar-check fa-3x opacity-50"></i>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 待审核打卡 -->
+                    <div id="checkins-section" class="content-section d-none">
+                        <div class="d-flex justify-content-between align-items-center mb-4">
+                            <h3>打卡审核</h3>
+                            <button class="btn btn-primary" id="refresh-checkins">
+                                <i class="fas fa-sync"></i> 刷新
+                            </button>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover">
+                                <thead class="thead-dark">
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>用户</th>
+                                        <th>地点</th>
+                                        <th>花期状态</th>
+                                        <th>内容</th>
+                                        <th>时间</th>
+                                        <th>操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="checkins-table-body">
+                                    <!-- 数据将通过JavaScript动态加载 -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- 用户管理 -->
+                    <div id="users-section" class="content-section d-none">
+                        <h3>用户管理</h3>
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover">
+                                <thead class="thead-dark">
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>OpenID</th>
+                                        <th>昵称</th>
+                                        <th>角色</th>
+                                        <th>注册时间</th>
+                                        <th>操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="users-table-body">
+                                    <!-- 数据将通过JavaScript动态加载 -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- 地点管理 -->
+                    <div id="locations-section" class="content-section d-none">
+                        <h3>地点管理</h3>
+                        <p class="text-muted">地点管理功能正在开发中...</p>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- 模态框 - 拒绝理由 -->
+    <div class="modal fade" id="reject-modal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">拒绝理由</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <textarea class="form-control" id="reject-reason" rows="4" placeholder="请输入拒绝理由..."></textarea>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-danger" id="confirm-reject">确认拒绝</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="admin.js"></script>
+</body>
+</html>

@@ -1,34 +1,20 @@
 const Redis = require('ioredis');
-const config = require('./config');
 
-// 创建 Redis 客户端
-const redis = new Redis(config.redis.url, {
-  maxRetriesPerRequest: 3, // 限制重试次数
-  enableReadyCheck: false,
-  retryStrategy: (times) => {
-    // 指数退避重试策略
-    const delay = Math.min(times * 100, 3000);
-    return delay;
-  },
+// 创建Redis客户端
+const redis = new Redis({
+  host: process.env.REDIS_HOST || 'localhost',
+  port: process.env.REDIS_PORT || 6379,
+  password: process.env.REDIS_PASSWORD || undefined,
+  db: process.env.REDIS_DB || 0
 });
 
-// 处理 Redis 连接错误
-redis.on('error', (error) => {
-  console.error('⚠️  Redis 连接错误:', error.message);
+// 监听Redis连接事件
+redis.on('connect', () => {
+  console.log('Redis connected');
 });
 
-// 测试 Redis 连接
-async function testConnection() {
-  try {
-    await redis.ping();
-    console.log('✅ Redis 连接成功');
-  } catch (error) {
-    console.error('❌ Redis 连接失败:', error.message);
-    throw error;
-  }
-}
+redis.on('error', (err) => {
+  console.error('Redis connection error:', err);
+});
 
-module.exports = {
-  redis,
-  testConnection,
-};
+module.exports = redis;
