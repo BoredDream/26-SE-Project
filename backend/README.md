@@ -49,6 +49,102 @@
 - 花卉花期订阅
 - 花期变化通知
 
+## 数据库结构
+
+### 1. 用户表 (users)
+
+| 字段名       | 数据类型                  | 约束条件                | 注释                     |
+|-------------|--------------------------|------------------------|--------------------------|
+| id          | INT UNSIGNED             | AUTO_INCREMENT PRIMARY KEY | 用户ID                  |
+| openid      | VARCHAR(64)              | NOT NULL UNIQUE        | 微信openid              |
+| nickname    | VARCHAR(50)              | NOT NULL DEFAULT ''    | 用户昵称                 |
+| avatar_url  | VARCHAR(500)             | DEFAULT NULL           | 用户头像URL              |
+| role        | ENUM('user','admin')     | NOT NULL DEFAULT 'user'| 用户角色（普通用户/管理员）|
+| created_at  | DATETIME                 | NOT NULL DEFAULT CURRENT_TIMESTAMP | 创建时间       |
+| updated_at  | DATETIME                 | NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP | 更新时间 |
+
+### 2. 花卉地点表 (locations)
+
+| 字段名                 | 数据类型                  | 约束条件                | 注释                     |
+|-----------------------|--------------------------|------------------------|--------------------------|
+| id                    | INT UNSIGNED             | AUTO_INCREMENT PRIMARY KEY | 地点ID                  |
+| name                  | VARCHAR(100)             | NOT NULL               | 地点名称                 |
+| description           | TEXT                     | DEFAULT NULL           | 地点描述                 |
+| latitude              | DECIMAL(10,7)            | NOT NULL               | 纬度                     |
+| longitude             | DECIMAL(10,7)            | NOT NULL               | 经度                     |
+| flower_species        | VARCHAR(100)             | NOT NULL               | 花卉品种                 |
+| bloom_status          | ENUM('dormant','budding','blooming','withering') | NOT NULL DEFAULT 'dormant' | 花期状态 |
+| historical_bloom_start| VARCHAR(20)              | DEFAULT NULL           | 历史花期开始（如 03-01）  |
+| historical_bloom_end  | VARCHAR(20)              | DEFAULT NULL           | 历史花期结束（如 03-20）  |
+| cover_image           | VARCHAR(500)             | DEFAULT NULL           | 封面图片URL              |
+| checkin_count         | INT UNSIGNED             | NOT NULL DEFAULT 0     | 打卡次数（用于热力图）    |
+| status_updated_at     | DATETIME                 | DEFAULT NULL           | 状态更新时间             |
+| created_at            | DATETIME                 | NOT NULL DEFAULT CURRENT_TIMESTAMP | 创建时间       |
+
+### 3. 用户打卡表 (checkins)
+
+| 字段名                 | 数据类型                  | 约束条件                | 注释                     |
+|-----------------------|--------------------------|------------------------|--------------------------|
+| id                    | INT UNSIGNED             | AUTO_INCREMENT PRIMARY KEY | 打卡ID                  |
+| user_id               | INT UNSIGNED             | NOT NULL FOREIGN KEY REFERENCES users(id) | 用户ID |
+| location_id           | INT UNSIGNED             | NOT NULL FOREIGN KEY REFERENCES locations(id) | 地点ID |
+| bloom_report          | ENUM('budding','blooming','withering') | DEFAULT NULL | 用户报告的花期状态 |
+| content               | TEXT                     | DEFAULT NULL           | 图文描述，最多500字       |
+| images                | JSON                     | DEFAULT NULL           | 三级图片URL对象数组       |
+| likes_count           | INT UNSIGNED             | NOT NULL DEFAULT 0     | 点赞数                   |
+| gps_verified          | TINYINT(1)               | NOT NULL DEFAULT 0     | GPS校验是否通过           |
+| user_latitude         | DECIMAL(10,7)            | DEFAULT NULL           | 用户打卡纬度             |
+| user_longitude        | DECIMAL(10,7)            | DEFAULT NULL           | 用户打卡经度             |
+| audit_status          | ENUM('pending','approved','rejected') | NOT NULL DEFAULT 'pending' | 审核状态 |
+| is_visible            | TINYINT(1)               | NOT NULL DEFAULT 1     | 是否可见                 |
+| created_at            | DATETIME                 | NOT NULL DEFAULT CURRENT_TIMESTAMP | 创建时间       |
+
+### 4. 订阅表 (subscriptions)
+
+| 字段名                 | 数据类型                  | 约束条件                | 注释                     |
+|-----------------------|--------------------------|------------------------|--------------------------|
+| id                    | INT UNSIGNED             | AUTO_INCREMENT PRIMARY KEY | 订阅ID                  |
+| user_id               | INT UNSIGNED             | NOT NULL FOREIGN KEY REFERENCES users(id) | 用户ID |
+| location_id           | INT UNSIGNED             | NOT NULL FOREIGN KEY REFERENCES locations(id) | 地点ID |
+| created_at            | DATETIME                 | NOT NULL DEFAULT CURRENT_TIMESTAMP | 创建时间       |
+| UNIQUE KEY            | uq_user_location (user_id, location_id) | - | 用户与地点的唯一约束 |
+
+### 5. 成就表 (achievements)
+
+| 字段名                 | 数据类型                  | 约束条件                | 注释                     |
+|-----------------------|--------------------------|------------------------|--------------------------|
+| id                    | INT UNSIGNED             | AUTO_INCREMENT PRIMARY KEY | 成就ID                  |
+| user_id               | INT UNSIGNED             | NOT NULL FOREIGN KEY REFERENCES users(id) | 用户ID |
+| location_id           | INT UNSIGNED             | NOT NULL FOREIGN KEY REFERENCES locations(id) | 地点ID |
+| flower_species        | VARCHAR(100)             | NOT NULL               | 花卉品种（冗余字段）      |
+| grade                 | ENUM('gold','silver')    | NOT NULL               | 成就等级（金/银）         |
+| checkin_id            | INT UNSIGNED             | NOT NULL               | 触发该成就的打卡记录ID   |
+| created_at            | DATETIME                 | NOT NULL DEFAULT CURRENT_TIMESTAMP | 创建时间       |
+| UNIQUE KEY            | uq_user_species (user_id, flower_species) | - | 用户与花卉品种的唯一约束 |
+
+### 6. 称号表 (titles)
+
+| 字段名                 | 数据类型                  | 约束条件                | 注释                     |
+|-----------------------|--------------------------|------------------------|--------------------------|
+| id                    | INT UNSIGNED             | AUTO_INCREMENT PRIMARY KEY | 称号ID                  |
+| user_id               | INT UNSIGNED             | NOT NULL FOREIGN KEY REFERENCES users(id) | 用户ID |
+| title_key             | VARCHAR(50)              | NOT NULL               | 称号键（如 explorer / photographer） |
+| title_name            | VARCHAR(50)              | NOT NULL               | 称号名称（如 花卉观察员） |
+| awarded_at            | DATETIME                 | NOT NULL DEFAULT CURRENT_TIMESTAMP | 授予时间       |
+| UNIQUE KEY            | uq_user_title (user_id, title_key) | - | 用户与称号的唯一约束 |
+
+### 7. 探花使荣誉表 (pioneer_honors)
+
+| 字段名                 | 数据类型                  | 约束条件                | 注释                     |
+|-----------------------|--------------------------|------------------------|--------------------------|
+| id                    | INT UNSIGNED             | AUTO_INCREMENT PRIMARY KEY | 荣誉ID                  |
+| user_id               | INT UNSIGNED             | NOT NULL FOREIGN KEY REFERENCES users(id) | 用户ID |
+| location_id           | INT UNSIGNED             | NOT NULL FOREIGN KEY REFERENCES locations(id) | 地点ID |
+| bloom_season          | VARCHAR(20)              | NOT NULL               | 花期季节（如 2026-spring） |
+| checkin_id            | INT UNSIGNED             | NOT NULL               | 触发该荣誉的打卡记录ID   |
+| created_at            | DATETIME                 | NOT NULL DEFAULT CURRENT_TIMESTAMP | 创建时间       |
+| UNIQUE KEY            | uq_location_season (location_id, bloom_season) | - | 地点与季节的唯一约束 |
+
 ## 项目结构
 
 ```
@@ -147,6 +243,101 @@ npm install
 
 ```bash
 node src/index.js
+```
+
+## 服务管理
+
+### 1. Docker部署服务管理
+
+#### 1.1 重启服务
+
+```bash
+docker-compose restart
+```
+
+#### 1.2 停止服务
+
+```bash
+docker-compose down
+```
+
+#### 1.3 查看服务状态
+
+```bash
+docker-compose ps
+```
+
+#### 1.4 查看服务日志
+
+```bash
+# 查看所有服务日志
+docker-compose logs
+
+# 查看特定服务日志（如node-app）
+docker-compose logs node-app
+
+# 实时查看日志
+docker-compose logs -f
+```
+
+#### 1.5 重新构建并启动服务
+
+```bash
+docker-compose up -d --build
+```
+
+### 2. 传统部署服务管理
+
+#### 2.1 使用PM2管理服务（推荐）
+
+安装PM2：
+
+```bash
+npm install -g pm2
+```
+
+使用PM2启动服务：
+
+```bash
+pm2 start src/index.js --name flower-backend
+```
+
+重启服务：
+
+```bash
+pm2 restart flower-backend
+```
+
+停止服务：
+
+```bash
+pm2 stop flower-backend
+```
+
+查看服务状态：
+
+```bash
+pm2 status
+```
+
+查看服务日志：
+
+```bash
+pm2 logs flower-backend
+```
+
+#### 2.2 手动管理服务
+
+查看运行中的Node.js进程：
+
+```bash
+ps aux | grep node
+```
+
+停止服务（使用进程ID）：
+
+```bash
+kill <进程ID>
 ```
 
 ## API文档

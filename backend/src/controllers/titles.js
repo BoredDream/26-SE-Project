@@ -1,5 +1,24 @@
 const pool = require('../config/database');
 
+// 获取所有称号类型
+const getAllTitles = async (req, res) => {
+  try {
+    // 获取所有称号类型
+    const [titles] = await pool.execute(
+      'SELECT DISTINCT title_key, title_name FROM titles ORDER BY title_name'
+    );
+    
+    res.json({
+      code: 0,
+      message: 'ok',
+      data: titles
+    });
+  } catch (error) {
+    console.error('Get all titles error:', error);
+    res.status(500).json({ code: 5000, message: '服务器内部错误' });
+  }
+};
+
 // 获取我的称号
 const getMyTitles = async (req, res) => {
   try {
@@ -23,5 +42,6 @@ const getMyTitles = async (req, res) => {
 };
 
 module.exports = {
+  getAllTitles,
   getMyTitles
 };

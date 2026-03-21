@@ -1,5 +1,36 @@
 const pool = require('../config/database');
 
+// 获取统计数据
+const getStats = async (req, res) => {
+  try {
+    // 获取用户总数
+    const [users] = await pool.execute('SELECT COUNT(*) as total FROM users');
+    
+    // 获取地点总数
+    const [locations] = await pool.execute('SELECT COUNT(*) as total FROM locations');
+    
+    // 获取打卡总数
+    const [checkins] = await pool.execute('SELECT COUNT(*) as total FROM checkins');
+    
+    // 获取待审核打卡数
+    const [pendingCheckins] = await pool.execute('SELECT COUNT(*) as total FROM checkins WHERE audit_status = ?', ['pending']);
+    
+    res.json({
+      code: 0,
+      message: 'ok',
+      data: {
+        users: users[0].total,
+        locations: locations[0].total,
+        checkins: checkins[0].total,
+        pendingCheckins: pendingCheckins[0].total
+      }
+    });
+  } catch (error) {
+    console.error('Get stats error:', error);
+    res.status(500).json({ code: 5000, message: '服务器内部错误' });
+  }
+};
+
 // 待复核举报列表
 const getPendingCheckins = async (req, res) => {
   try {
@@ -55,6 +86,7 @@ const auditCheckin = async (req, res) => {
 };
 
 module.exports = {
+  getStats,
   getPendingCheckins,
   auditCheckin
 };

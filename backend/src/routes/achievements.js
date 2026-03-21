@@ -3,6 +3,9 @@ const router = express.Router();
 const achievementController = require('../controllers/achievements');
 const { authenticate } = require('../middlewares/auth');
 
+// 获取所有成就类型（公开）
+router.get('/', achievementController.getAllAchievements);
+
 // 我的花圃（需登录）
 router.get('/me', authenticate, achievementController.getMyAchievements);
 
