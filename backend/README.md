@@ -166,17 +166,24 @@ node src/index.js
 
 ### 打卡管理
 
-- `POST /v1/checkins` - 创建打卡
-- `GET /v1/checkins/user` - 获取用户打卡记录
-- `GET /v1/checkins/pending` - 获取待审核打卡（管理员）
-- `PUT /v1/checkins/:id/audit` - 审核打卡（管理员）
+- `GET /v1/checkins` - 获取所有打卡数据
+- `POST /v1/checkins` - 创建打卡（需认证）
+- `POST /v1/checkins/:id/like` - 点赞打卡（需认证）
+- `POST /v1/checkins/:id/report` - 举报打卡（需认证）
 
 ### 成就与称号
 
-- `GET /v1/achievements` - 获取所有成就
-- `GET /v1/achievements/user` - 获取用户已解锁成就
-- `GET /v1/titles` - 获取所有称号
-- `GET /v1/titles/user` - 获取用户称号
+- `GET /v1/achievements` - 获取所有成就类型
+- `GET /v1/achievements/me` - 获取我的成就（需认证）
+- `GET /v1/achievements/user/:id` - 获取指定用户的成就
+- `GET /v1/titles` - 获取所有称号类型
+- `GET /v1/titles/me` - 获取我的称号（需认证）
+
+### 管理员功能
+
+- `GET /v1/admin/stats` - 获取系统统计数据（管理员）
+- `GET /v1/admin/checkins/pending` - 获取待审核打卡（管理员）
+- `PATCH /v1/admin/checkins/:id/audit` - 审核打卡（管理员）
 
 ### 订阅功能
 

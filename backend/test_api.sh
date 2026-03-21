@@ -2,7 +2,7 @@
 
 # 后端API测试脚本
 # 设置API基础URL
-API_BASE_URL="http://localhost:3000"
+API_BASE_URL="http://101.37.240.166:3001"
 
 # 颜色定义
 GREEN="\033[0;32m"
@@ -42,8 +42,10 @@ test_api() {
     
     # 执行curl命令并获取状态码和响应体
     local response=$(eval "${curl_cmd}")
-    local status_code=$(echo "${response}" | tail -n 1)
-    local response_body=$(echo "${response}" | head -n -1)
+    # 从响应中提取状态码（最后3个字符）
+    local status_code=${response: -3}
+    # 提取响应体（除了最后3个字符）
+    local response_body=${response%???}
     
     # 检查状态码
     if [ "${status_code}" -eq "${expected_status}" ]; then
