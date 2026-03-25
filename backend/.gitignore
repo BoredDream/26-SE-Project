@@ -58,6 +58,7 @@ coverage/
 test-frontend
 test-*
 test_*
+test
 
 # temp
 temp_*

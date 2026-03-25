@@ -2,205 +2,125 @@
 
 ## 项目概述
 
-校园花卉地图小程序后端是一个基于Node.js开发的RESTful API服务，为校园花卉地图小程序提供数据支持和业务逻辑处理。该系统包含用户认证、花卉地点管理、用户打卡与审核、花期众包投票、成就与称号系统等核心功能。
+校园花卉地图小程序后端是一个基于Node.js开发的RESTful API服务，为校园花卉地图小程序提供数据支持和业务逻辑处理。该系统包含用户认证、花卉地点管理、用户打卡、花期众包报告、成就与称号系统等核心功能，旨在为师生提供便捷的校园花卉信息查询和分享平台。
 
 ## 技术栈
 
 - **Web框架**：Express.js
-- **数据库**：MySQL 5.7
+- **数据库**：MySQL 5.7+
 - **缓存**：Redis
-- **反向代理**：Nginx
 - **容器化**：Docker & Docker Compose
 - **认证**：JWT (JSON Web Tokens)
 - **对象存储**：腾讯云COS
+- **图片处理**：Sharp
+- **地理位置计算**：Geolib
 
 ## 核心功能
 
 ### 1. 用户认证
-- 微信小程序登录（基于OpenID）
+
+- 微信小程序登录与注册（基于OpenID）
+- 微信网页扫码登录（基于微信开放平台OAuth2.0）
 - JWT令牌生成与验证
 - 用户角色管理（普通用户/管理员）
 
-### 2. 花卉地点管理
-- 花卉地点CRUD操作
-- 花卉信息维护（名称、科属、花期等）
+### 2. 花卉管理
+
+- 花卉信息维护（名称、学名、描述、花期等）
 - 花卉图片存储与管理
+- 花卉分类与检索
 
-### 3. 用户打卡
+### 3. 地点管理
+
+- 花卉地点CRUD操作
+- 地点坐标管理
+- 地点打卡次数统计
+
+### 4. 用户打卡
+
 - 打卡位置验证（GPS）
-- 打卡图片上传
+- 打卡图片上传与存储
 - 花期状态报告
+- 打卡内容分享
+- 打卡点赞与举报
 
-### 4. 打卡审核
-- 管理员审核打卡信息
-- 违规打卡处理
+### 5. 花期报告系统
 
-### 5. 花期众包投票
-- 用户对花期状态进行投票
-- 基于投票结果自动更新花期状态
-- 投票记录管理
-
-### 6. 成就与称号系统
-- 成就解锁条件设置
-- 成就自动检测与解锁
-- 用户称号管理
-
-### 7. 订阅功能
-- 花卉花期订阅
+- 用户众包花期报告
+- 花期状态自动更新
 - 花期变化通知
 
-## 数据库结构
+### 6. 成就与称号系统
 
-### 1. 用户表 (users)
+- 多样化的成就系统
+- 自动成就检测与解锁
+- 用户称号管理
+- 积分与等级体系
 
-| 字段名       | 数据类型                  | 约束条件                | 注释                     |
-|-------------|--------------------------|------------------------|--------------------------|
-| id          | INT UNSIGNED             | AUTO_INCREMENT PRIMARY KEY | 用户ID                  |
-| openid      | VARCHAR(64)              | NOT NULL UNIQUE        | 微信openid              |
-| nickname    | VARCHAR(50)              | NOT NULL DEFAULT ''    | 用户昵称                 |
-| avatar_url  | VARCHAR(500)             | DEFAULT NULL           | 用户头像URL              |
-| role        | ENUM('user','admin')     | NOT NULL DEFAULT 'user'| 用户角色（普通用户/管理员）|
-| created_at  | DATETIME                 | NOT NULL DEFAULT CURRENT_TIMESTAMP | 创建时间       |
-| updated_at  | DATETIME                 | NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP | 更新时间 |
+### 7. 订阅功能
 
-### 2. 花卉地点表 (locations)
+- 花卉花期订阅
+- 花期变化通知
+- 个性化订阅管理
 
-| 字段名                 | 数据类型                  | 约束条件                | 注释                     |
-|-----------------------|--------------------------|------------------------|--------------------------|
-| id                    | INT UNSIGNED             | AUTO_INCREMENT PRIMARY KEY | 地点ID                  |
-| name                  | VARCHAR(100)             | NOT NULL               | 地点名称                 |
-| description           | TEXT                     | DEFAULT NULL           | 地点描述                 |
-| latitude              | DECIMAL(10,7)            | NOT NULL               | 纬度                     |
-| longitude             | DECIMAL(10,7)            | NOT NULL               | 经度                     |
-| flower_species        | VARCHAR(100)             | NOT NULL               | 花卉品种                 |
-| bloom_status          | ENUM('dormant','budding','blooming','withering') | NOT NULL DEFAULT 'dormant' | 花期状态 |
-| historical_bloom_start| VARCHAR(20)              | DEFAULT NULL           | 历史花期开始（如 03-01）  |
-| historical_bloom_end  | VARCHAR(20)              | DEFAULT NULL           | 历史花期结束（如 03-20）  |
-| cover_image           | VARCHAR(500)             | DEFAULT NULL           | 封面图片URL              |
-| checkin_count         | INT UNSIGNED             | NOT NULL DEFAULT 0     | 打卡次数（用于热力图）    |
-| status_updated_at     | DATETIME                 | DEFAULT NULL           | 状态更新时间             |
-| created_at            | DATETIME                 | NOT NULL DEFAULT CURRENT_TIMESTAMP | 创建时间       |
+## 数据库设计
 
-### 3. 用户打卡表 (checkins)
+### 核心表结构
 
-| 字段名                 | 数据类型                  | 约束条件                | 注释                     |
-|-----------------------|--------------------------|------------------------|--------------------------|
-| id                    | INT UNSIGNED             | AUTO_INCREMENT PRIMARY KEY | 打卡ID                  |
-| user_id               | INT UNSIGNED             | NOT NULL FOREIGN KEY REFERENCES users(id) | 用户ID |
-| location_id           | INT UNSIGNED             | NOT NULL FOREIGN KEY REFERENCES locations(id) | 地点ID |
-| bloom_report          | ENUM('budding','blooming','withering') | DEFAULT NULL | 用户报告的花期状态 |
-| content               | TEXT                     | DEFAULT NULL           | 图文描述，最多500字       |
-| images                | JSON                     | DEFAULT NULL           | 三级图片URL对象数组       |
-| likes_count           | INT UNSIGNED             | NOT NULL DEFAULT 0     | 点赞数                   |
-| gps_verified          | TINYINT(1)               | NOT NULL DEFAULT 0     | GPS校验是否通过           |
-| user_latitude         | DECIMAL(10,7)            | DEFAULT NULL           | 用户打卡纬度             |
-| user_longitude        | DECIMAL(10,7)            | DEFAULT NULL           | 用户打卡经度             |
-| audit_status          | ENUM('pending','approved','rejected') | NOT NULL DEFAULT 'pending' | 审核状态 |
-| is_visible            | TINYINT(1)               | NOT NULL DEFAULT 1     | 是否可见                 |
-| created_at            | DATETIME                 | NOT NULL DEFAULT CURRENT_TIMESTAMP | 创建时间       |
+| 表名                  | 描述      |
+| ------------------- | ------- |
+| `users`             | 用户表     |
+| `flowers`           | 花卉表     |
+| `places`            | 地点表     |
+| `flower_places`     | 花卉地点关联表 |
+| `checkins`          | 打卡表     |
+| `checkin_likes`     | 打卡点赞表   |
+| `checkin_reports`   | 打卡举报表   |
+| `subscriptions`     | 订阅表     |
+| `achievements`      | 成就表     |
+| `user_achievements` | 用户成就关联表 |
+| `titles`            | 头衔表     |
+| `user_titles`       | 用户头衔关联表 |
 
-### 4. 订阅表 (subscriptions)
+### 数据库初始化
 
-| 字段名                 | 数据类型                  | 约束条件                | 注释                     |
-|-----------------------|--------------------------|------------------------|--------------------------|
-| id                    | INT UNSIGNED             | AUTO_INCREMENT PRIMARY KEY | 订阅ID                  |
-| user_id               | INT UNSIGNED             | NOT NULL FOREIGN KEY REFERENCES users(id) | 用户ID |
-| location_id           | INT UNSIGNED             | NOT NULL FOREIGN KEY REFERENCES locations(id) | 地点ID |
-| created_at            | DATETIME                 | NOT NULL DEFAULT CURRENT_TIMESTAMP | 创建时间       |
-| UNIQUE KEY            | uq_user_location (user_id, location_id) | - | 用户与地点的唯一约束 |
+使用提供的初始化脚本创建数据库和表结构：
 
-### 5. 成就表 (achievements)
+```bash
+# 通过Docker执行
+mysql -u root -p < scripts/init.sql
 
-| 字段名                 | 数据类型                  | 约束条件                | 注释                     |
-|-----------------------|--------------------------|------------------------|--------------------------|
-| id                    | INT UNSIGNED             | AUTO_INCREMENT PRIMARY KEY | 成就ID                  |
-| user_id               | INT UNSIGNED             | NOT NULL FOREIGN KEY REFERENCES users(id) | 用户ID |
-| location_id           | INT UNSIGNED             | NOT NULL FOREIGN KEY REFERENCES locations(id) | 地点ID |
-| flower_species        | VARCHAR(100)             | NOT NULL               | 花卉品种（冗余字段）      |
-| grade                 | ENUM('gold','silver')    | NOT NULL               | 成就等级（金/银）         |
-| checkin_id            | INT UNSIGNED             | NOT NULL               | 触发该成就的打卡记录ID   |
-| created_at            | DATETIME                 | NOT NULL DEFAULT CURRENT_TIMESTAMP | 创建时间       |
-| UNIQUE KEY            | uq_user_species (user_id, flower_species) | - | 用户与花卉品种的唯一约束 |
-
-### 6. 称号表 (titles)
-
-| 字段名                 | 数据类型                  | 约束条件                | 注释                     |
-|-----------------------|--------------------------|------------------------|--------------------------|
-| id                    | INT UNSIGNED             | AUTO_INCREMENT PRIMARY KEY | 称号ID                  |
-| user_id               | INT UNSIGNED             | NOT NULL FOREIGN KEY REFERENCES users(id) | 用户ID |
-| title_key             | VARCHAR(50)              | NOT NULL               | 称号键（如 explorer / photographer） |
-| title_name            | VARCHAR(50)              | NOT NULL               | 称号名称（如 花卉观察员） |
-| awarded_at            | DATETIME                 | NOT NULL DEFAULT CURRENT_TIMESTAMP | 授予时间       |
-| UNIQUE KEY            | uq_user_title (user_id, title_key) | - | 用户与称号的唯一约束 |
-
-### 7. 探花使荣誉表 (pioneer_honors)
-
-| 字段名                 | 数据类型                  | 约束条件                | 注释                     |
-|-----------------------|--------------------------|------------------------|--------------------------|
-| id                    | INT UNSIGNED             | AUTO_INCREMENT PRIMARY KEY | 荣誉ID                  |
-| user_id               | INT UNSIGNED             | NOT NULL FOREIGN KEY REFERENCES users(id) | 用户ID |
-| location_id           | INT UNSIGNED             | NOT NULL FOREIGN KEY REFERENCES locations(id) | 地点ID |
-| bloom_season          | VARCHAR(20)              | NOT NULL               | 花期季节（如 2026-spring） |
-| checkin_id            | INT UNSIGNED             | NOT NULL               | 触发该荣誉的打卡记录ID   |
-| created_at            | DATETIME                 | NOT NULL DEFAULT CURRENT_TIMESTAMP | 创建时间       |
-| UNIQUE KEY            | uq_location_season (location_id, bloom_season) | - | 地点与季节的唯一约束 |
+# 或通过Docker Compose执行
+docker-compose exec mysql mysql -u root -p campus_flower < scripts/init.sql
+```
 
 ## 项目结构
 
 ```
 .
-├── src/
-│   ├── config/          # 配置文件
-│   │   ├── cos.js       # 腾讯云COS配置
-│   │   ├── database.js  # 数据库配置
-│   │   ├── jwt.js       # JWT配置
-│   │   └── redis.js     # Redis配置
-│   ├── controllers/     # 控制器
-│   │   ├── achievements.js
-│   │   ├── admin.js
-│   │   ├── auth.js
-│   │   ├── checkins.js
-│   │   ├── locations.js
-│   │   ├── subscriptions.js
-│   │   └── titles.js
-│   ├── middlewares/     # 中间件
-│   │   └── auth.js      # 认证中间件
-│   ├── routes/          # 路由
-│   │   ├── achievements.js
-│   │   ├── admin.js
-│   │   ├── auth.js
-│   │   ├── checkins.js
-│   │   ├── locations.js
-│   │   ├── subscriptions.js
-│   │   └── titles.js
-│   ├── services/        # 服务层
-│   │   ├── achievementService.js
-│   │   ├── auditService.js
-│   │   ├── titleService.js
-│   │   └── voteService.js
-│   └── index.js         # 入口文件
-├── scripts/             # 脚本文件
-│   └── init.sql         # 数据库初始化脚本
-├── ssl/                 # SSL证书
-├── uploads/             # 临时上传文件
-├── .env                 # 环境变量
-├── .env.example         # 环境变量示例
-├── Dockerfile           # Docker配置
-├── docker-compose.yml   # Docker Compose配置
-├── nginx.conf           # Nginx配置
-├── package.json         # 项目依赖
-└── README.md            # 项目说明
+├── src/                    # 源代码目录
+│   ├── config/             # 配置文件
+│   ├── controllers/        # 控制器
+│   ├── middlewares/        # 中间件
+│   ├── models/             # 数据模型
+│   ├── routes/             # 路由定义
+│   ├── services/           # 业务逻辑层
+│   └── index.js            # 入口文件
+├── scripts/                # 脚本文件
+│   └── init.sql           # 数据库初始化脚本
+├── uploads/                # 临时上传文件
+├── .env                    # 环境变量配置
+├── .env.example            # 环境变量示例
+├── Dockerfile              # Docker构建文件
+├── docker-compose.yml      # Docker Compose配置
+├── nginx.conf              # Nginx配置
+├── package.json            # 项目依赖
+└── README.md               # 项目说明文档
 ```
 
 ## 环境配置
 
-### 1. 安装依赖
-
-```bash
-npm install
-```
-
-### 2. 配置环境变量
+### 1. 配置环境变量
 
 复制`.env.example`文件并重命名为`.env`，然后根据实际情况修改配置：
 
@@ -209,198 +129,194 @@ cp .env.example .env
 ```
 
 配置内容包括：
+
 - 数据库连接信息
 - Redis连接信息
 - JWT密钥
 - 腾讯云COS配置
-- 服务器端口
 
 ## 部署方式
 
-### 1. Docker部署（推荐）
+### Docker部署（推荐）
 
 使用Docker Compose一键部署整个后端服务：
 
 ```bash
+# 构建并启动服务
+docker-compose up -d --build
+
+# 仅启动服务
 docker-compose up -d
 ```
 
 此命令将启动以下服务：
+
 - MySQL 5.7
 - Redis
 - Node.js应用
 - Nginx
 
-### 2. 传统部署
+### 服务管理命令
 
-#### 2.1 安装依赖
+```bash
+# 重启所有服务
+docker-compose restart
+
+# 重启单个服务
+docker-compose restart node-app
+
+# 停止服务
+docker-compose down
+
+# 查看服务状态
+docker-compose ps
+
+# 查看服务日志
+docker-compose logs -f node-app
+```
+
+## 开发指南
+
+### 1. 安装依赖
 
 ```bash
 npm install
 ```
 
-#### 2.2 启动服务
+### 2. 启动开发服务
 
 ```bash
-node src/index.js
+npm run dev
 ```
 
-## 服务管理
+### 3. 代码风格
 
-### 1. Docker部署服务管理
-
-#### 1.1 重启服务
-
-```bash
-docker-compose restart
-```
-
-#### 1.2 停止服务
-
-```bash
-docker-compose down
-```
-
-#### 1.3 查看服务状态
-
-```bash
-docker-compose ps
-```
-
-#### 1.4 查看服务日志
-
-```bash
-# 查看所有服务日志
-docker-compose logs
-
-# 查看特定服务日志（如node-app）
-docker-compose logs node-app
-
-# 实时查看日志
-docker-compose logs -f
-```
-
-#### 1.5 重新构建并启动服务
-
-```bash
-docker-compose up -d --build
-```
-
-### 2. 传统部署服务管理
-
-#### 2.1 使用PM2管理服务（推荐）
-
-安装PM2：
-
-```bash
-npm install -g pm2
-```
-
-使用PM2启动服务：
-
-```bash
-pm2 start src/index.js --name flower-backend
-```
-
-重启服务：
-
-```bash
-pm2 restart flower-backend
-```
-
-停止服务：
-
-```bash
-pm2 stop flower-backend
-```
-
-查看服务状态：
-
-```bash
-pm2 status
-```
-
-查看服务日志：
-
-```bash
-pm2 logs flower-backend
-```
-
-#### 2.2 手动管理服务
-
-查看运行中的Node.js进程：
-
-```bash
-ps aux | grep node
-```
-
-停止服务（使用进程ID）：
-
-```bash
-kill <进程ID>
-```
-
-## API文档
-
-### 认证相关
-
-- `POST /v1/auth/login` - 微信登录
-- `POST /v1/auth/logout` - 退出登录
-
-### 花卉地点
-
-- `GET /v1/locations` - 获取所有花卉地点
-- `GET /v1/locations/:id` - 获取单个花卉地点详情
-- `POST /v1/locations` - 创建花卉地点（管理员）
-- `PUT /v1/locations/:id` - 更新花卉地点（管理员）
-- `DELETE /v1/locations/:id` - 删除花卉地点（管理员）
-
-### 打卡管理
-
-- `GET /v1/checkins` - 获取所有打卡数据
-- `POST /v1/checkins` - 创建打卡（需认证）
-- `POST /v1/checkins/:id/like` - 点赞打卡（需认证）
-- `POST /v1/checkins/:id/report` - 举报打卡（需认证）
-
-### 成就与称号
-
-- `GET /v1/achievements` - 获取所有成就类型
-- `GET /v1/achievements/me` - 获取我的成就（需认证）
-- `GET /v1/achievements/user/:id` - 获取指定用户的成就
-- `GET /v1/titles` - 获取所有称号类型
-- `GET /v1/titles/me` - 获取我的称号（需认证）
-
-### 管理员功能
-
-- `GET /v1/admin/stats` - 获取系统统计数据（管理员）
-- `GET /v1/admin/checkins/pending` - 获取待审核打卡（管理员）
-- `PATCH /v1/admin/checkins/:id/audit` - 审核打卡（管理员）
-
-### 订阅功能
-
-- `POST /v1/subscriptions` - 订阅花卉花期
-- `GET /v1/subscriptions/user` - 获取用户订阅列表
-- `DELETE /v1/subscriptions/:id` - 取消订阅
-
-## 开发指南
-
-### 1. 代码风格
 - 遵循JavaScript ES6+语法
 - 使用Promise或async/await处理异步操作
 - 保持代码模块化和可维护性
 
-### 2. 数据库操作
+### 4. 数据库操作
+
 - 使用MySQL连接池
 - 避免直接执行SQL语句，使用参数化查询防止SQL注入
-- 数据库迁移和初始化使用`scripts/init.sql`脚本
+- 使用模型层封装数据库操作
 
-### 3. 错误处理
-- 统一的错误响应格式
-- 适当的错误日志记录
+### 5. API开发规范
+
+- 遵循RESTful API设计规范
+- 使用统一的响应格式
+- 适当的错误处理和日志记录
+- API版本控制
+
+## API文档
+
+### 基础URL
+
+所有API请求的基础URL为：`http://your-domain.com/v1`
+
+### 认证
+
+大多数API需要认证，认证方式为在请求头中添加`Authorization: Bearer <token>`，其中`<token>`为登录后获取的JWT令牌。
+
+### 主要API端点
+
+#### 1. 认证路由 `/v1/auth`
+
+| 方法 | 路径 | 功能 | 认证 | 管理员 |
+|------|------|------|------|--------|
+| POST | `/login` | 微信小程序登录 | 否 | 否 |
+| POST | `/register` | 微信小程序注册/更新用户信息 | 否 | 否 |
+| GET  | `/web/login` | 获取网页微信登录二维码 | 否 | 否 |
+| GET  | `/web/login/status` | 检查网页登录状态 | 否 | 否 |
+| GET  | `/web/callback` | 网页微信登录回调 | 否 | 否 |
+| POST | `/logout` | 退出登录 | 是 | 否 |
+| POST | `/update` | 更新微信用户信息 | 是 | 否 |
+
+#### 2. 用户路由 `/v1/users`
+
+| 方法 | 路径 | 功能 | 认证 | 管理员 |
+|------|------|------|------|--------|
+| GET  | `/me` | 获取当前登录用户信息 | 是 | 否 |
+| PUT  | `/me` | 更新当前用户信息 | 是 | 否 |
+| GET  | `/` | 获取用户列表 | 是 | 是 |
+| GET  | `/:id` | 获取单个用户信息 | 是 | 否 |
+| POST | `/` | 创建用户 | 否 | 否 |
+| PUT  | `/:id` | 更新用户信息 | 是 | 否 |
+| DELETE | `/:id` | 删除用户 | 是 | 是 |
+
+#### 3. 地点路由 `/v1/locations`
+
+| 方法 | 路径 | 功能 | 认证 | 管理员 |
+|------|------|------|------|--------|
+| GET  | `/` | 获取所有花卉地点 | 否 | 否 |
+| GET  | `/:id` | 获取单个花卉地点详情 | 否 | 否 |
+| POST | `/` | 创建花卉地点 | 是 | 是 |
+| PUT  | `/:id` | 更新花卉地点 | 是 | 是 |
+| DELETE | `/:id` | 删除花卉地点 | 是 | 是 |
+| PATCH | `/:id/status` | 更新花期状态 | 是 | 是 |
+| POST | `/:id/vote` | 花期状态投票 | 是 | 否 |
+
+#### 4. 打卡路由 `/v1/checkins`
+
+| 方法 | 路径 | 功能 | 认证 | 管理员 |
+|------|------|------|------|--------|
+| POST | `/` | 创建打卡 | 是 | 否 |
+| GET  | `/me` | 获取我的打卡列表 | 是 | 否 |
+| GET  | `/place/:placeId` | 获取某地点的打卡列表 | 是 | 否 |
+| GET  | `/flower/:flowerId` | 获取某花卉的打卡列表 | 是 | 否 |
+| GET  | `/:id` | 获取单个打卡详情 | 是 | 否 |
+| PUT  | `/:id` | 更新打卡内容 | 是 | 否 |
+| DELETE | `/:id` | 删除打卡 | 是 | 否 |
+| POST | `/:id/like` | 点赞打卡 | 是 | 否 |
+| POST | `/:id/report` | 举报打卡 | 是 | 否 |
+| GET  | `/:id/likes` | 获取打卡点赞用户列表 | 是 | 否 |
+
+#### 5. 花卉路由 `/v1/flowers`
+
+| 方法 | 路径 | 功能 | 认证 | 管理员 |
+|------|------|------|------|--------|
+| GET  | `/` | 获取花卉列表 | 是 | 否 |
+| GET  | `/:id` | 获取单个花卉详情 | 是 | 否 |
+| POST | `/` | 创建花卉信息 | 是 | 是 |
+| PUT  | `/:id` | 更新花卉信息 | 是 | 是 |
+| DELETE | `/:id` | 删除花卉 | 是 | 是 |
+
+#### 6. 成就与称号
+
+##### 成就路由 `/v1/achievements`
+
+| 方法 | 路径 | 功能 | 认证 | 管理员 |
+|------|------|------|------|--------|
+| GET  | `/` | 获取所有成就 | 否 | 否 |
+| GET  | `/me` | 获取我的成就 | 是 | 否 |
+| GET  | `/user/:id` | 查看他人成就 | 否 | 否 |
+
+##### 称号路由 `/v1/titles`
+
+| 方法 | 路径 | 功能 | 认证 | 管理员 |
+|------|------|------|------|--------|
+| GET  | `/` | 获取所有称号 | 否 | 否 |
+| GET  | `/me` | 获取我的称号 | 是 | 否 |
+
+#### 7. 订阅功能 `/v1/subscriptions`
+
+| 方法 | 路径 | 功能 | 认证 | 管理员 |
+|------|------|------|------|--------|
+| POST | `/` | 订阅花卉花期 | 是 | 否 |
+| GET  | `/` | 获取我的订阅列表 | 是 | 否 |
+| DELETE | `/:locationId` | 取消订阅 | 是 | 否 |
+
+#### 8. 管理员路由 `/v1/admin`
+
+| 方法 | 路径 | 功能 | 认证 | 管理员 |
+|------|------|------|------|--------|
+| GET  | `/stats` | 获取统计数据 | 是 | 是 |
+| GET  | `/checkins/pending` | 待复核举报列表 | 是 | 是 |
+| PATCH | `/checkins/:id/audit` | 审核操作 | 是 | 是 |
 
 ## 注意事项
 
-1. 确保Docker和Docker Compose已正确安装
+1. 确保Docker和Docker Compose已正确安装（如果使用Docker部署）
 2. 修改`.env`文件中的配置时，注意敏感信息的保护
 3. 开发环境和生产环境的配置应分开管理
 4. 定期备份数据库数据
