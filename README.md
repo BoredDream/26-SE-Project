@@ -2,7 +2,6 @@
 
 <div align="center">
 
-![狮山花园 Banner](https://img.shields.io/badg狮山花园狮山花园-校园花卉地图小程序-2E7D32?style=for-the-badge&logo=wechat&logoColor=white)
 
 **不再错过每一次花开**
 
