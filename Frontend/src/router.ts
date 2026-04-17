@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import Login from './views/login.vue'
+import Register from './views/Register.vue'
 import Home from './views/Home.vue'
 import Map from './views/Map.vue'
 import Garden from './views/Garden.vue'
@@ -7,6 +8,11 @@ import Profile from './views/Profile.vue'
 import Navigation from './views/Navigation.vue'
 
 const routes = [
+  {
+    path: '/register',
+    name: 'Register',
+    component: Register
+  },
   {
     path: '/',
     redirect: '/login'
@@ -59,7 +65,7 @@ router.beforeEach((to, from, next) => {
 
   if (to.meta.requiresAuth && !isAuthenticated) {
     next('/login')
-  } else if (to.path === '/login' && isAuthenticated) {
+  } else if ((to.path === '/login' || to.path === '/register') && isAuthenticated) {
     next('/home')
   } else {
     next()

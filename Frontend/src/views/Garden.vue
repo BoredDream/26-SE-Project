@@ -91,10 +91,12 @@ import { ref, computed, onMounted } from 'vue';
 import BottomNav from '../components/BottomNav.vue';
 import { useLocationStore } from '@/stores/location';
 import { useCheckinStore } from '@/stores/checkin';
+import { useAuthStore } from '@/stores/auth';
 import type { Location } from '@/services/api';
 
 const locationStore = useLocationStore();
 const checkinStore = useCheckinStore();
+const authStore = useAuthStore();
 
 // 花卉分类
 const categories = ref([
@@ -132,7 +134,7 @@ const filteredFlowers = computed(() => {
 
 // 检查花卉是否已打卡
 const isChecked = (locationId: number) => {
-  return checkinStore.checkins.some(checkin => checkin.location_id === locationId);
+  return checkinStore.checkins.some(checkin => checkin.flower_place_id === locationId);
 };
 
 // 获取花卉图标
@@ -180,7 +182,9 @@ const toggleCheckin = async (flower: Location) => {
     } else {
       // 打卡
       await checkinStore.createCheckin({
-        location_id: flower.id,
+        user_id: authStore.user?.id ?? 1,
+        flower_place_id: flower.id,
+        bloom_report: 'blooming',
         content: `在${flower.name}打卡！`,
         images: []
       });

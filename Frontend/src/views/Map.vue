@@ -453,6 +453,28 @@ onMounted(async () => {
 
     // 保存地图实例到全局
     window.mapInstance = map;
+
+    // 将后端地点数据渲染为地图标记
+    const locationMarkers = locationStore.locations
+      .map(location => {
+        const lng = toNumber(location.longitude)
+        const lat = toNumber(location.latitude)
+        if (Number.isNaN(lng) || Number.isNaN(lat)) {
+          return null
+        }
+
+        return new AMap.Marker({
+          position: [lng, lat],
+          title: location.name,
+        })
+      })
+      .filter((marker): marker is any => marker !== null)
+
+    if (locationMarkers.length) {
+      map.add(locationMarkers)
+      map.setFitView(locationMarkers)
+    }
+
     placeSearch.value = new AMap.PlaceSearch({
       pageSize: 6,
       pageIndex: 1,

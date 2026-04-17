@@ -14,8 +14,23 @@ export const useLocationStore = defineStore('location', () => {
     error.value = null
 
     try {
-      const response = await api.locations.getList()
-      locations.value = response.data
+      const response = await api.map.flowers()
+      locations.value = response.data.map(item => ({
+        id: item.flower_place_id,
+        flower_place_id: item.flower_place_id,
+        flower_id: item.flower_id,
+        place_id: item.place_id,
+        name: item.place_name,
+        flower_species: item.flower_name,
+        latitude: String(item.latitude),
+        longitude: String(item.longitude),
+        bloom_status: item.bloom_status,
+        description: `花卉 ${item.flower_name}，地点 ${item.place_name}`,
+        historical_bloom_start: null,
+        historical_bloom_end: null,
+        cover_image: '',
+        checkin_count: 0,
+      }))
     } catch (err) {
       error.value = err instanceof Error ? err.message : '加载位置失败'
     } finally {
@@ -24,22 +39,36 @@ export const useLocationStore = defineStore('location', () => {
   }
 
   const getLocationById = async (id: number) => {
+    const existing = locations.value.find(location => location.id === id)
+    if (existing) {
+      return existing
+    }
+
     try {
-      const response = await api.locations.getById(id)
-      return response.data
+      const response = await api.map.flowers()
+      const item = response.data.find(location => location.flower_place_id === id)
+      if (!item) {
+        throw new Error('未找到该地点')
+      }
+
+      return {
+        id: item.flower_place_id,
+        flower_place_id: item.flower_place_id,
+        flower_id: item.flower_id,
+        place_id: item.place_id,
+        name: item.place_name,
+        flower_species: item.flower_name,
+        latitude: String(item.latitude),
+        longitude: String(item.longitude),
+        bloom_status: item.bloom_status,
+        description: `花卉 ${item.flower_name}，地点 ${item.place_name}`,
+        historical_bloom_start: null,
+        historical_bloom_end: null,
+        cover_image: '',
+        checkin_count: 0,
+      }
     } catch (err) {
       error.value = err instanceof Error ? err.message : '获取位置详情失败'
-      throw err
-    }
-  }
-
-  const updateLocationStatus = async (id: number, status: number) => {
-    try {
-      await api.locations.updateStatus(id, status)
-      // 注意：API响应中没有status字段，这里不更新本地数据
-      console.log(`位置 ${id} 状态已更新为 ${status}`)
-    } catch (err) {
-      error.value = err instanceof Error ? err.message : '更新状态失败'
       throw err
     }
   }
@@ -51,6 +80,5 @@ export const useLocationStore = defineStore('location', () => {
     error,
     loadLocations,
     getLocationById,
-    updateLocationStatus,
   }
 })

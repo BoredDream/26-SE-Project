@@ -16,7 +16,23 @@
       </div>
 
       <div v-else class="login-content">
-        <!-- 演示模式按钮 -->
+        <div class="login-fields">
+          <label>
+            用户名
+            <input v-model="username" type="text" placeholder="请输入用户名" />
+          </label>
+          <label>
+            密码
+            <input v-model="password" type="password" placeholder="请输入密码" />
+          </label>
+          <button @click="handleLogin" class="login-btn" :disabled="isLoading">
+            登录
+          </button>
+        </div>
+        <div class="login-actions">
+          <span>没有账号？<a @click.prevent="goRegister" href="/register">注册</a></span>
+        </div>
+        <div class="divider">或</div>
         <button @click="handleDemoLogin" class="demo-login-btn" :disabled="isLoading">
           演示模式
         </button>
@@ -29,55 +45,70 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
-import { api } from '@/services/api'
 
 const router = useRouter()
 const authStore = useAuthStore()
 
+const username = ref('')
+const password = ref('')
 const isLoading = ref(false)
 const error = ref<string | null>(null)
 
 // 检查是否已登录
 onMounted(async () => {
   if (authStore.isAuthenticated) {
-    // 如果已登录，直接跳转到首页
     router.push('/home')
     return
   }
 
-  // 尝试从本地存储恢复用户状态
   await authStore.loadUser()
   if (authStore.isAuthenticated) {
     router.push('/home')
   }
 })
 
-// 演示模式登录
+const handleLogin = async () => {
+  if (!username.value || !password.value) {
+    error.value = '请输入用户名和密码'
+    return
+  }
+
+  isLoading.value = true
+  error.value = null
+
+  try {
+    const success = await authStore.login(username.value, password.value)
+    if (success) {
+      router.push('/home')
+    } else {
+      error.value = authStore.error || '登录失败，请检查账号密码'
+    }
+  } catch (err) {
+    error.value = err instanceof Error ? err.message : '登录失败'
+  } finally {
+    isLoading.value = false
+  }
+}
+
+const goRegister = () => {
+  router.push('/register')
+}
+
 const handleDemoLogin = async () => {
   isLoading.value = true
   error.value = null
 
   try {
-    // 使用演示token
     const demoToken = 'demo_token_' + Date.now()
     authStore.token = demoToken
-
-    // 设置API客户端token
-    api.setToken(demoToken)
-
-    // 设置演示用户数据
     authStore.user = {
       id: 1,
-      openid: 'demo_openid',
+      username: 'demo',
       nickname: '花园探索者',
-      avatar: '',
-      level: 8,
-      exp: 1250,
-      total_checkins: 47,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
+      avatar_url: null,
+      role: 'user',
     }
-
+    authStore.isAuthenticated
     router.push('/home')
   } catch (err) {
     error.value = '演示模式启动失败'

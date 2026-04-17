@@ -14,7 +14,7 @@ export const useAchievementStore = defineStore('achievement', () => {
     error.value = null
 
     try {
-      const response = await api.achievements.getList()
+      const response = await api.achievements.list()
       achievements.value = response.data
     } catch (err) {
       error.value = err instanceof Error ? err.message : '加载成就失败'
@@ -25,7 +25,7 @@ export const useAchievementStore = defineStore('achievement', () => {
 
   const loadTitles = async () => {
     try {
-      const response = await api.titles.getList()
+      const response = await api.titles.list()
       titles.value = response.data
     } catch (err) {
       error.value = err instanceof Error ? err.message : '加载头衔失败'

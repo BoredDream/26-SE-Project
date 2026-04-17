@@ -22,7 +22,13 @@ export const useCheckinStore = defineStore('checkin', () => {
     }
   }
 
-  const createCheckin = async (data: { location_id: number; content: string; images: string[] }) => {
+  const createCheckin = async (data: {
+    user_id: number
+    flower_place_id: number
+    bloom_report: string
+    content?: string
+    images?: File[]
+  }) => {
     try {
       const response = await api.checkins.create(data)
       checkins.value.unshift(response.data) // 添加到列表开头
@@ -36,7 +42,6 @@ export const useCheckinStore = defineStore('checkin', () => {
   const likeCheckin = async (id: number) => {
     try {
       await api.checkins.like(id)
-      // 更新本地点赞数
       const checkin = checkins.value.find(c => c.id === id)
       if (checkin) {
         checkin.likes_count += 1

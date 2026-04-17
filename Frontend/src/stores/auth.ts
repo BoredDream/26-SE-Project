@@ -11,21 +11,58 @@ export const useAuthStore = defineStore('auth', () => {
 
   const isAuthenticated = computed(() => !!token.value && !!user.value)
 
-  const login = async (code: string) => {
+  const formatApiError = (err: unknown, fallback: string) => {
+    if (err instanceof Error) {
+      if (err.message.includes('Failed to fetch')) {
+        return '无法连接后端，请检查网络或后端服务是否可用。'
+      }
+      return err.message
+    }
+    return fallback
+  }
+
+  const login = async (username: string, password: string) => {
     isLoading.value = true
     error.value = null
 
     try {
-      const response = await api.auth.login(code)
-      const { token: newToken, user: userData } = response.data
+      const response = await api.auth.login(username, password)
+      const newToken = response.data.access_token
+      const userData = response.data
 
-      token.value = newToken
+      token.value = newToken || null
       user.value = userData
-      api.setToken(newToken)
+      if (newToken) {
+        api.setToken(newToken)
+      }
 
       return true
     } catch (err) {
-      error.value = err instanceof Error ? err.message : '登录失败'
+      error.value = formatApiError(err, '登录失败')
+      return false
+    } finally {
+      isLoading.value = false
+    }
+  }
+
+  const register = async (username: string, password: string, nickname: string) => {
+    isLoading.value = true
+    error.value = null
+
+    try {
+      const response = await api.auth.register({ username, password, nickname })
+      const newToken = response.data.access_token
+      const userData = response.data
+
+      token.value = newToken || null
+      user.value = userData
+      if (newToken) {
+        api.setToken(newToken)
+      }
+
+      return true
+    } catch (err) {
+      error.value = formatApiError(err, '注册失败')
       return false
     } finally {
       isLoading.value = false
@@ -42,7 +79,7 @@ export const useAuthStore = defineStore('auth', () => {
     if (!token.value) return
 
     try {
-      const response = await api.users.getCurrent()
+      const response = await api.user.getInfo()
       user.value = response.data
     } catch (err) {
       // Token可能已过期
@@ -57,6 +94,7 @@ export const useAuthStore = defineStore('auth', () => {
     error,
     isAuthenticated,
     login,
+    register,
     logout,
     loadUser,
   }

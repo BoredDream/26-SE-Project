@@ -139,15 +139,16 @@ const locationStore = useLocationStore();
 const userInfo = computed(() => authStore.user);
 const progressPercent = computed(() => {
   if (!userInfo.value) return 0;
+  const currentExp = userInfo.value.exp ?? 0;
   // 假设下一级需要当前经验的1.5倍
-  const nextLevelExp = userInfo.value.exp * 1.5;
-  return (userInfo.value.exp / nextLevelExp) * 100;
+  const nextLevelExp = Math.max(currentExp * 1.5, 1);
+  return (currentExp / nextLevelExp) * 100;
 });
 
 // 最近打卡记录
 const recentCheckins = computed(() => {
   return checkinStore.checkins.slice(0, 4).map(checkin => {
-    const location = locationStore.locations.find(loc => loc.id === checkin.location_id);
+    const location = locationStore.locations.find(loc => loc.id === checkin.flower_place_id);
     return {
       id: checkin.id,
       flowerName: location?.name || '未知花卉',
