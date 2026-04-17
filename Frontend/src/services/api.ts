@@ -1,124 +1,71 @@
 // API服务层
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? ''
-
-// In development, Vite can proxy `/api` requests to the backend to avoid CORS issues.
-// For production, set VITE_API_BASE_URL to the backend host if needed.
-
-type QueryParams = Record<string, string | number | boolean | undefined>
+const API_BASE_URL = 'http://101.37.240.166:3001'
 
 // API响应类型定义
 export interface ApiResponse<T = any> {
   code: number
-  message?: string
+  message: string
   data: T
 }
 
 export interface User {
   id: number
-  username?: string
+  openid: string
   nickname: string
-  avatar_url: string | null
-  role?: string
-  access_token?: string
-  level?: number
-  exp?: number
-  total_checkins?: number
-  achievements?: Achievement[]
-  titles?: Title[]
+  avatar: string
+  level: number
+  exp: number
+  total_checkins: number
+  created_at: string
+  updated_at: string
 }
 
 export interface Location {
   id: number
-  flower_place_id: number
-  flower_id: number
-  place_id: number
   name: string
-  flower_species: string
+  description: string
   latitude: string
   longitude: string
+  flower_species: string
   bloom_status: string
-  description?: string
-  historical_bloom_start?: string | null
-  historical_bloom_end?: string | null
-  cover_image?: string
-  checkin_count?: number
-}
-
-export interface Flower {
-  id: number
-  species: string
-  scientific_name: string
-  bloom_status: string
+  historical_bloom_start: string | null
+  historical_bloom_end: string | null
   cover_image: string
-}
-
-export interface FlowerDetail extends Flower {
-  family: string
-  genus: string
-  historical_bloom_start: string
-  historical_bloom_end: string
-  description: string
-  places: Place[]
-}
-
-export interface Place {
-  id: number
-  name: string
-  description: string
-  latitude: number
-  longitude: number
-  flowers?: Array<{
-    id: number
-    species: string
-    bloom_status: string
-  }>
-}
-
-export interface FlowerPlaceMapItem {
-  flower_place_id: number
-  flower_id: number
-  flower_name: string
-  place_id: number
-  place_name: string
-  latitude: number
-  longitude: number
-  bloom_status: string
+  checkin_count: number
+  status_updated_at: string | null
+  created_at: string
+  updated_at?: string
 }
 
 export interface Checkin {
   id: number
   user_id: number
-  flower_place_id: number
-  bloom_report: string
+  location_id: number
   content: string
   images: string[]
   likes_count: number
+  dislikes_count?: number
+  comments_count?: number
   created_at: string
-  user?: {
-    id: number
-    nickname: string
-    avatar_url: string | null
-  }
-  flower?: {
-    id: number
-    species: string
-  }
-  place?: {
-    id: number
-    name: string
-  }
+  updated_at: string
+  user?: User
+  location?: Location
 }
 
 export interface Achievement {
   id: number
-  name?: string
-  icon?: string
+  name: string
   description: string
+  icon: string
+  requirement: number
+  reward_exp: number
 }
 
 export interface Title {
   id: number
+  name: string
   description: string
+  requirement: number
 }
 
 // HTTP请求工具函数
@@ -128,6 +75,7 @@ class ApiClient {
 
   constructor(baseURL: string) {
     this.baseURL = baseURL
+    // 从localStorage获取token
     this.token = localStorage.getItem('token')
   }
 
@@ -141,80 +89,57 @@ class ApiClient {
     localStorage.removeItem('token')
   }
 
-  private buildQueryString(params?: QueryParams) {
-    if (!params) return ''
-    const query = Object.entries(params)
-      .filter(([, value]) => value !== undefined && value !== null && value !== '')
-      .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
-      .join('&')
-    return query ? `?${query}` : ''
-  }
-
   private async request<T>(
     endpoint: string,
-    options: RequestInit = {},
-    params?: QueryParams
+    options: RequestInit = {}
   ): Promise<ApiResponse<T>> {
-    const url = `${this.baseURL}${endpoint}${this.buildQueryString(params)}`
-    const headers: Record<string, string> = {
-      ...((options.headers as Record<string, string>) || {}),
-    }
-
-    const isFormData = options.body instanceof FormData
-    if (!isFormData) {
-      headers['Content-Type'] = 'application/json'
-    }
-
-    if (this.token) {
-      headers['Authorization'] = `Bearer ${this.token}`
-    }
-
+    const url = `${this.baseURL}${endpoint}`
     const config: RequestInit = {
+      headers: {
+        'Content-Type': 'application/json',
+        ...options.headers,
+      },
       ...options,
-      headers,
+    }
+
+    // 添加认证头
+    if (this.token) {
+      config.headers = {
+        ...config.headers,
+        'Authorization': `Bearer ${this.token}`,
+      }
     }
 
     try {
       const response = await fetch(url, config)
-      const payload = await response.json()
+      const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(payload?.message || `HTTP error! status: ${response.status}`)
+        throw new Error(data.message || `HTTP error! status: ${response.status}`)
       }
 
-      return {
-        code: response.status,
-        message: payload?.message || response.statusText,
-        data: payload,
-      }
+      return data
     } catch (error) {
       console.error('API request failed:', error)
       throw error
     }
   }
 
-  async get<T>(endpoint: string, params?: QueryParams): Promise<ApiResponse<T>> {
-    return this.request<T>(endpoint, { method: 'GET' }, params)
+  async get<T>(endpoint: string): Promise<ApiResponse<T>> {
+    return this.request<T>(endpoint, { method: 'GET' })
   }
 
   async post<T>(endpoint: string, data?: any): Promise<ApiResponse<T>> {
     return this.request<T>(endpoint, {
       method: 'POST',
-      body: data,
-    })
-  }
-
-  async put<T>(endpoint: string, data?: any): Promise<ApiResponse<T>> {
-    return this.request<T>(endpoint, {
-      method: 'PUT',
-      body: data,
+      body: data ? JSON.stringify(data) : undefined,
     })
   }
 
   async patch<T>(endpoint: string, data?: any): Promise<ApiResponse<T>> {
     return this.request<T>(endpoint, {
       method: 'PATCH',
-      body: data,
+      body: data ? JSON.stringify(data) : undefined,
     })
   }
 
@@ -223,87 +148,63 @@ class ApiClient {
   }
 }
 
+// 创建API客户端实例
 const apiClient = new ApiClient(API_BASE_URL)
 
+// API服务方法
 export const api = {
+  // 健康检查
   health: () => apiClient.get('/health'),
 
+  // 认证相关
   auth: {
-    login: (username: string, password: string) =>
-      apiClient.post<User>('/api/user/login', JSON.stringify({ username, password })),
-    register: (payload: { username: string; password: string; nickname: string; avatar_url?: string }) =>
-      apiClient.post<User>('/api/user/register', JSON.stringify(payload)),
+    login: (code: string) => apiClient.post<{ token: string; user: User }>('/v1/auth/login', { code }),
   },
 
-  user: {
-    getInfo: () => apiClient.get<User>('/api/user/info'),
-    updateInfo: (payload: { nickname: string; avatar_url?: string }) =>
-      apiClient.put<{ message: string }>('/api/user/info', JSON.stringify(payload)),
-    getAchievements: () => apiClient.get<Achievement[]>('/api/user/achievements'),
-    getTitles: () => apiClient.get<Title[]>('/api/user/titles'),
+  // 用户相关
+  users: {
+    getList: () => apiClient.get<User[]>('/v1/users'),
+    getById: (id: number) => apiClient.get<User>(`/v1/users/${id}`),
+    getCurrent: () => apiClient.get<User>('/v1/users/me'),
   },
 
-  flowers: {
-    list: (status?: string, species?: string) =>
-      apiClient.get<Flower[]>('/api/flowers', { status, species }),
-    detail: (id: number) => apiClient.get<FlowerDetail>(`/api/flowers/${id}`),
-    bloomStatus: (id: number) =>
-      apiClient.get<{ current_status: string; historical_bloom_start: string; historical_bloom_end: string }>(
-        `/api/flowers/${id}/bloom-status`
-      ),
-    checkins: (id: number) => apiClient.get<Checkin[]>(`/api/flowers/${id}/checkins`),
+  // 位置相关
+  locations: {
+    getList: () => apiClient.get<Location[]>('/v1/locations'),
+    getById: (id: number) => apiClient.get<Location>(`/v1/locations/${id}`),
+    updateStatus: (id: number, status: number) => apiClient.patch(`/v1/locations/${id}/status`, { status }),
   },
 
-  places: {
-    list: (flowerId?: number) => apiClient.get<Place[]>('/api/places', { flower_id: flowerId }),
-    detail: (id: number) => apiClient.get<Place>(`/api/places/${id}`),
-    checkins: (id: number) => apiClient.get<Checkin[]>(`/api/places/${id}/checkins`),
-  },
-
-  map: {
-    flowers: () => apiClient.get<FlowerPlaceMapItem[]>('/api/map/flowers'),
-    filter: (flowerId: number) => apiClient.get<FlowerPlaceMapItem[]>('/api/map/filter', { flower_id: flowerId }),
-  },
-
+  // 签到相关
   checkins: {
-    getList: (params?: QueryParams) => apiClient.get<Checkin[]>('/api/checkins', params),
-    getById: (id: number) => apiClient.get<Checkin>(`/api/checkins/${id}`),
-    create: (payload: {
-      user_id: number
-      flower_place_id: number
-      bloom_report: string
-      content?: string
-      images?: File[]
-    }) => {
-      const formData = new FormData()
-      formData.append('user_id', String(payload.user_id))
-      formData.append('flower_place_id', String(payload.flower_place_id))
-      formData.append('bloom_report', payload.bloom_report)
-      if (payload.content) {
-        formData.append('content', payload.content)
-      }
-      if (payload.images && payload.images.length > 0) {
-        payload.images.forEach((image, index) => {
-          formData.append('images', image)
-        })
-      }
-      return apiClient.post<Checkin>('/api/checkins', formData)
-    },
-    like: (id: number) => apiClient.put<{ likes_count: number }>(`/api/checkins/${id}/like`, JSON.stringify({})),
-    report: (id: number, reason: string) =>
-      apiClient.post<{ message: string }>(`/api/checkins/${id}/report`, JSON.stringify({ reason })),
+    getList: () => apiClient.get<Checkin[]>('/v1/checkins'),
+    create: (data: { location_id: number; content: string; images: string[] }) =>
+      apiClient.post<Checkin>('/v1/checkins', data),
+    like: (id: number) => apiClient.post(`/v1/checkins/${id}/like`),
+    report: (id: number, reason: string) => apiClient.post(`/v1/checkins/${id}/report`, { reason }),
   },
 
+  // 订阅相关
+  subscriptions: {
+    getList: () => apiClient.get('/v1/subscriptions'),
+  },
+
+  // 成就相关
   achievements: {
-    list: () => apiClient.get<Achievement[]>('/api/achievements'),
-    getList: () => apiClient.get<Achievement[]>('/api/achievements'),
+    getList: () => apiClient.get<Achievement[]>('/v1/achievements'),
   },
 
+  // 头衔相关
   titles: {
-    list: () => apiClient.get<Title[]>('/api/titles'),
-    getList: () => apiClient.get<Title[]>('/api/titles'),
+    getList: () => apiClient.get<Title[]>('/v1/titles'),
   },
 
+  // 管理员相关
+  admin: {
+    getStats: () => apiClient.get('/v1/admin/stats'),
+  },
+
+  // 设置token
   setToken: (token: string) => apiClient.setToken(token),
   clearToken: () => apiClient.clearToken(),
 }

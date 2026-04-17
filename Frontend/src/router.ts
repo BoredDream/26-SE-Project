@@ -1,18 +1,14 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import Login from './views/login.vue'
-import Register from './views/Register.vue'
 import Home from './views/Home.vue'
 import Map from './views/Map.vue'
 import Garden from './views/Garden.vue'
 import Profile from './views/Profile.vue'
 import Navigation from './views/Navigation.vue'
+import Checkin from './views/Checkin.vue'
+import UserDetail from './views/UserDetail.vue'
 
 const routes = [
-  {
-    path: '/register',
-    name: 'Register',
-    component: Register
-  },
   {
     path: '/',
     redirect: '/login'
@@ -47,9 +43,22 @@ const routes = [
     meta: { requiresAuth: true }
   },
   {
+    path: '/checkin',
+    name: 'Checkin',
+    component: Checkin,
+    meta: { requiresAuth: true }
+  },
+  {
     path: '/navigation',
     name: 'Navigation',
     component: Navigation,
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/user/:id',
+    name: 'UserDetail',
+    component: UserDetail,
+    props: true,
     meta: { requiresAuth: true }
   }
 ]
@@ -65,7 +74,7 @@ router.beforeEach((to, from, next) => {
 
   if (to.meta.requiresAuth && !isAuthenticated) {
     next('/login')
-  } else if ((to.path === '/login' || to.path === '/register') && isAuthenticated) {
+  } else if (to.path === '/login' && isAuthenticated) {
     next('/home')
   } else {
     next()

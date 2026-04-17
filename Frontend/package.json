@@ -5,9 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "run-p type-check \"build-only {@}\" --",
+    "dev:h5": "vite",
+    "build": "vite build",
+    "build:h5": "vite build",
     "preview": "vite preview",
-    "build-only": "vite build",
     "type-check": "vue-tsc --build"
   },
   "dependencies": {
@@ -22,7 +23,7 @@
     "@tsconfig/node24": "^24.0.4",
     "@types/node": "^24.11.0",
     "@types/three": "^0.183.1",
-    "@vitejs/plugin-vue": "^6.0.4",
+    "@vitejs/plugin-vue": "^5.0.0",
     "@vue/tsconfig": "^0.8.1",
     "npm-run-all2": "^8.0.4",
     "sass-embedded": "^1.98.0",

@@ -1,340 +1,576 @@
-<template>
-  <div class="home">
-    <div class="content">
-      <!-- 狮山花园标题 -->
-      <div class="header">
-        <h1 class="title">狮山花园</h1>
-        <p class="subtitle">探索花卉之美，发现自然魅力</p>
-      </div>
-
-      <!-- 今日概览卡片 -->
-      <div class="overview-cards">
-        <div class="card">
-          <div class="card-icon">今日</div>
-          <div class="card-content">
-            <h3>{{ todayCheckins }}</h3>
-            <p>今日打卡</p>
-          </div>
+﻿<template>
+  <div class="home-page">
+    <div class="home-scroll" ref="scrollRef" @scroll="onScroll">
+      <section class="hero-card">
+        <div class="hero-meta">
+          <p>花卉打卡与分享平台</p>
         </div>
-        <div class="card">
-          <div class="card-icon">种类</div>
-          <div class="card-content">
-            <h3>{{ totalFlowers }}</h3>
-            <p>花卉种类</p>
-          </div>
-        </div>
-        <div class="card">
-          <div class="card-icon">等级</div>
-          <div class="card-content">
-            <h3>{{ userLevel }}</h3>
-            <p>花园等级</p>
-          </div>
-        </div>
-      </div>
-
-      <!-- 今日推荐 -->
-      <div class="section">
-        <h2 class="section-title">今日推荐</h2>
-        <div v-if="featuredFlower" class="flower-card">
-          <div class="flower-image">
-            <div class="placeholder-icon">{{ getFlowerIcon(featuredFlower.flower_species) }}</div>
-          </div>
-          <div class="flower-info">
-            <h3>{{ featuredFlower.name }}</h3>
-            <p>{{ featuredFlower.description || '暂无描述' }}</p>
-            <div class="flower-tags">
-              <span class="tag">{{ getBloomPeriod(featuredFlower) }}</span>
-              <span class="tag">位置：{{ featuredFlower.flower_species }}</span>
+        <div class="carousel">
+          <div class="slide" :style="`background-image: url(${carouselPhotos[activePhoto]})`"></div>
+          <div class="carousel-footer">
+            <span>当前展示 {{ activePhoto + 1 }}/{{ carouselPhotos.length }}</span>
+            <div class="slider-dots">
+              <button
+                v-for="(photo, index) in carouselPhotos"
+                :key="index"
+                :class="{ active: index === activePhoto }"
+                @click="activePhoto = index"
+              />
             </div>
           </div>
         </div>
-        <div v-else class="loading">加载中...</div>
-      </div>
+      </section>
 
-      <!-- 花园活动 -->
-      <div class="section">
-        <h2 class="section-title">花园活动</h2>
-        <div class="activity-list">
-          <div class="activity-item">
-            <div class="activity-icon">花</div>
-            <div class="activity-content">
-              <h4>春季花卉展</h4>
-              <p>欣赏各类春季花卉的盛开</p>
-              <small>2026年3月25日 - 4月10日</small>
+      <section class="recommend-section">
+        <div class="section-title">花卉推荐</div>
+        <div class="recommend-grid">
+          <article
+            v-for="item in recommendationList"
+            :key="item.id"
+            class="recommend-card"
+          >
+            <div class="recommend-image">
+              <img :src="item.cover_image" alt="花卉图片" />
             </div>
+            <div class="recommend-content">
+              <h3>{{ item.name }}</h3>
+              <p>{{ item.flower_species }}</p>
+              <div class="recommend-status">{{ formatStatus(item.bloom_status) }}</div>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section class="post-section">
+        <div class="post-header">
+          <div>
+            <h2>花园帖子</h2>
+            <p>按时间或热度查看最新动态</p>
           </div>
-          <div class="activity-item">
-            <div class="activity-icon">拍</div>
-            <div class="activity-content">
-              <h4>花卉摄影大赛</h4>
-              <p>记录花园中最美的瞬间</p>
-              <small>进行中 - 截止4月30日</small>
-            </div>
+          <div class="post-actions">
+            <button
+              :class="{ active: sortOption === 'time' }"
+              @click="sortOption = 'time'"
+            >按时间排序</button>
+            <button
+              :class="{ active: sortOption === 'hot' }"
+              @click="sortOption = 'hot'"
+            >按热度排序</button>
           </div>
         </div>
-      </div>
+
+        <div class="post-list">
+          <article
+            v-for="post in visiblePosts"
+            :key="post.id"
+            class="post-card"
+          >
+            <div class="post-author" @click="openUser(post.user?.id)">
+              <div class="author-avatar">{{ authorNameInitial(post.user?.nickname) }}</div>
+              <div>
+                <div class="author-name">{{ post.user?.nickname || '匿名用户' }}</div>
+                <div class="author-meta">{{ formatTime(post.created_at) }}</div>
+              </div>
+            </div>
+            <p class="post-content">{{ post.content }}</p>
+            <div
+              v-if="post.images?.length"
+              :class="['post-image-grid', getImageGridClass(post.images.length)]"
+            >
+              <div
+                v-for="(image, index) in post.images"
+                :key="index"
+                class="post-image-item"
+              >
+                <img :src="image" alt="动态图片" />
+              </div>
+            </div>
+            <div class="post-footer">
+              <button class="tag-button" @click="openMap(post)" type="button">
+                花种：{{ locationSpecies(post.location_id) }}
+              </button>
+              <div class="post-actions-row">
+                <button class="action-button" @click="likePost(post.id)">点赞</button>
+                <button class="action-button" @click="dislikePost(post.id)">点踩</button>
+                <span class="comment-info">评论 {{ post.comments_count || 0 }}</span>
+              </div>
+            </div>
+          </article>
+        </div>
+
+        <div class="load-more" v-if="canLoadMore">
+          <button @click="loadMore">加载更多帖子</button>
+        </div>
+        <div class="empty-state" v-if="!visiblePosts.length">
+          暂无帖子，请先发布你的第一条打卡。
+        </div>
+      </section>
     </div>
+
+    <button class="back-to-top" v-if="showBackToTop" @click="scrollToTop">返回顶部</button>
     <BottomNav />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue';
-import BottomNav from '../components/BottomNav.vue';
-import { useAuthStore } from '@/stores/auth';
-import { useLocationStore } from '@/stores/location';
-import { useCheckinStore } from '@/stores/checkin';
-import type { Location } from '@/services/api';
+import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { useRouter } from 'vue-router'
+import BottomNav from '../components/BottomNav.vue'
+import { useAuthStore } from '@/stores/auth'
+import { useLocationStore } from '@/stores/location'
+import { useCheckinStore } from '@/stores/checkin'
+import type { Location, Checkin } from '@/services/api'
 
-const authStore = useAuthStore();
-const locationStore = useLocationStore();
-const checkinStore = useCheckinStore();
+const router = useRouter()
+const authStore = useAuthStore()
+const locationStore = useLocationStore()
+const checkinStore = useCheckinStore()
+const scrollRef = ref<HTMLElement | null>(null)
+const activePhoto = ref(0)
+const carouselIntervalId = ref<number | null>(null)
+const sortOption = ref<'time' | 'hot'>('time')
+const visibleCount = ref(10)
+const showBackToTop = ref(false)
+const carouselPhotos = [
+  'https://images.unsplash.com/photo-1493246507139-91e8fad9978e?auto=format&fit=crop&w=900&q=80',
+  'https://images.unsplash.com/photo-1501004318641-b39e6451bec6?auto=format&fit=crop&w=900&q=80',
+  'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=900&q=80',
+]
 
-// 计算属性
-const todayCheckins = computed(() => checkinStore.checkins.length);
-const totalFlowers = computed(() => locationStore.locations.length);
-const userLevel = computed(() => authStore.user?.level || 1);
+const recommendationList = computed(() => {
+  return locationStore.locations.slice(0, 3)
+})
 
-// 精选花卉
-const featuredFlower = ref<Location | null>(null);
+const sortedPosts = computed<Checkin[]>(() => {
+  const list = [...checkinStore.checkins]
+  if (sortOption.value === 'hot') {
+    return list.sort((a, b) => (b.likes_count + (b.comments_count || 0)) - (a.likes_count + (a.comments_count || 0)))
+  }
+  return list.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+})
 
-// 页面加载时获取数据
+const visiblePosts = computed(() => sortedPosts.value.slice(0, visibleCount.value))
+const canLoadMore = computed(() => visibleCount.value < sortedPosts.value.length)
+
+const todayCheckins = computed(() => checkinStore.checkins.length)
+const totalFlowers = computed(() => locationStore.locations.length)
+const userLevel = computed(() => authStore.user?.level || 1)
+
+const formatStatus = (status: string) => {
+  if (!status) {
+    return '未知状态'
+  }
+  if (status.includes('预计')) {
+    return status
+  }
+  return status
+}
+
+const locationSpecies = (locationId: number) => {
+  const item = locationStore.locations.find(location => location.id === locationId)
+  return item?.flower_species || '未知'
+}
+
+const onScroll = () => {
+  const element = scrollRef.value
+  if (!element) return
+  showBackToTop.value = element.scrollTop > 360
+  if (element.scrollTop + element.clientHeight >= element.scrollHeight - 120) {
+    loadMore()
+  }
+}
+
+const loadMore = () => {
+  if (canLoadMore.value) {
+    visibleCount.value += 10
+  }
+}
+
+const scrollToTop = () => {
+  scrollRef.value?.scrollTo({ top: 0, behavior: 'smooth' })
+}
+
+const authorNameInitial = (name?: string) => {
+  return name ? name[0] : '访'
+}
+
+const formatTime = (dateString: string) => {
+  const date = new Date(dateString)
+  const now = new Date()
+  const diff = now.getTime() - date.getTime()
+  const minutes = Math.floor(diff / 60000)
+  const hours = Math.floor(diff / 3600000)
+  const days = Math.floor(diff / 86400000)
+  if (minutes < 60) return `${minutes}分钟前`
+  if (hours < 24) return `${hours}小时前`
+  return `${days}天前`
+}
+
+const openMap = (post: Checkin) => {
+  const flowerName = locationSpecies(post.location_id)
+  router.push({ path: '/map', query: { flower: flowerName } })
+}
+
+const openUser = (id?: number) => {
+  if (!id) return
+  router.push({ name: 'UserDetail', params: { id } })
+}
+
+const likePost = async (id: number) => {
+  await checkinStore.likeCheckin(id)
+}
+
+const dislikePost = (id: number) => {
+  checkinStore.dislikeCheckin(id)
+}
+
+const getImageGridClass = (count: number) => {
+  if (count === 1) return 'one-image'
+  if (count === 2) return 'two-images'
+  if (count === 3) return 'three-images'
+  return 'many-images'
+}
+
 onMounted(async () => {
-  try {
-    // 并行加载数据
-    await Promise.all([
-      locationStore.loadLocations(),
-      checkinStore.loadCheckins(),
-    ]);
+  await Promise.all([locationStore.loadLocations(), checkinStore.loadCheckins()])
+  carouselIntervalId.value = window.setInterval(() => {
+    activePhoto.value = (activePhoto.value + 1) % carouselPhotos.length
+  }, 4500)
+})
 
-    // 设置精选花卉（第一个位置）
-    if (locationStore.locations.length > 0) {
-      featuredFlower.value = locationStore.locations[0] || null;
-    } else {
-      featuredFlower.value = null;
-    }
-  } catch (error) {
-    console.error('加载首页数据失败:', error);
+onUnmounted(() => {
+  if (carouselIntervalId.value !== null) {
+    window.clearInterval(carouselIntervalId.value)
   }
-});
-
-// 根据花卉类型获取图标
-const getFlowerIcon = (flowerSpecies: string) => {
-  const iconMap: { [key: string]: string } = {
-    '樱花': '樱',
-    '菊花': '菊',
-    '荷花': '荷',
-    '玫瑰': '玫',
-    '郁金香': '郁',
-    '向日葵': '向',
-    '百合': '百',
-    '兰花': '兰',
-    '牡丹': '牡',
-    'test': '花'
-  };
-  return iconMap[flowerSpecies] || '花';
-};
-
-// 获取花卉花期
-const getBloomPeriod = (flower: any) => {
-  if (flower.historical_bloom_start && flower.historical_bloom_end) {
-    return `${flower.historical_bloom_start} 至 ${flower.historical_bloom_end}`;
-  }
-  return '未知';
-};
+})
 </script>
 
 <style scoped>
-.home {
+.home-page {
+  min-height: 100vh;
   display: flex;
   flex-direction: column;
-  height: 100vh;
-  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  background: #f3f9f3;
 }
 
-.content {
+.home-scroll {
   flex: 1;
-  padding: 20px;
   overflow-y: auto;
-}
-
-.header {
-  text-align: center;
-  margin-bottom: 30px;
-}
-
-.title {
-  font-size: 2.5rem;
-  color: #4CAF50;
-  margin: 0;
-  font-weight: 700;
-  text-shadow: 0 2px 4px rgba(76, 175, 80, 0.3);
-}
-
-.subtitle {
-  color: #666;
-  margin: 10px 0 0 0;
-  font-size: 1rem;
-}
-
-.overview-cards {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 15px;
-  margin-bottom: 30px;
-}
-
-.card {
-  background: white;
-  border-radius: 15px;
   padding: 20px;
-  text-align: center;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.25s ease;
-  animation: fadeInUp 0.4s ease both;
 }
 
-.card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+.hero-card {
+  background: linear-gradient(135deg, #edf7ec 0%, #dff2d8 100%);
+  border-radius: 24px;
+  padding: 24px;
+  margin-bottom: 20px;
+  box-shadow: 0 18px 40px rgba(79, 118, 70, 0.08);
 }
 
-.card-icon {
-  font-size: 2rem;
-  margin-bottom: 10px;
-}
-
-.card-content h3 {
-  font-size: 1.8rem;
-  color: #4CAF50;
+.hero-meta h1 {
   margin: 0;
-  font-weight: 700;
+  color: #2f5a32;
+  font-size: 2.1rem;
 }
 
-.card-content p {
-  color: #666;
-  margin: 5px 0 0 0;
-  font-size: 0.9rem;
+.hero-meta p {
+  margin: 10px 0 0;
+  color: #5a7f5a;
 }
 
-.section {
-  margin-bottom: 30px;
+.carousel {
+  margin-top: 22px;
+  border-radius: 20px;
+  overflow: hidden;
+  position: relative;
+  min-height: 220px;
+}
+
+.slide {
+  width: 100%;
+  min-height: 220px;
+  background-size: cover;
+  background-position: center;
+}
+
+.carousel-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.82);
+  padding: 12px 16px;
+}
+
+.slider-dots {
+  display: flex;
+  gap: 8px;
+}
+
+.slider-dots button {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(76, 175, 80, 0.3);
+  cursor: pointer;
+}
+
+.slider-dots button.active {
+  background: #4caf50;
+}
+
+.recommend-section,
+.post-section {
+  margin-bottom: 22px;
 }
 
 .section-title {
-  font-size: 1.5rem;
-  color: #333;
-  margin-bottom: 15px;
-  font-weight: 600;
+  font-size: 18px;
+  color: #2b5130;
+  margin-bottom: 16px;
 }
 
-.flower-card {
+.recommend-grid {
+  display: grid;
+  gap: 16px;
+}
+
+.recommend-card {
+  display: grid;
+  grid-template-columns: 100px 1fr;
+  gap: 16px;
+  padding: 18px;
   background: white;
-  border-radius: 15px;
+  border-radius: 18px;
+  box-shadow: 0 14px 36px rgba(84, 123, 76, 0.08);
+}
+
+.recommend-image {
+  width: 100px;
+  height: 100px;
+  border-radius: 18px;
   overflow: hidden;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-  display: flex;
 }
 
-.flower-image {
-  width: 120px;
-  height: 120px;
-  background: linear-gradient(45deg, #4CAF50, #66BB6A);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 3rem;
-}
-
-.flower-image img {
+.recommend-image img {
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
 
-.flower-info {
-  flex: 1;
-  padding: 20px;
+.recommend-content h3 {
+  margin: 0 0 6px;
+  font-size: 1.05rem;
+  color: #2f5630;
 }
 
-.flower-info h3 {
-  color: #333;
-  margin: 0 0 10px 0;
-  font-size: 1.3rem;
+.recommend-content p {
+  margin: 0 0 10px;
+  color: #5e715f;
 }
 
-.flower-info p {
-  color: #666;
-  margin: 0 0 15px 0;
-  line-height: 1.5;
+.recommend-status {
+  border-radius: 999px;
+  background: #eef7ed;
+  color: #3f7b44;
+  font-size: 12px;
+  padding: 8px 12px;
+  display: inline-block;
 }
 
-.flower-tags {
+.post-header {
   display: flex;
-  gap: 8px;
-}
-
-.tag {
-  background: #E8F5E8;
-  color: #4CAF50;
-  padding: 4px 8px;
-  border-radius: 12px;
-  font-size: 0.8rem;
-  font-weight: 500;
-}
-
-.activity-list {
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
-}
-
-.activity-item {
-  background: white;
-  border-radius: 15px;
-  padding: 20px;
-  display: flex;
+  justify-content: space-between;
+  gap: 12px;
   align-items: center;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.25s ease;
-  animation: fadeInUp 0.4s ease both;
 }
 
-.activity-item:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+.post-header h2 {
+  margin: 0;
+  color: #2b5130;
+  font-size: 1.25rem;
 }
 
-.activity-icon {
-  font-size: 2rem;
-  margin-right: 15px;
+.post-header p {
+  margin: 4px 0 0;
+  color: #637860;
+  font-size: 0.95rem;
 }
 
-.activity-content h4 {
-  color: #333;
-  margin: 0 0 5px 0;
-  font-size: 1.1rem;
+.post-actions {
+  display: flex;
+  gap: 10px;
 }
 
-.activity-content p {
-  color: #666;
-  margin: 0 0 5px 0;
-  font-size: 0.9rem;
+.post-actions button {
+  border: 1px solid #c9dbc4;
+  background: transparent;
+  color: #4a6c47;
+  padding: 10px 14px;
+  border-radius: 16px;
+  cursor: pointer;
 }
 
-.activity-content small {
-  color: #999;
-  font-size: 0.8rem;
+.post-actions button.active,
+.post-actions button:hover {
+  background: #edf7ee;
+  border-color: #8bc48b;
 }
 
-@keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(12px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+.post-list {
+  display: grid;
+  gap: 18px;
+  margin-top: 16px;
+}
+
+.post-card {
+  background: white;
+  border-radius: 20px;
+  padding: 18px;
+  box-shadow: 0 18px 42px rgba(83, 114, 75, 0.08);
+}
+
+.post-author {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  cursor: pointer;
+}
+
+.author-avatar {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: #d9efda;
+  display: grid;
+  place-items: center;
+  color: #3f6a3e;
+  font-weight: 700;
+}
+
+.author-name {
+  font-weight: 700;
+  color: #2b5130;
+}
+
+.author-meta {
+  color: #6e806e;
+  font-size: 12px;
+}
+
+.post-content {
+  margin: 14px 0;
+  color: #4a6146;
+  line-height: 1.8;
+}
+
+.post-image-grid {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.post-image-grid.one-image {
+  grid-template-columns: 1fr;
+}
+
+.post-image-grid.two-images {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.post-image-grid.three-images {
+  grid-template-columns: 1.6fr 1fr;
+  grid-template-rows: repeat(2, 100px);
+}
+
+.post-image-grid.three-images .post-image-item:first-child {
+  grid-row: span 2;
+}
+
+.post-image-grid.many-images {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.post-image-item {
+  overflow: hidden;
+  border-radius: 16px;
+  min-height: 100px;
+}
+
+.post-image-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.post-footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.tag-button {
+  border: none;
+  background: #f1fbf2;
+  color: #3b6c3a;
+  border-radius: 16px;
+  padding: 10px 14px;
+  cursor: pointer;
+}
+
+.post-actions-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.action-button {
+  border: 1px solid #c7dab1;
+  background: #ffffff;
+  color: #4a6d43;
+  border-radius: 16px;
+  padding: 10px 14px;
+  cursor: pointer;
+}
+
+.comment-info {
+  color: #6b7b61;
+  font-size: 13px;
+}
+
+.load-more {
+  text-align: center;
+  margin-top: 16px;
+}
+
+.load-more button {
+  border: none;
+  background: #4caf50;
+  color: white;
+  border-radius: 18px;
+  padding: 12px 22px;
+  cursor: pointer;
+}
+
+.empty-state {
+  text-align: center;
+  color: #6d7f66;
+  padding: 28px 16px;
+}
+
+.back-to-top {
+  position: fixed;
+  right: 18px;
+  bottom: 86px;
+  border: none;
+  background: #4caf50;
+  color: white;
+  padding: 12px 16px;
+  border-radius: 999px;
+  cursor: pointer;
+  box-shadow: 0 18px 34px rgba(76, 175, 80, 0.22);
 }
 </style>

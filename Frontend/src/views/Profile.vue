@@ -1,517 +1,290 @@
-<template>
-  <div class="page">
-    <div class="content">
-      <!-- 用户信息卡片 -->
-      <div class="user-card">
-        <div class="user-avatar">
-          <div class="avatar-placeholder">U</div>
-        </div>
-        <div class="user-info">
-          <h2 class="user-name">{{ userInfo?.nickname || '花园探索者' }}</h2>
-          <p class="user-level">花园探索者 Lv.{{ userInfo?.level || 1 }}</p>
-          <div class="user-stats">
-            <div class="stat">
-              <span class="stat-number">{{ userInfo?.total_checkins || 0 }}</span>
-              <span class="stat-label">总打卡</span>
+﻿<template>
+  <div class="profile-page">
+    <div class="profile-scroll">
+      <section class="profile-card">
+        <div class="avatar-box">{{ avatarInitial }}</div>
+        <div class="profile-info">
+          <h2>{{ userName }}</h2>
+          <p>{{ userRole }}</p>
+          <div class="profile-stats">
+            <div>
+              <div class="stat-number">{{ userExp }}</div>
+              <div class="stat-label">经验</div>
             </div>
-            <div class="stat">
-              <span class="stat-number">{{ checkinStore.checkins.length }}</span>
-              <span class="stat-label">发现花卉</span>
+            <div>
+              <div class="stat-number">{{ totalCheckins }}</div>
+              <div class="stat-label">打卡数</div>
             </div>
-            <div class="stat">
-              <span class="stat-number">{{ achievementStore.achievements.length }}</span>
-              <span class="stat-label">成就</span>
+            <div>
+              <div class="stat-number">{{ achievementCount }}</div>
+              <div class="stat-label">徽章</div>
             </div>
           </div>
         </div>
-      </div>
+      </section>
 
-      <!-- 经验进度条 -->
-      <div class="progress-section">
-        <div class="progress-label">
-          <span>经验值</span>
-          <span>{{ userInfo?.exp || 0 }}/{{ Math.floor((userInfo?.exp || 0) * 1.5) }}</span>
-        </div>
+      <section class="progress-panel">
+        <div class="progress-title">成长进度</div>
         <div class="progress-bar">
           <div class="progress-fill" :style="{ width: progressPercent + '%' }"></div>
         </div>
-      </div>
+        <div class="progress-meta">当前等级 {{ userLevel }} · {{ progressPercent }}%</div>
+      </section>
 
-      <!-- 菜单选项 -->
-      <div class="menu-section">
-        <div class="menu-item" @click="showCheckinHistory">
-          <div class="menu-icon">记</div>
-          <div class="menu-content">
-            <h3>打卡记录</h3>
-            <p>查看您的花卉打卡历史</p>
-          </div>
-          <div class="menu-arrow">›</div>
+      <section class="post-section">
+        <div class="post-title-row">
+          <h3>我的帖子</h3>
+          <button @click="goToCheckins">查看全部</button>
         </div>
-
-        <div class="menu-item" @click="showAchievements">
-          <div class="menu-icon">成</div>
-          <div class="menu-content">
-            <h3>成就系统</h3>
-            <p>解锁更多花园成就</p>
-          </div>
-          <div class="menu-arrow">›</div>
-        </div>
-
-        <div class="menu-item" @click="showFavorites">
-          <div class="menu-icon">藏</div>
-          <div class="menu-content">
-            <h3>收藏花卉</h3>
-            <p>您最喜欢的花卉收藏</p>
-          </div>
-          <div class="menu-arrow">›</div>
-        </div>
-
-        <div class="menu-item" @click="showSettings">
-          <div class="menu-icon">设</div>
-          <div class="menu-content">
-            <h3>设置</h3>
-            <p>应用设置和偏好</p>
-          </div>
-          <div class="menu-arrow">›</div>
-        </div>
-      </div>
-
-      <!-- 最近打卡 -->
-      <div class="recent-section">
-        <h3 class="section-title">最近打卡</h3>
-        <div class="recent-list">
-          <div
-            v-for="checkin in recentCheckins"
-            :key="checkin.id"
-            class="recent-item"
-          >
-            <div class="checkin-icon">{{ checkin.flowerIcon }}</div>
-            <div class="checkin-info">
-              <h4>{{ checkin.flowerName }}</h4>
-              <p>{{ checkin.time }}</p>
+        <div v-if="myPosts.length" class="post-list">
+          <article v-for="post in myPosts" :key="post.id" class="post-card">
+            <div class="post-main" @click="openPost(post)">
+              <div class="post-title">{{ post.location?.name || locationSpecies(post.location_id) }}</div>
+              <p class="post-text">{{ post.content }}</p>
             </div>
-            <div class="checkin-exp">+{{ checkin.exp }} EXP</div>
-          </div>
-          <div v-if="recentCheckins.length === 0" class="no-data">
-            暂无打卡记录
-          </div>
+            <div class="post-meta-row">
+              <span>{{ formatTime(post.created_at) }}</span>
+              <span>点赞 {{ post.likes_count }} · 评论 {{ post.comments_count || 0 }}</span>
+            </div>
+          </article>
         </div>
-      </div>
-
-      <!-- 成就展示 -->
-      <div class="achievements-section">
-        <h3 class="section-title">最新成就</h3>
-        <div class="achievements-grid">
-          <div
-            v-for="achievement in recentAchievements"
-            :key="achievement.id"
-            class="achievement-item"
-            :class="{ unlocked: achievement.unlocked }"
-          >
-            <div class="achievement-icon">{{ achievement.icon }}</div>
-            <div class="achievement-name">{{ achievement.name }}</div>
-            <div class="achievement-desc">{{ achievement.description }}</div>
-          </div>
-          <div v-if="recentAchievements.length === 0" class="no-data">
-            暂无成就
-          </div>
-        </div>
-      </div>
+        <div v-else class="empty-state">你还没有发布过帖子。</div>
+      </section>
     </div>
     <BottomNav />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
-import BottomNav from '../components/BottomNav.vue';
-import { useAuthStore } from '@/stores/auth';
-import { useCheckinStore } from '@/stores/checkin';
-import { useAchievementStore } from '@/stores/achievement';
-import { useLocationStore } from '@/stores/location';
+import { computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+import BottomNav from '../components/BottomNav.vue'
+import { useAuthStore } from '@/stores/auth'
+import { useCheckinStore } from '@/stores/checkin'
+import { useAchievementStore } from '@/stores/achievement'
+import { useLocationStore } from '@/stores/location'
 
-const authStore = useAuthStore();
-const checkinStore = useCheckinStore();
-const achievementStore = useAchievementStore();
-const locationStore = useLocationStore();
+const router = useRouter()
+const authStore = useAuthStore()
+const checkinStore = useCheckinStore()
+const achievementStore = useAchievementStore()
+const locationStore = useLocationStore()
 
-// 计算属性
-const userInfo = computed(() => authStore.user);
+const userName = computed(() => authStore.user?.nickname || '花园探索者')
+const userRole = computed(() => '狮山花园会员')
+const userExp = computed(() => authStore.user?.exp || 0)
+const userLevel = computed(() => authStore.user?.level || 1)
+const totalCheckins = computed(() => authStore.user?.total_checkins || checkinStore.checkins.length)
+const achievementCount = computed(() => achievementStore.achievements.length)
 const progressPercent = computed(() => {
-  if (!userInfo.value) return 0;
-  const currentExp = userInfo.value.exp ?? 0;
-  // 假设下一级需要当前经验的1.5倍
-  const nextLevelExp = Math.max(currentExp * 1.5, 1);
-  return (currentExp / nextLevelExp) * 100;
-});
+  const nextExp = Math.max(100, (authStore.user?.exp || 0) * 1.5)
+  return Math.min(100, Math.round(((authStore.user?.exp || 0) / nextExp) * 100))
+})
+const avatarInitial = computed(() => userName.value.slice(0, 1))
 
-// 最近打卡记录
-const recentCheckins = computed(() => {
-  return checkinStore.checkins.slice(0, 4).map(checkin => {
-    const location = locationStore.locations.find(loc => loc.id === checkin.flower_place_id);
-    return {
-      id: checkin.id,
-      flowerName: location?.name || '未知花卉',
-      flowerIcon: location ? getFlowerIcon(location.flower_species) : '花',
-      time: formatTime(checkin.created_at),
-      exp: 10 // 假设每次打卡获得10经验
-    };
-  });
-});
+const myPosts = computed(() => {
+  if (!authStore.user) return []
+  return checkinStore.checkins.filter(post => post.user?.id === authStore.user?.id)
+})
 
-// 最新成就
-const recentAchievements = computed(() => {
-  return achievementStore.achievements.slice(0, 4).map(achievement => ({
-    ...achievement,
-    unlocked: Math.random() > 0.5 // 模拟解锁状态
-  }));
-});
+const locationSpecies = (id: number) => {
+  return locationStore.locations.find(item => item.id === id)?.flower_species || '未知'
+}
 
-// 获取花卉图标
-const getFlowerIcon = (flowerType: string) => {
-  const iconMap: { [key: string]: string } = {
-    'rose': 'R',
-    'tulip': 'T',
-    'sunflower': 'S',
-    'cherry': 'C',
-    'lily': 'L',
-    'daisy': 'D',
-    'orchid': 'O',
-    'peony': 'P',
-    'chrysanthemum': 'H',
-    'lotus': 'N'
-  };
-  return iconMap[flowerType.toLowerCase()] || '花';
-};
-
-// 格式化时间
 const formatTime = (dateString: string) => {
-  const date = new Date(dateString);
-  const now = new Date();
-  const diff = now.getTime() - date.getTime();
+  const date = new Date(dateString)
+  const now = new Date()
+  const diff = now.getTime() - date.getTime()
+  const hours = Math.floor(diff / (1000 * 60 * 60))
+  const days = Math.floor(diff / (1000 * 60 * 60 * 24))
+  if (hours < 24) return `${hours}小时前`
+  return `${days}天前`
+}
 
-  const minutes = Math.floor(diff / (1000 * 60));
-  const hours = Math.floor(diff / (1000 * 60 * 60));
-  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+const goToCheckins = () => {
+  router.push('/home')
+}
 
-  if (minutes < 60) {
-    return `${minutes}分钟前`;
-  } else if (hours < 24) {
-    return `${hours}小时前`;
-  } else {
-    return `${days}天前`;
+const openPost = (post: any) => {
+  if (post.user?.id) {
+    router.push({ name: 'UserDetail', params: { id: post.user.id } })
   }
-};
+}
 
-// 菜单功能
-const showCheckinHistory = () => {
-  console.log('显示打卡历史');
-  // 这里可以导航到打卡历史页面
-};
-
-const showAchievements = () => {
-  console.log('显示成就系统');
-  // 这里可以导航到成就页面
-};
-
-const showFavorites = () => {
-  console.log('显示收藏花卉');
-  // 这里可以导航到收藏页面
-};
-
-const showSettings = () => {
-  console.log('显示设置');
-  // 这里可以导航到设置页面
-};
-
-// 页面加载时获取数据
 onMounted(async () => {
-  try {
-    await Promise.all([
-      checkinStore.loadCheckins(),
-      achievementStore.loadAchievements(),
-      locationStore.loadLocations(),
-    ]);
-  } catch (error) {
-    console.error('加载个人资料数据失败:', error);
-  }
-});
+  await Promise.all([
+    authStore.loadUser(),
+    checkinStore.loadCheckins(),
+    achievementStore.loadAchievements(),
+    locationStore.loadLocations(),
+  ])
+})
 </script>
 
 <style scoped>
-.page {
+.profile-page {
+  min-height: 100vh;
   display: flex;
   flex-direction: column;
-  height: 100vh;
-  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  background: #eef8ed;
 }
 
-.content {
-  flex: 1;
+.profile-scroll {
   padding: 20px;
+  flex: 1;
   overflow-y: auto;
 }
 
-.user-card {
+.profile-card {
+  display: flex;
+  gap: 16px;
+  padding: 20px;
   background: white;
-  border-radius: 20px;
-  padding: 25px;
+  border-radius: 22px;
+  box-shadow: 0 18px 38px rgba(85, 118, 79, 0.08);
+  margin-bottom: 18px;
+}
+
+.avatar-box {
+  width: 78px;
+  height: 78px;
+  border-radius: 22px;
+  background: linear-gradient(135deg, #d9f0d7, #f7fff5);
+  display: grid;
+  place-items: center;
+  font-size: 30px;
+  font-weight: 700;
+  color: #3f6d44;
+}
+
+.profile-info h2 {
+  margin: 0;
+  font-size: 1.8rem;
+  color: #2f5630;
+}
+
+.profile-info p {
+  margin: 8px 0 16px;
+  color: #637960;
+}
+
+.profile-stats {
   display: flex;
-  align-items: center;
-  margin-bottom: 25px;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-  animation: fadeInUp 0.35s ease both;
+  gap: 16px;
 }
 
-.user-avatar {
-  margin-right: 20px;
-}
-
-.avatar-placeholder {
-  width: 80px;
-  height: 80px;
-  border-radius: 50%;
-  background: linear-gradient(45deg, #4CAF50, #66BB6A);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 2.5rem;
-}
-
-.user-info {
-  flex: 1;
-}
-
-.user-name {
-  margin: 0 0 5px 0;
-  color: #333;
-  font-size: 1.5rem;
-  font-weight: 600;
-}
-
-.user-level {
-  margin: 0 0 15px 0;
-  color: #4CAF50;
-  font-weight: 500;
-}
-
-.user-stats {
-  display: flex;
-  gap: 20px;
-}
-
-.stat {
+.profile-stats div {
   text-align: center;
 }
 
 .stat-number {
-  display: block;
-  font-size: 1.5rem;
+  font-size: 1.2rem;
   font-weight: 700;
-  color: #4CAF50;
+  color: #3e6e40;
 }
 
 .stat-label {
-  font-size: 0.8rem;
-  color: #666;
+  color: #6d7f6a;
+  font-size: 0.85rem;
 }
 
-.progress-section {
+.progress-panel {
   background: white;
-  border-radius: 15px;
-  padding: 20px;
-  margin-bottom: 25px;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  border-radius: 22px;
+  padding: 18px;
+  box-shadow: 0 14px 32px rgba(79, 117, 66, 0.08);
+  margin-bottom: 18px;
 }
 
-.progress-label {
-  display: flex;
-  justify-content: space-between;
+.progress-title {
+  font-weight: 700;
+  color: #2f5630;
   margin-bottom: 10px;
-  font-size: 0.9rem;
-  color: #666;
 }
 
 .progress-bar {
-  height: 8px;
-  background: #eee;
-  border-radius: 4px;
+  width: 100%;
+  height: 12px;
+  border-radius: 999px;
+  background: #edf7ed;
   overflow: hidden;
 }
 
 .progress-fill {
   height: 100%;
-  background: linear-gradient(90deg, #4CAF50, #66BB6A);
-  border-radius: 4px;
-  transition: width 0.3s ease;
+  background: linear-gradient(90deg, #7cbc79 0%, #4c8d47 100%);
 }
 
-.menu-section {
-  background: white;
-  border-radius: 15px;
-  overflow: hidden;
-  margin-bottom: 25px;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+.progress-meta {
+  margin-top: 10px;
+  color: #5d7f63;
+  font-size: 0.95rem;
 }
 
-.menu-item {
+.post-section {
+  margin-bottom: 18px;
+}
+
+.post-title-row {
   display: flex;
+  justify-content: space-between;
   align-items: center;
-  padding: 20px;
-  border-bottom: 1px solid #f5f5f5;
+  margin-bottom: 12px;
+}
+
+.post-title-row h3 {
+  margin: 0;
+  color: #2b5130;
+}
+
+.post-title-row button {
+  border: none;
+  background: #edf7ee;
+  color: #3c6940;
+  border-radius: 16px;
+  padding: 10px 14px;
   cursor: pointer;
-  transition: background-color 0.25s cubic-bezier(0.4, 0, 0.2, 1), transform 0.25s ease;
 }
 
-.menu-item:last-child {
-  border-bottom: none;
-}
-
-.menu-item:hover {
-  background-color: #f9f9f9;
-  transform: translateX(2px);
-}
-
-.menu-icon {
-  font-size: 1.5rem;
-  margin-right: 15px;
-  width: 30px;
-  text-align: center;
-}
-
-.menu-content {
-  flex: 1;
-}
-
-.menu-content h3 {
-  margin: 0 0 5px 0;
-  color: #333;
-  font-size: 1rem;
-}
-
-.menu-content p {
-  margin: 0;
-  color: #666;
-  font-size: 0.9rem;
-}
-
-.menu-arrow {
-  color: #ccc;
-  font-size: 1.2rem;
-}
-
-.section-title {
-  font-size: 1.3rem;
-  color: #333;
-  margin-bottom: 15px;
-  font-weight: 600;
-}
-
-.recent-section, .achievements-section {
-  margin-bottom: 25px;
-}
-
-.recent-list {
-  background: white;
-  border-radius: 15px;
-  overflow: hidden;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-}
-
-.recent-item {
-  display: flex;
-  align-items: center;
-  padding: 15px 20px;
-  border-bottom: 1px solid #f5f5f5;
-}
-
-.recent-item:last-child {
-  border-bottom: none;
-}
-
-.checkin-icon {
-  font-size: 2rem;
-  margin-right: 15px;
-}
-
-.checkin-info {
-  flex: 1;
-}
-
-.checkin-info h4 {
-  margin: 0 0 5px 0;
-  color: #333;
-  font-size: 1rem;
-}
-
-.checkin-info p {
-  margin: 0;
-  color: #666;
-  font-size: 0.8rem;
-}
-
-.checkin-exp {
-  color: #4CAF50;
-  font-weight: 600;
-  font-size: 0.9rem;
-}
-
-.achievements-grid {
+.post-list {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 15px;
+  gap: 14px;
 }
 
-.achievement-item {
+.post-card {
   background: white;
-  border-radius: 15px;
-  padding: 20px;
-  text-align: center;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.25s ease;
-  animation: fadeInUp 0.35s ease both;
+  border-radius: 20px;
+  padding: 16px;
+  box-shadow: 0 14px 32px rgba(77, 111, 73, 0.08);
+  cursor: pointer;
 }
 
-.achievement-item:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.12);
-}
-
-.achievement-item.unlocked {
-  border: 2px solid #4CAF50;
-}
-
-.achievement-item:not(.unlocked) {
-  opacity: 0.6;
-}
-
-.achievement-icon {
-  font-size: 2.5rem;
+.post-main {
   margin-bottom: 10px;
 }
 
-.achievement-name {
-  color: #333;
-  margin: 0 0 8px 0;
-  font-size: 1rem;
-  font-weight: 600;
+.post-title {
+  margin: 0 0 8px;
+  font-weight: 700;
+  color: #2f5530;
 }
 
-.achievement-desc {
-  color: #666;
+.post-text {
   margin: 0;
-  font-size: 0.8rem;
-  line-height: 1.4;
+  color: #556a57;
+  line-height: 1.7;
 }
 
-@keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(12px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+.post-meta-row {
+  display: flex;
+  justify-content: space-between;
+  color: #6e7f6b;
+  font-size: 13px;
+}
+
+.empty-state {
+  text-align: center;
+  color: #6c7c66;
+  padding: 24px 0;
 }
 </style>

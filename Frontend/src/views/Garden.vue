@@ -1,494 +1,353 @@
-<template>
-  <div class="page">
-    <div class="content">
-      <!-- 花园标题 -->
-      <div class="header">
-        <h1 class="title">花园花卉</h1>
-        <p class="subtitle">探索狮山花园的美丽花卉</p>
-      </div>
-
-      <!-- 花卉分类标签 -->
-      <div class="categories">
-        <div
-          v-for="category in categories"
-          :key="category.id"
-          class="category-tag"
-          :class="{ active: activeCategory === category.id }"
-          @click="setActiveCategory(category.id)"
-        >
-          {{ category.name }}
+﻿<template>
+  <div class="garden-page">
+    <div class="garden-scroll">
+      <section class="progress-panel">
+        <div class="progress-title">徽章收集进度</div>
+        <div class="progress-bar">
+          <div class="progress-fill" :style="{ width: progressPercent + '%' }"></div>
         </div>
-      </div>
+        <div class="progress-text">已解锁 {{ unlockedCount }} / {{ totalCount }} 个徽章</div>
+      </section>
 
-      <!-- 花卉网格 -->
-      <div class="flowers-grid">
-        <div
-          v-for="flower in filteredFlowers"
-          :key="flower.id"
-          class="flower-item"
-          @click="openFlowerDetail(flower)"
-        >
-          <div class="flower-image">
-            <div class="placeholder-icon">{{ getFlowerIcon(flower.flower_species) }}</div>
-          </div>
-          <div class="flower-name">{{ flower.name }}</div>
-          <div class="flower-status" :class="{ checked: isChecked(flower.id) }">
-            {{ isChecked(flower.id) ? '已打卡' : '未打卡' }}
+      <section class="badges-panel">
+        <div class="badge-row" v-for="(row, rowIndex) in badgeRows" :key="row[0]?.id || rowIndex">
+          <div
+            v-for="badge in row"
+            :key="badge.id"
+            class="badge-card"
+            :class="{ locked: !badge.unlocked }"
+            @click="openBadgeDetail(badge)"
+          >
+            <div class="badge-lamp"></div>
+            <div class="badge-body">
+              <div class="badge-glass"></div>
+              <div class="badge-flower" :class="badge.flowerClass"></div>
+            </div>
+            <div class="badge-name">{{ badge.name }}</div>
           </div>
         </div>
-      </div>
+      </section>
 
-      <!-- 花卉详情弹窗 -->
-      <div v-if="selectedFlower" class="modal-overlay" @click="closeFlowerDetail">
-        <div class="modal-content" @click.stop>
-          <div class="modal-header">
-            <h2>{{ selectedFlower.name }}</h2>
-            <button class="close-btn" @click="closeFlowerDetail">✕</button>
+      <div class="empty-note">点击徽章查看该花的打卡帖子</div>
+    </div>
+
+    <BottomNav />
+
+    <div class="detail-modal" v-if="selectedLocation">
+      <div class="modal-backdrop" @click="selectedLocation = null"></div>
+      <div class="modal-card">
+        <div class="modal-header">
+          <div>
+            <h3>{{ selectedLocation.name }}</h3>
+            <p>花种：{{ selectedLocation.flower_species }}</p>
           </div>
-          <div class="modal-body">
-            <div class="flower-detail-image">
-              <div class="placeholder-icon-large">{{ getFlowerIcon(selectedFlower.flower_species) }}</div>
-            </div>
-            <div class="flower-description">
-              <p>{{ selectedFlower.description || '暂无描述' }}</p>
-            </div>
-            <div class="flower-info">
-              <div class="info-item">
-                <strong>花期：</strong>{{ getBloomPeriod(selectedFlower) }}
+          <button class="close-button" @click="selectedLocation = null">关闭</button>
+        </div>
+        <div class="modal-body">
+          <div class="modal-status">{{ selectedLocation.bloom_status }}</div>
+          <div class="modal-description">{{ selectedLocation.description }}</div>
+          <div class="modal-posts">
+            <div v-if="selectedLocationPosts.length" class="modal-post" v-for="post in selectedLocationPosts" :key="post.id">
+              <div class="modal-post-meta">
+                <span>{{ post.user?.nickname || '作者' }}</span>
+                <span>{{ formatTime(post.created_at) }}</span>
               </div>
-              <div class="info-item">
-                <strong>位置：</strong>{{ selectedFlower.name }}区域
-              </div>
-              <div class="info-item">
-                <strong>类型：</strong>{{ selectedFlower.flower_species }}
-              </div>
-              <div class="info-item">
-                <strong>打卡次数：</strong>{{ selectedFlower.checkin_count }}
-              </div>
+              <p>{{ post.content }}</p>
             </div>
-            <div class="action-buttons">
-              <button
-                class="checkin-btn"
-                :class="{ checked: isChecked(selectedFlower.id) }"
-                @click="toggleCheckin(selectedFlower)"
-              >
-                {{ isChecked(selectedFlower.id) ? '已打卡' : '打卡' }}
-              </button>
-              <button class="share-btn" @click="shareFlower(selectedFlower)">
-                分享
-              </button>
-            </div>
+            <div v-else class="no-posts">暂无打卡内容</div>
           </div>
         </div>
       </div>
     </div>
-    <BottomNav />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
-import BottomNav from '../components/BottomNav.vue';
-import { useLocationStore } from '@/stores/location';
-import { useCheckinStore } from '@/stores/checkin';
-import { useAuthStore } from '@/stores/auth';
-import type { Location } from '@/services/api';
+import { ref, computed, onMounted } from 'vue'
+import BottomNav from '../components/BottomNav.vue'
+import { useLocationStore } from '@/stores/location'
+import { useCheckinStore } from '@/stores/checkin'
 
-const locationStore = useLocationStore();
-const checkinStore = useCheckinStore();
-const authStore = useAuthStore();
+const locationStore = useLocationStore()
+const checkinStore = useCheckinStore()
+const selectedLocation = ref<any>(null)
 
-// 花卉分类
-const categories = ref([
-  { id: 'all', name: '全部' },
-  { id: 'spring', name: '春季' },
-  { id: 'summer', name: '夏季' },
-  { id: 'autumn', name: '秋季' },
-  { id: 'winter', name: '冬季' }
-]);
+const locations = computed(() => locationStore.locations)
+const totalCount = computed(() => locations.value.length)
+const unlockedCount = computed(() => locations.value.filter(location => checkinStore.checkins.some(post => post.location_id === location.id)).length)
+const progressPercent = computed(() => {
+  if (!totalCount.value) return 0
+  return Math.round((unlockedCount.value / totalCount.value) * 100)
+})
 
-const activeCategory = ref('all');
-const selectedFlower = ref<Location | null>(null);
-
-// 计算过滤后的花卉
-const filteredFlowers = computed(() => {
-  if (activeCategory.value === 'all') {
-    return locationStore.locations;
-  }
-
-  // 根据开花季节过滤
-  const seasonMap: { [key: string]: string[] } = {
-    spring: ['03', '04', '05'],
-    summer: ['06', '07', '08'],
-    autumn: ['09', '10', '11'],
-    winter: ['12', '01', '02']
-  };
-
-  const targetMonths = seasonMap[activeCategory.value] || [];
-  return locationStore.locations.filter(location => {
-    if (!location.historical_bloom_start) return false;
-    const startMonth = location.historical_bloom_start.substring(0, 2);
-    return targetMonths.includes(startMonth);
-  });
-});
-
-// 检查花卉是否已打卡
-const isChecked = (locationId: number) => {
-  return checkinStore.checkins.some(checkin => checkin.flower_place_id === locationId);
-};
-
-// 获取花卉图标
-const getFlowerIcon = (flowerSpecies: string) => {
-  const iconMap: { [key: string]: string } = {
-    '樱花': '樱',
-    '菊花': '菊',
-    '荷花': '荷',
-    '玫瑰': '玫',
-    '郁金香': '郁',
-    '向日葵': '向',
-    '百合': '百',
-    '兰花': '兰',
-    '牡丹': '牡',
-    'test': '花'
-  };
-  return iconMap[flowerSpecies] || '花';
-};
-
-// 获取花卉花期
-const getBloomPeriod = (flower: Location) => {
-  if (flower.historical_bloom_start && flower.historical_bloom_end) {
-    return `${flower.historical_bloom_start} 至 ${flower.historical_bloom_end}`;
-  }
-  return '未知';
-};
-
-const setActiveCategory = (categoryId: string) => {
-  activeCategory.value = categoryId;
-};
-
-const openFlowerDetail = (flower: Location) => {
-  selectedFlower.value = flower;
-};
-
-const closeFlowerDetail = () => {
-  selectedFlower.value = null;
-};
-
-const toggleCheckin = async (flower: Location) => {
-  try {
-    if (isChecked(flower.id)) {
-      // 取消打卡（这里简化处理，实际可能需要API支持）
-      console.log('取消打卡:', flower.name);
-    } else {
-      // 打卡
-      await checkinStore.createCheckin({
-        user_id: authStore.user?.id ?? 1,
-        flower_place_id: flower.id,
-        bloom_report: 'blooming',
-        content: `在${flower.name}打卡！`,
-        images: []
-      });
-      console.log('打卡成功:', flower.name);
+const locationWithBadge = computed(() => {
+  return locations.value.map(location => {
+    const unlocked = checkinStore.checkins.some(post => post.location_id === location.id)
+    return {
+      ...location,
+      unlocked,
+      flowerClass: `flower-${(location.flower_species || 'none').replace(/[^a-zA-Z0-9]/g, '')}`
     }
-  } catch (error) {
-    console.error('打卡失败:', error);
-  }
-};
+  })
+})
 
-const shareFlower = (flower: Location) => {
-  const shareText = `发现美丽的${flower.name}！${flower.description}`;
-  if (navigator.share) {
-    navigator.share({
-      title: `发现${flower.name}`,
-      text: shareText,
-      url: window.location.href
-    });
-  } else {
-    alert(`分享：${shareText}`);
+const badgeRows = computed(() => {
+  const rows: any[][] = []
+  for (let i = 0; i < locationWithBadge.value.length; i += 3) {
+    rows.push(locationWithBadge.value.slice(i, i + 3))
   }
-};
+  return rows
+})
 
-// 页面加载时获取数据
+const selectedLocationPosts = computed(() => {
+  if (!selectedLocation.value) return []
+  return checkinStore.checkins.filter(post => post.location_id === selectedLocation.value.id)
+})
+
+const openBadgeDetail = (location: any) => {
+  selectedLocation.value = location
+}
+
+const formatTime = (dateString: string) => {
+  const date = new Date(dateString)
+  const now = new Date()
+  const diff = now.getTime() - date.getTime()
+  const hours = Math.floor(diff / (1000 * 60 * 60))
+  const days = Math.floor(diff / (1000 * 60 * 60 * 24))
+  if (hours < 24) return `${hours}小时前`
+  return `${days}天前`
+}
+
 onMounted(async () => {
-  try {
-    console.log('开始加载花园数据...')
-    await Promise.all([
-      locationStore.loadLocations(),
-      checkinStore.loadCheckins(),
-    ]);
-    console.log('花园数据加载完成', {
-      locations: locationStore.locations.length,
-      checkins: checkinStore.checkins.length,
-      locationError: locationStore.error,
-      checkinError: checkinStore.error
-    });
-  } catch (error) {
-    console.error('加载花园数据失败:', error);
-    // 显示错误信息给用户
-    alert('加载花园数据失败，请检查网络连接');
-  }
-});
+  await Promise.all([locationStore.loadLocations(), checkinStore.loadCheckins()])
+})
 </script>
 
 <style scoped>
-.page {
+.garden-page {
+  min-height: 100vh;
+  background: linear-gradient(180deg, #eef8ee 0%, #f7fbf7 100%);
   display: flex;
   flex-direction: column;
-  height: 100vh;
-  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-  animation: fadeIn 0.35s ease both;
 }
 
-.content {
+.garden-scroll {
   flex: 1;
-  padding: 20px;
   overflow-y: auto;
+  padding: 20px;
 }
 
-.header {
-  text-align: center;
-  margin-bottom: 25px;
+.garden-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 18px;
 }
 
-.title {
-  font-size: 2.2rem;
-  color: #4CAF50;
+.garden-header h2 {
   margin: 0;
-  font-weight: 700;
-  text-shadow: 0 2px 4px rgba(76, 175, 80, 0.3);
+  font-size: 1.9rem;
+  color: #2d5b31;
 }
 
-.subtitle {
-  color: #666;
-  margin: 10px 0 0 0;
-  font-size: 1rem;
+.garden-header p {
+  margin: 8px 0 0;
+  color: #5b7655;
 }
 
-.categories {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 25px;
-  overflow-x: auto;
-  padding-bottom: 5px;
-}
-
-.category-tag {
+.progress-panel {
   background: white;
-  color: #666;
-  padding: 8px 16px;
-  border-radius: 20px;
-  font-size: 0.9rem;
-  font-weight: 500;
-  cursor: pointer;
-  white-space: nowrap;
-  transition: all 0.3s ease;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-
-.category-tag:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-}
-
-.category-tag.active {
-  background: #4CAF50;
-  color: white;
-}
-
-.flowers-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-  gap: 15px;
-}
-
-.flower-item {
-  background: white;
-  border-radius: 15px;
-  overflow: hidden;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-  cursor: pointer;
-  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.25s ease;
-  animation: fadeInUp 0.35s ease both;
-}
-
-.flower-item:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.12);
-}
-
-.flower-image {
-  height: 120px;
-  background: linear-gradient(45deg, #4CAF50, #66BB6A);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.placeholder-icon {
-  font-size: 3rem;
-}
-
-.flower-name {
-  padding: 15px;
-  font-weight: 600;
-  color: #333;
-  text-align: center;
-}
-
-.flower-status {
-  padding: 0 15px 15px;
-  text-align: center;
-  font-size: 0.8rem;
-  font-weight: 500;
-}
-
-.flower-status.checked {
-  color: #4CAF50;
-}
-
-/* 弹窗样式 */
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 2000;
+  border-radius: 22px;
   padding: 20px;
+  box-shadow: 0 18px 38px rgba(79, 117, 66, 0.08);
+  margin-bottom: 20px;
 }
 
-.modal-content {
-  background: white;
-  border-radius: 20px;
+.progress-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #3c6a38;
+  margin-bottom: 10px;
+}
+
+.progress-bar {
+  height: 12px;
+  border-radius: 999px;
+  background: #ebf6eb;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #79b87c 0%, #4c8d47 100%);
+}
+
+.progress-text {
+  margin-top: 10px;
+  color: #61755d;
+  font-size: 0.95rem;
+}
+
+.badges-panel {
+  display: grid;
+  gap: 16px;
+}
+
+.badge-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.badge-card {
+  background: #f8fff6;
+  border-radius: 22px;
+  border: 1px solid rgba(124, 182, 124, 0.34);
+  padding: 16px 12px 18px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  position: relative;
+}
+
+.badge-card.locked {
+  opacity: 0.44;
+}
+
+.badge-lamp {
+  width: 36px;
+  height: 10px;
+  background: linear-gradient(90deg, #f4f2ae 0%, #f7f9c1 100%);
+  border-radius: 999px;
+  box-shadow: 0 0 18px rgba(223, 227, 165, 0.7);
+}
+
+.badge-body {
   width: 100%;
-  max-width: 400px;
-  max-height: 80vh;
-  overflow-y: auto;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  height: 130px;
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.badge-glass {
+  width: 90%;
+  height: 70px;
+  border-radius: 50% 50% 16px 16px;
+  background: rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.75);
+  position: absolute;
+  bottom: 18px;
+}
+
+.badge-flower {
+  width: 46px;
+  height: 46px;
+  border-radius: 12px;
+  background: #8fbc8f;
+}
+
+.badge-name {
+  color: #385238;
+  font-size: 0.95rem;
+  font-weight: 600;
+  text-align: center;
+}
+
+.empty-note {
+  margin-top: 16px;
+  color: #657864;
+  font-size: 0.95rem;
+  text-align: center;
+}
+
+.detail-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1400;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.28);
+}
+
+.modal-card {
+  position: relative;
+  width: min(560px, calc(100vw - 32px));
+  background: white;
+  border-radius: 24px;
+  padding: 24px;
+  z-index: 1;
+  box-shadow: 0 28px 60px rgba(58, 84, 38, 0.16);
 }
 
 .modal-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  padding: 20px;
-  border-bottom: 1px solid #eee;
+  align-items: flex-start;
+  gap: 14px;
 }
 
-.modal-header h2 {
+.modal-header h3 {
   margin: 0;
-  color: #333;
+  color: #2b5e2c;
 }
 
-.close-btn {
-  background: none;
+.close-button {
   border: none;
-  font-size: 1.5rem;
+  background: #f1f8ef;
+  color: #4a6e44;
+  padding: 10px 14px;
+  border-radius: 16px;
   cursor: pointer;
-  color: #999;
-  padding: 5px;
 }
 
 .modal-body {
-  padding: 20px;
+  margin-top: 16px;
+  color: #576b57;
 }
 
-.flower-detail-image {
-  text-align: center;
-  margin-bottom: 20px;
+.modal-status {
+  font-weight: 700;
+  color: #3d6a3f;
+  margin-bottom: 12px;
 }
 
-.placeholder-icon-large {
-  font-size: 5rem;
+.modal-description {
+  margin-bottom: 18px;
+  line-height: 1.7;
 }
 
-.flower-description {
-  margin-bottom: 20px;
-  line-height: 1.6;
-  color: #555;
+.modal-posts {
+  display: grid;
+  gap: 14px;
 }
 
-.flower-info {
-  margin-bottom: 25px;
+.modal-post {
+  padding: 14px;
+  background: #f6fbf6;
+  border-radius: 18px;
 }
 
-.info-item {
-  margin-bottom: 10px;
-  color: #666;
-}
-
-.tag {
-  display: inline-block;
-  background: #E8F5E8;
-  color: #4CAF50;
-  padding: 2px 8px;
-  border-radius: 10px;
-  font-size: 0.8rem;
-  margin-right: 5px;
-  margin-bottom: 5px;
-}
-
-.action-buttons {
+.modal-post-meta {
   display: flex;
-  gap: 10px;
+  justify-content: space-between;
+  color: #5a6f5c;
+  font-size: 12px;
+  margin-bottom: 8px;
 }
 
-.checkin-btn, .share-btn {
-  flex: 1;
-  padding: 12px;
-  border: none;
-  border-radius: 10px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.checkin-btn {
-  background: #4CAF50;
-  color: white;
-}
-
-.checkin-btn:hover {
-  background: #45a049;
-  transform: translateY(-2px);
-}
-
-.checkin-btn.checked {
-  background: #66BB6A;
-}
-
-.share-btn {
-  background: #f5f5f5;
-  color: #666;
-  border: 1px solid #ddd;
-}
-
-.share-btn:hover {
-  background: #eee;
-  transform: translateY(-2px);
-}
-
-@keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(12px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
+.no-posts {
+  text-align: center;
+  color: #7a8b7a;
+  padding: 22px 0;
 }
 </style>
