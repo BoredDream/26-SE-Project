@@ -21,9 +21,10 @@
     "@dcloudio/types": "^3.4.30",
     "@dcloudio/vite-plugin-uni": "3.0.0-alpha-5000820260420001",
     "@types/node": "^20.17.0",
+    "@vue/tsconfig": "^0.9.1",
     "sass-embedded": "^1.98.0",
     "typescript": "~5.9.3",
-    "vite": "^7.3.1",
+    "vite": "^4.5.3",
     "vue-tsc": "^3.2.5"
   },
   "engines": {
