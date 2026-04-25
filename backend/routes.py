@@ -7,49 +7,47 @@ from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identi
 from werkzeug.utils import secure_filename
 from datetime import datetime
 
+# 通用响应包装
+def success(data=None, message='ok', code=200):
+    return {'code': code, 'message': message, 'data': data}, code
+
+def error(message, code=400):
+    return {'code': code, 'message': message, 'data': None}, code
+
 # 用户相关API
-class UserRegister(Resource):
+class AuthRegister(Resource):
     def post(self):
         # 检查是否是文件上传请求
         if 'avatar' in request.files:
-            # 处理文件上传
             avatar_file = request.files['avatar']
             avatar_url = None
             if avatar_file and avatar_file.filename:
-                # 安全处理文件名
                 filename = secure_filename(avatar_file.filename)
-                # 保存文件
                 file_path = os.path.join(UPLOAD_FOLDER, filename)
                 avatar_file.save(file_path)
-                # 生成文件URL
                 avatar_url = url_for('uploads', filename=filename, _external=True)
-            
-            # 获取其他表单数据
             username = request.form.get('username')
             password = request.form.get('password')
             nickname = request.form.get('nickname')
-            
-            # 验证必填参数
             if not username or not password or not nickname:
-                return {'message': 'Missing required parameters'}, 400
+                return error('Missing required parameters', 400)
         else:
-            # 处理JSON请求
             parser = reqparse.RequestParser()
             parser.add_argument('username', required=True)
             parser.add_argument('password', required=True)
             parser.add_argument('nickname', required=True)
             parser.add_argument('avatar_url')
             args = parser.parse_args()
-            
             username = args['username']
             password = args['password']
             nickname = args['nickname']
             avatar_url = args.get('avatar_url')
-        
+
         if User.query.filter_by(username=username).first():
-            return {'message': 'User already exists'}, 400
-        
+            return error('User already exists', 400)
+
         user = User(
+            openid='manual_' + username,
             username=username,
             nickname=nickname,
             avatar_url=avatar_url
@@ -57,119 +55,155 @@ class UserRegister(Resource):
         user.set_password(password)
         db.session.add(user)
         db.session.commit()
-        
-        # 生成JWT令牌
-        access_token = create_access_token(identity=str(user.id))
-        
-        return {
-            'id': user.id,
-            'username': user.username,
-            'nickname': user.nickname,
-            'avatar_url': user.avatar_url,
-            'role': user.role.value,
-            'access_token': access_token,
-            'message': 'User created successfully'
-        }, 201
 
-class UserLogin(Resource):
+        access_token = create_access_token(identity=str(user.id))
+        return success({
+            'token': access_token,
+            'user': {
+                'id': user.id,
+                'username': user.username,
+                'nickname': user.nickname,
+                'avatar_url': user.avatar_url,
+                'role': user.role.value,
+                'level': 1,
+                'exp': 0,
+                'total_checkins': 0,
+            }
+        }, 'User created successfully', 201)
+
+class AuthLogin(Resource):
     def post(self):
         parser = reqparse.RequestParser()
-        parser.add_argument('username', required=True)
-        parser.add_argument('password', required=True)
+        parser.add_argument('mode', required=True)
+        parser.add_argument('code')
+        parser.add_argument('username')
+        parser.add_argument('password')
         args = parser.parse_args()
-        
-        user = User.query.filter_by(username=args['username']).first()
-        if not user or not user.check_password(args['password']):
-            return {'message': 'Invalid username or password'}, 401
-        
-        # 生成JWT令牌
-        access_token = create_access_token(identity=str(user.id))
-        
-        return {
-            'id': user.id,
-            'username': user.username,
-            'nickname': user.nickname,
-            'avatar_url': user.avatar_url,
-            'role': user.role.value,
-            'access_token': access_token
-        }, 200
+        mode = args['mode']
 
-class UserInfo(Resource):
+        if mode == 'demo':
+            # 演示模式：查找或创建 demo 用户
+            demo_user = User.query.filter_by(username='demo_user').first()
+            if not demo_user:
+                demo_user = User(
+                    openid='demo_openid',
+                    username='demo_user',
+                    nickname='花园探索者',
+                    avatar_url=''
+                )
+                demo_user.set_password('demo')
+                db.session.add(demo_user)
+                db.session.commit()
+            access_token = create_access_token(identity=str(demo_user.id))
+            return success({
+                'token': access_token,
+                'user': {
+                    'id': demo_user.id,
+                    'username': demo_user.username,
+                    'nickname': demo_user.nickname,
+                    'avatar_url': demo_user.avatar_url,
+                    'role': demo_user.role.value,
+                    'level': 8,
+                    'exp': 1250,
+                    'total_checkins': 47,
+                }
+            })
+
+        if mode == 'wx-code':
+            return error('WeChat login not implemented', 501)
+
+        # 默认账号密码登录
+        username = args.get('username')
+        password = args.get('password')
+        if not username or not password:
+            return error('Username and password required', 400)
+
+        user = User.query.filter_by(username=username).first()
+        if not user or not user.check_password(password):
+            return error('Invalid username or password', 401)
+
+        access_token = create_access_token(identity=str(user.id))
+        return success({
+            'token': access_token,
+            'user': {
+                'id': user.id,
+                'username': user.username,
+                'nickname': user.nickname,
+                'avatar_url': user.avatar_url,
+                'role': user.role.value,
+                'level': 1,
+                'exp': 0,
+                'total_checkins': len(user.checkins),
+            }
+        })
+
+class UserMe(Resource):
     @jwt_required()
     def get(self):
-        # 从JWT令牌中获取当前用户ID
         current_user_id = get_jwt_identity()
-        
         user = User.query.get(current_user_id)
         if not user:
-            return {'message': 'User not found'}, 404
-        
-        return {
+            return error('User not found', 404)
+        return success({
             'id': user.id,
             'nickname': user.nickname,
             'avatar_url': user.avatar_url,
             'role': user.role.value,
+            'level': 1,
+            'exp': 0,
+            'total_checkins': len(user.checkins),
             'achievements': [a.description for a in user.achievements],
             'titles': [t.description for t in user.titles]
-        }, 200
-    
+        })
+
     @jwt_required()
     def put(self):
-        # 从JWT令牌中获取当前用户ID
         current_user_id = get_jwt_identity()
-        
+        user = User.query.get(current_user_id)
+        if not user:
+            return error('User not found', 404)
         parser = reqparse.RequestParser()
         parser.add_argument('nickname')
         parser.add_argument('avatar_url')
         args = parser.parse_args()
-        
-        user = User.query.get(current_user_id)
-        if not user:
-            return {'message': 'User not found'}, 404
-        
         if args.get('nickname'):
             user.nickname = args['nickname']
         if args.get('avatar_url'):
             user.avatar_url = args['avatar_url']
-        
         db.session.commit()
-        return {'message': 'User info updated successfully'}, 200
+        return success(message='User info updated successfully')
 
 # 花卉相关API
 class FlowerList(Resource):
     def get(self):
         status = request.args.get('status')
         species = request.args.get('species')
-        
         query = Flower.query
         if status:
             query = query.filter_by(bloom_status=BloomStatus(status))
         if species:
             query = query.filter(Flower.species.like(f'%{species}%'))
-        
         flowers = query.all()
-        return [{
+        return success([{
             'id': f.id,
             'species': f.species,
             'scientific_name': f.scientific_name,
             'bloom_status': f.bloom_status.value if f.bloom_status else None,
             'cover_image': f.cover_image
-        } for f in flowers], 200
+        } for f in flowers])
 
 class FlowerDetail(Resource):
     def get(self, id):
         flower = Flower.query.get(id)
         if not flower:
-            return {'message': 'Flower not found'}, 404
-        
+            return error('Flower not found', 404)
         places = [{
             'id': p.id,
             'name': p.name,
             'latitude': float(p.latitude),
             'longitude': float(p.longitude)
         } for p in flower.places]
-        
-        return {
+        return success({
             'id': flower.id,
             'species': flower.species,
             'scientific_name': flower.scientific_name,
@@ -181,67 +215,60 @@ class FlowerDetail(Resource):
             'cover_image': flower.cover_image,
             'description': flower.description,
             'places': places
-        }, 200
+        })
 
 class FlowerBloomStatus(Resource):
     def get(self, id):
         flower = Flower.query.get(id)
         if not flower:
-            return {'message': 'Flower not found'}, 404
-        
-        # 这里可以添加实时状态计算逻辑
-        return {
+            return error('Flower not found', 404)
+        return success({
             'current_status': flower.bloom_status.value if flower.bloom_status else None,
             'historical_bloom_start': flower.historical_bloom_start,
             'historical_bloom_end': flower.historical_bloom_end
-        }, 200
+        })
 
-# 地点与地图相关API
-class PlaceList(Resource):
+# 地点与地图相关API（术语统一为 location，但内部仍用 Place）
+class LocationList(Resource):
     def get(self):
         flower_id = request.args.get('flower_id')
-        
         if flower_id:
             flower = Flower.query.get(flower_id)
             if not flower:
-                return {'message': 'Flower not found'}, 404
+                return error('Flower not found', 404)
             places = flower.places
         else:
             places = Place.query.all()
-        
-        return [{
+        return success([{
             'id': p.id,
             'name': p.name,
             'description': p.description,
             'latitude': float(p.latitude),
             'longitude': float(p.longitude)
-        } for p in places], 200
+        } for p in places])
 
-class PlaceDetail(Resource):
+class LocationDetail(Resource):
     def get(self, id):
         place = Place.query.get(id)
         if not place:
-            return {'message': 'Place not found'}, 404
-        
+            return error('Place not found', 404)
         flowers = [{
             'id': f.id,
             'species': f.species,
             'bloom_status': f.bloom_status.value if f.bloom_status else None
         } for f in place.flowers]
-        
-        return {
+        return success({
             'id': place.id,
             'name': place.name,
             'description': place.description,
             'latitude': float(place.latitude),
             'longitude': float(place.longitude),
             'flowers': flowers
-        }, 200
+        })
 
 class MapFlowers(Resource):
     def get(self):
         flower_places = FlowerPlace.query.all()
-        
         result = []
         for fp in flower_places:
             flower = fp.flower
@@ -252,84 +279,79 @@ class MapFlowers(Resource):
                     'flower_id': flower.id,
                     'flower_name': flower.species,
                     'place_id': place.id,
+                    'location_id': place.id,
                     'place_name': place.name,
                     'latitude': float(place.latitude),
                     'longitude': float(place.longitude),
                     'bloom_status': flower.bloom_status.value if flower.bloom_status else None
                 })
-        
-        return result, 200
+        return success(result)
 
 class MapFilter(Resource):
     def get(self):
         flower_id = request.args.get('flower_id')
         if not flower_id:
-            return {'message': 'Flower ID is required'}, 400
-        
+            return error('Flower ID is required', 400)
         flower = Flower.query.get(flower_id)
         if not flower:
-            return {'message': 'Flower not found'}, 404
-        
+            return error('Flower not found', 404)
         places = flower.places
-        return [{
+        return success([{
             'place_id': p.id,
+            'location_id': p.id,
             'place_name': p.name,
             'latitude': float(p.latitude),
             'longitude': float(p.longitude)
-        } for p in places], 200
+        } for p in places])
 
 # 打卡/帖子相关API
-
-# 确保上传目录存在
 UPLOAD_FOLDER = 'uploads'
 if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
 
 class CheckinList(Resource):
+    @jwt_required()
     def post(self):
-        # 获取表单数据
-        user_id = request.form.get('user_id')
-        flower_place_id = request.form.get('flower_place_id')
-        bloom_report = request.form.get('bloom_report')
-        content = request.form.get('content')
-        
-        # 验证必填参数
-        if not user_id or not flower_place_id or not bloom_report:
-            return {'message': 'Missing required parameters'}, 400
-        
-        # 处理文件上传
-        images = []
-        if 'images' in request.files:
-            # 检查是否是多个文件
-            files = request.files.getlist('images')
-            for file in files:
-                if file and file.filename:
-                    # 安全处理文件名
-                    filename = secure_filename(file.filename)
-                    # 保存文件
-                    file_path = os.path.join(UPLOAD_FOLDER, filename)
-                    file.save(file_path)
-                    # 生成文件URL
-                    file_url = url_for('uploads', filename=filename, _external=True)
-                    images.append(file_url)
-        
+        user_id = get_jwt_identity()
+        parser = reqparse.RequestParser()
+        parser.add_argument('location_id', type=int, required=True)
+        parser.add_argument('content')
+        parser.add_argument('images', type=list, location='json')
+        parser.add_argument('bloom_report')
+        args = parser.parse_args()
+
+        # 将 location_id (Place.id) 映射到 flower_place_id
+        flower_place = FlowerPlace.query.filter_by(place_id=args['location_id']).first()
+        if not flower_place:
+            return error('Invalid location_id', 400)
+
         checkin = Checkin(
             user_id=user_id,
-            flower_place_id=flower_place_id,
-            bloom_report=BloomStatus(bloom_report),
-            content=content,
-            images=images
+            flower_place_id=flower_place.id,
+            bloom_report=BloomStatus(args.get('bloom_report', 'blooming')),
+            content=args.get('content', ''),
+            images=args.get('images', [])
         )
         db.session.add(checkin)
         db.session.commit()
-        return {'id': checkin.id, 'message': 'Checkin created successfully', 'images': images}, 201
-    
+        return success({
+            'id': checkin.id,
+            'user_id': checkin.user_id,
+            'flower_place_id': checkin.flower_place_id,
+            'location_id': flower_place.place_id,
+            'bloom_report': checkin.bloom_report.value,
+            'content': checkin.content,
+            'images': checkin.images,
+            'likes_count': checkin.likes_count,
+            'created_at': checkin.created_at.isoformat()
+        }, 'Checkin created successfully', 201)
+
     def get(self):
         start_time = request.args.get('start_time')
         end_time = request.args.get('end_time')
         status = request.args.get('status')
         place_id = request.args.get('place_id')
-        
+
         query = Checkin.query
         if start_time:
             query = query.filter(Checkin.created_at >= datetime.fromisoformat(start_time))
@@ -338,36 +360,38 @@ class CheckinList(Resource):
         if status:
             query = query.filter_by(bloom_report=BloomStatus(status))
         if place_id:
-            # 通过flower_place_id关联查询
             flower_places = FlowerPlace.query.filter_by(place_id=place_id).all()
             fp_ids = [fp.id for fp in flower_places]
             if fp_ids:
                 query = query.filter(Checkin.flower_place_id.in_(fp_ids))
-        
+
         checkins = query.order_by(Checkin.created_at.desc()).all()
-        return [{
-            'id': c.id,
-            'user_id': c.user_id,
-            'flower_place_id': c.flower_place_id,
-            'bloom_report': c.bloom_report.value,
-            'content': c.content,
-            'images': c.images,
-            'likes_count': c.likes_count,
-            'created_at': c.created_at.isoformat()
-        } for c in checkins], 200
+        result = []
+        for c in checkins:
+            fp = FlowerPlace.query.get(c.flower_place_id)
+            result.append({
+                'id': c.id,
+                'user_id': c.user_id,
+                'flower_place_id': c.flower_place_id,
+                'location_id': fp.place_id if fp else None,
+                'bloom_report': c.bloom_report.value,
+                'content': c.content,
+                'images': c.images,
+                'likes_count': c.likes_count,
+                'created_at': c.created_at.isoformat()
+            })
+        return success(result)
 
 class CheckinDetail(Resource):
     def get(self, id):
         checkin = Checkin.query.get(id)
         if not checkin:
-            return {'message': 'Checkin not found'}, 404
-        
+            return error('Checkin not found', 404)
         user = User.query.get(checkin.user_id)
         flower_place = FlowerPlace.query.get(checkin.flower_place_id)
-        flower = Flower.query.get(flower_place.flower_id)
-        place = Place.query.get(flower_place.place_id)
-        
-        return {
+        flower = Flower.query.get(flower_place.flower_id) if flower_place else None
+        place = Place.query.get(flower_place.place_id) if flower_place else None
+        return success({
             'id': checkin.id,
             'user': {
                 'id': user.id,
@@ -377,44 +401,40 @@ class CheckinDetail(Resource):
             'flower': {
                 'id': flower.id,
                 'species': flower.species
-            },
+            } if flower else None,
             'place': {
                 'id': place.id,
                 'name': place.name
-            },
+            } if place else None,
+            'flower_place_id': checkin.flower_place_id,
+            'location_id': place.id if place else None,
             'bloom_report': checkin.bloom_report.value,
             'content': checkin.content,
             'images': checkin.images,
             'likes_count': checkin.likes_count,
             'created_at': checkin.created_at.isoformat()
-        }, 200
+        })
 
 class CheckinLike(Resource):
     def put(self, id):
         checkin = Checkin.query.get(id)
         if not checkin:
-            return {'message': 'Checkin not found'}, 404
-        
-        # 简单实现：每次调用增加一个点赞
+            return error('Checkin not found', 404)
         checkin.likes_count += 1
         db.session.commit()
-        return {'likes_count': checkin.likes_count}, 200
+        return success({'likes_count': checkin.likes_count})
 
 class FlowerCheckins(Resource):
     def get(self, id):
         flower = Flower.query.get(id)
         if not flower:
-            return {'message': 'Flower not found'}, 404
-        
-        # 获取该花卉所有关联的flower_place_ids
+            return error('Flower not found', 404)
         flower_places = FlowerPlace.query.filter_by(flower_id=id).all()
         fp_ids = [fp.id for fp in flower_places]
-        
         if not fp_ids:
-            return [], 200
-        
+            return success([])
         checkins = Checkin.query.filter(Checkin.flower_place_id.in_(fp_ids)).order_by(Checkin.created_at.desc()).all()
-        return [{
+        return success([{
             'id': c.id,
             'user_id': c.user_id,
             'bloom_report': c.bloom_report.value,
@@ -422,23 +442,19 @@ class FlowerCheckins(Resource):
             'images': c.images,
             'likes_count': c.likes_count,
             'created_at': c.created_at.isoformat()
-        } for c in checkins], 200
+        } for c in checkins])
 
-class PlaceCheckins(Resource):
+class LocationCheckins(Resource):
     def get(self, id):
         place = Place.query.get(id)
         if not place:
-            return {'message': 'Place not found'}, 404
-        
-        # 获取该地点所有关联的flower_place_ids
+            return error('Place not found', 404)
         flower_places = FlowerPlace.query.filter_by(place_id=id).all()
         fp_ids = [fp.id for fp in flower_places]
-        
         if not fp_ids:
-            return [], 200
-        
+            return success([])
         checkins = Checkin.query.filter(Checkin.flower_place_id.in_(fp_ids)).order_by(Checkin.created_at.desc()).all()
-        return [{
+        return success([{
             'id': c.id,
             'user_id': c.user_id,
             'bloom_report': c.bloom_report.value,
@@ -446,45 +462,54 @@ class PlaceCheckins(Resource):
             'images': c.images,
             'likes_count': c.likes_count,
             'created_at': c.created_at.isoformat()
-        } for c in checkins], 200
+        } for c in checkins])
 
 # 成就与称号相关API
 class AchievementList(Resource):
     def get(self):
         achievements = Achievement.query.all()
-        return [{
+        return success([{
             'id': a.id,
             'description': a.description
-        } for a in achievements], 200
+        } for a in achievements])
 
 class UserAchievements(Resource):
     @jwt_required()
     def get(self):
-        # 从JWT令牌中获取当前用户ID
         current_user_id = get_jwt_identity()
-        
         user = User.query.get(current_user_id)
         if not user:
-            return {'message': 'User not found'}, 404
-        
-        return [{
+            return error('User not found', 404)
+        return success([{
             'id': a.id,
             'description': a.description
-        } for a in user.achievements], 200
+        } for a in user.achievements])
 
 class UserTitles(Resource):
     @jwt_required()
     def get(self):
-        # 从JWT令牌中获取当前用户ID
         current_user_id = get_jwt_identity()
-        
         user = User.query.get(current_user_id)
         if not user:
-            return {'message': 'User not found'}, 404
-        
-        return [{
+            return error('User not found', 404)
+        return success([{
             'id': t.id,
             'description': t.description
-        } for t in user.titles], 200
+        } for t in user.titles])
 
-# 路由将在app.py中注册
+# 文件上传
+class UploadResource(Resource):
+    @jwt_required()
+    def post(self):
+        if 'file' not in request.files:
+            return error('No file part', 400)
+        file = request.files['file']
+        if file.filename == '':
+            return error('No selected file', 400)
+        filename = secure_filename(file.filename)
+        name, ext = os.path.splitext(filename)
+        filename = f"{name}_{int(datetime.utcnow().timestamp())}{ext}"
+        file_path = os.path.join(UPLOAD_FOLDER, filename)
+        file.save(file_path)
+        file_url = url_for('uploads', filename=filename, _external=True)
+        return success({'url': file_url}, 'Upload successful', 201)
