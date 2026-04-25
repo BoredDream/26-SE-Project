@@ -3,5 +3,7 @@ Flask-SQLAlchemy
 Flask-Migrate
 Flask-RESTful
 Flask-CORS
+Flask-JWT-Extended
+Werkzeug
 PyMySQL
 python-dotenv
