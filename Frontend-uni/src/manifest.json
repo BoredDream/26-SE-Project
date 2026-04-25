@@ -1,0 +1,21 @@
+{
+  "name": "狮山花园",
+  "appid": "__UNI__FLOWERGARDEN",
+  "description": "花卉地图打卡应用",
+  "versionName": "1.0.0",
+  "versionCode": "100",
+  "transformPx": false,
+  "app-plus": {},
+  "h5": {
+    "title": "狮山花园",
+    "router": {
+      "mode": "hash"
+    }
+  },
+  "mp-weixin": {
+    "appid": "",
+    "setting": {
+      "urlCheck": false
+    }
+  }
+}

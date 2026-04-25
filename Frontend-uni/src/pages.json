@@ -1,0 +1,104 @@
+{
+  "pages": [
+    {
+      "path": "pages/login/login",
+      "style": {
+        "navigationBarTitleText": "登录",
+        "navigationStyle": "custom"
+      }
+    },
+    {
+      "path": "pages/register/register",
+      "style": {
+        "navigationBarTitleText": "注册",
+        "navigationStyle": "custom"
+      }
+    },
+    {
+      "path": "pages/home/home",
+      "style": {
+        "navigationBarTitleText": "首页",
+        "navigationStyle": "custom"
+      }
+    },
+    {
+      "path": "pages/map/map",
+      "style": {
+        "navigationBarTitleText": "地图",
+        "navigationStyle": "custom"
+      }
+    },
+    {
+      "path": "pages/checkin/checkin",
+      "style": {
+        "navigationBarTitleText": "打卡",
+        "navigationStyle": "custom"
+      }
+    },
+    {
+      "path": "pages/garden/garden",
+      "style": {
+        "navigationBarTitleText": "花园",
+        "navigationStyle": "custom"
+      }
+    },
+    {
+      "path": "pages/profile/profile",
+      "style": {
+        "navigationBarTitleText": "我的",
+        "navigationStyle": "custom"
+      }
+    },
+    {
+      "path": "pages/user-detail/user-detail",
+      "style": {
+        "navigationBarTitleText": "用户详情",
+        "navigationStyle": "custom"
+      }
+    },
+    {
+      "path": "pages/navigation/navigation",
+      "style": {
+        "navigationBarTitleText": "导航",
+        "navigationStyle": "custom"
+      }
+    }
+  ],
+  "tabBar": {
+    "color": "#6d7f66",
+    "selectedColor": "#338a3f",
+    "backgroundColor": "#ffffff",
+    "borderStyle": "black",
+    "list": [
+      {
+        "pagePath": "pages/home/home",
+        "text": "主页",
+        "iconPath": "static/icon/home.png",
+        "selectedIconPath": "static/icon/home-active.png"
+      },
+      {
+        "pagePath": "pages/map/map",
+        "text": "地图",
+        "iconPath": "static/icon/map.png",
+        "selectedIconPath": "static/icon/map-active.png"
+      },
+      {
+        "pagePath": "pages/garden/garden",
+        "text": "花园",
+        "iconPath": "static/icon/garden.png",
+        "selectedIconPath": "static/icon/garden-active.png"
+      },
+      {
+        "pagePath": "pages/profile/profile",
+        "text": "我的",
+        "iconPath": "static/icon/profile.png",
+        "selectedIconPath": "static/icon/profile-active.png"
+      }
+    ]
+  },
+  "globalStyle": {
+    "navigationBarTextStyle": "black",
+    "navigationBarBackgroundColor": "#F8F8F8",
+    "backgroundColor": "#F8F8F8"
+  }
+}
