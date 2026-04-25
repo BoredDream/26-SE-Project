@@ -1,43 +1,50 @@
 from flask import Flask, render_template
 from flask_migrate import Migrate
+from flask_cors import CORS
 from config import Config
 from extensions import db, api, jwt
 
 # 导入模型和路由
 from models import User, Flower, Place, FlowerPlace, Checkin, Achievement, Title
 from routes import (
-    UserRegister, UserLogin, UserInfo,
+    AuthRegister, AuthLogin, UserMe,
     FlowerList, FlowerDetail, FlowerBloomStatus,
-    PlaceList, PlaceDetail, MapFlowers, MapFilter,
-    CheckinList, CheckinDetail, CheckinLike, FlowerCheckins, PlaceCheckins,
-    AchievementList, UserAchievements, UserTitles
+    LocationList, LocationDetail, MapFlowers, MapFilter,
+    CheckinList, CheckinDetail, CheckinLike, FlowerCheckins, LocationCheckins,
+    AchievementList, UserAchievements, UserTitles,
+    UploadResource
 )
 
 app = Flask(__name__)
 app.config.from_object(Config)
+
+# CORS 允许本地开发来源
+CORS(app, resources={r"/v1/*": {"origins": ["http://localhost:5173", "http://127.0.0.1:5173", "http://localhost:3000"]}})
+
 db.init_app(app)
 jwt.init_app(app)
 migrate = Migrate(app, db)
 
-# 注册API路由
-api.add_resource(UserRegister, '/api/user/register')
-api.add_resource(UserLogin, '/api/user/login')
-api.add_resource(UserInfo, '/api/user/info')
-api.add_resource(FlowerList, '/api/flowers')
-api.add_resource(FlowerDetail, '/api/flowers/<int:id>')
-api.add_resource(FlowerBloomStatus, '/api/flowers/<int:id>/bloom-status')
-api.add_resource(PlaceList, '/api/places')
-api.add_resource(PlaceDetail, '/api/places/<int:id>')
-api.add_resource(MapFlowers, '/api/map/flowers')
-api.add_resource(MapFilter, '/api/map/filter')
-api.add_resource(CheckinList, '/api/checkins')
-api.add_resource(CheckinDetail, '/api/checkins/<int:id>')
-api.add_resource(CheckinLike, '/api/checkins/<int:id>/like')
-api.add_resource(FlowerCheckins, '/api/flowers/<int:id>/checkins')
-api.add_resource(PlaceCheckins, '/api/places/<int:id>/checkins')
-api.add_resource(AchievementList, '/api/achievements')
-api.add_resource(UserAchievements, '/api/user/achievements')
-api.add_resource(UserTitles, '/api/user/titles')
+# 注册API路由（全部改为 /v1/... 前缀）
+api.add_resource(AuthRegister, '/v1/auth/register')
+api.add_resource(AuthLogin, '/v1/auth/login')
+api.add_resource(UserMe, '/v1/users/me')
+api.add_resource(FlowerList, '/v1/flowers')
+api.add_resource(FlowerDetail, '/v1/flowers/<int:id>')
+api.add_resource(FlowerBloomStatus, '/v1/flowers/<int:id>/bloom-status')
+api.add_resource(LocationList, '/v1/locations')
+api.add_resource(LocationDetail, '/v1/locations/<int:id>')
+api.add_resource(MapFlowers, '/v1/map/flowers')
+api.add_resource(MapFilter, '/v1/map/filter')
+api.add_resource(CheckinList, '/v1/checkins')
+api.add_resource(CheckinDetail, '/v1/checkins/<int:id>')
+api.add_resource(CheckinLike, '/v1/checkins/<int:id>/like')
+api.add_resource(FlowerCheckins, '/v1/flowers/<int:id>/checkins')
+api.add_resource(LocationCheckins, '/v1/locations/<int:id>/checkins')
+api.add_resource(AchievementList, '/v1/achievements')
+api.add_resource(UserAchievements, '/v1/users/me/achievements')
+api.add_resource(UserTitles, '/v1/users/me/titles')
+api.add_resource(UploadResource, '/v1/upload')
 
 # 初始化API
 api.init_app(app)
@@ -47,10 +54,10 @@ api.init_app(app)
 def home():
     return render_template('index.html')
 
-# 健康检查端点
-@app.route('/health')
+# 健康检查端点（统一到 /v1）
+@app.route('/v1/health')
 def health_check():
-    return {'status': 'ok'}, 200
+    return {'code': 200, 'message': 'ok', 'data': {'status': 'ok'}}, 200
 
 # 服务上传的图片
 import os
