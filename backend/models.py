@@ -1,4 +1,4 @@
-from app import db
+from extensions import db
 from datetime import datetime
 import enum
 
@@ -16,6 +16,8 @@ class User(db.Model):
     __tablename__ = 'users'
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     openid = db.Column(db.String(64), unique=True, nullable=False)
+    username = db.Column(db.String(64), unique=True, nullable=True)
+    password_hash = db.Column(db.String(256), nullable=True)
     nickname = db.Column(db.String(50), nullable=False)
     avatar_url = db.Column(db.String(500))
     role = db.Column(db.Enum(UserRole), default=UserRole.USER)
@@ -24,6 +26,16 @@ class User(db.Model):
     checkins = db.relationship('Checkin', backref='user', lazy=True)
     achievements = db.relationship('Achievement', secondary='achievements_users', backref='users')
     titles = db.relationship('Title', secondary='titles_users', backref='users')
+
+    def set_password(self, password):
+        from werkzeug.security import generate_password_hash
+        self.password_hash = generate_password_hash(password)
+
+    def check_password(self, password):
+        from werkzeug.security import check_password_hash
+        if not self.password_hash:
+            return False
+        return check_password_hash(self.password_hash, password)
 
 class Flower(db.Model):
     __tablename__ = 'flowers'
