@@ -41,6 +41,18 @@
         </div>
       </section>
 
+      <section class="card-box">
+        <div class="section-title">选择打卡地点 <span class="required-mark">*</span></div>
+        <div class="field-row">
+          <select v-model="selectedLocationId">
+            <option :value="null" disabled>请选择打卡地点</option>
+            <option v-for="loc in availableLocations" :key="loc.id" :value="loc.id">
+              {{ loc.name }}{{ loc.flower_species ? ' - ' + loc.flower_species : '' }}
+            </option>
+          </select>
+        </div>
+      </section>
+
       <section class="card-box optional-box">
         <div class="section-title">可选信息</div>
 
@@ -84,7 +96,7 @@
         >
           {{ isSubmitting ? '上传中...' : '上传打卡' }}
         </button>
-        <p class="tip-text">图文均为空时无法上传，花的种类与状态为可选项。</p>
+        <p class="tip-text">请选择打卡地点，图文均为空时无法上传，花的种类与状态为可选项。</p>
       </section>
     </main>
 
@@ -112,6 +124,7 @@ import { defineComponent, ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useLocationStore } from '@/stores/location'
 import { useCheckinStore } from '@/stores/checkin'
+import { api } from '@/services/api'
 
 export default defineComponent({
   setup() {
@@ -119,6 +132,7 @@ export default defineComponent({
     const locationStore = useLocationStore()
     const checkinStore = useCheckinStore()
     const content = ref('')
+    const selectedLocationId = ref<number | null>(null)
     const selectedSpecies = ref('')
     const selectedStatus = ref('')
     const selectedImages = ref<Array<{ file: File; preview: string }>>([])
@@ -126,13 +140,23 @@ export default defineComponent({
     const galleryInput = ref<HTMLInputElement | null>(null)
     const cameraInput = ref<HTMLInputElement | null>(null)
 
+    // 可选的打卡地点列表
+    const availableLocations = computed(() => {
+      return locationStore.locations
+    })
+
+    // 根据选中的地点过滤可用的花种
     const availableSpecies = computed(() => {
+      if (selectedLocationId.value) {
+        const loc = locationStore.locations.find(l => l.id === selectedLocationId.value)
+        return loc?.flower_species ? [loc.flower_species] : []
+      }
       const species = locationStore.locations.map(item => item.flower_species)
       return Array.from(new Set(species)).filter(Boolean) as string[]
     })
 
     const canUpload = computed(() => {
-      return content.value.trim().length > 0 || selectedImages.value.length > 0
+      return (content.value.trim().length > 0 || selectedImages.value.length > 0) && selectedLocationId.value !== null
     })
 
     const goBack = () => {
@@ -168,21 +192,69 @@ export default defineComponent({
       selectedImages.value.splice(index, 1)
     }
 
+    // 上传单张图片到后端，返回真实 URL
+    const uploadImage = async (file: File): Promise<string> => {
+      const formData = new FormData()
+      formData.append('file', file)
+      const token = localStorage.getItem('token')
+      if (!token) {
+        throw new Error('未登录，请重新登录后再试')
+      }
+      const response = await fetch('/v1/upload', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` },
+        body: formData,
+      })
+      if (!response.ok) {
+        let errorMsg = '图片上传失败'
+        try {
+          const data = await response.json()
+          errorMsg = data.message || errorMsg
+        } catch {
+          errorMsg = `图片上传失败 (HTTP ${response.status})`
+        }
+        throw new Error(errorMsg)
+      }
+      const data = await response.json()
+      return data.data.url
+    }
+
+    // 将中文状态映射为后端 bloom_report 枚举值
+    const mapBloomReport = (status: string): string => {
+      const mapping: Record<string, string> = {
+        '含苞待放': 'budding',
+        '盛开': 'blooming',
+        '凋零': 'wilting',
+      }
+      return mapping[status] || 'blooming'
+    }
+
     const submitCheckin = async () => {
       if (!canUpload.value) return
       isSubmitting.value = true
 
       try {
-        const images = selectedImages.value.map(item => item.preview)
+        // 1. 先上传所有图片，获取真实 URL
+        const uploadedUrls: string[] = []
+        for (const item of selectedImages.value) {
+          const url = await uploadImage(item.file)
+          uploadedUrls.push(url)
+        }
+
+        // 2. 将中文状态映射为后端枚举值
+        const bloomReport = selectedStatus.value ? mapBloomReport(selectedStatus.value) : undefined
+
+        // 3. 提交打卡
         await checkinStore.createCheckin({
-          location_id: 1,
+          location_id: selectedLocationId.value!,
           content: content.value.trim(),
-          images,
-          flower_species: selectedSpecies.value || undefined,
+          images: uploadedUrls,
+          bloom_report: bloomReport,
         })
         router.push('/home')
       } catch (error) {
         console.error('上传失败', error)
+        alert('打卡发布失败：' + (error instanceof Error ? error.message : '未知错误'))
       } finally {
         isSubmitting.value = false
       }
@@ -197,12 +269,14 @@ export default defineComponent({
     return {
       goBack,
       content,
+      selectedLocationId,
       selectedSpecies,
       selectedStatus,
       selectedImages,
       isSubmitting,
       galleryInput,
       cameraInput,
+      availableLocations,
       availableSpecies,
       canUpload,
       triggerGallery,

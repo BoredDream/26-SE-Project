@@ -24,34 +24,19 @@ export const useCheckinStore = defineStore('checkin', () => {
     }
   }
 
-  const createCheckin = async (data: { location_id: number; content: string; images: string[]; flower_species?: string }) => {
-    const createdAt = new Date().toISOString()
-    const payload: Checkin = {
-      id: Date.now(),
-      user_id: mockUser.id,
-      location_id: data.location_id,
-      content: data.content,
-      images: data.images,
-      likes_count: 0,
-      dislikes_count: 0,
-      comments_count: 0,
-      created_at: createdAt,
-      updated_at: createdAt,
-      user: mockUser,
-    }
-
+  const createCheckin = async (data: { location_id: number; content: string; images: string[]; flower_species?: string; bloom_report?: string }) => {
     try {
       const response = await api.checkins.create({
         location_id: data.location_id,
         content: data.content,
         images: data.images,
+        bloom_report: data.bloom_report,
       })
       checkins.value.unshift(response.data)
       return response.data
     } catch (err) {
-      checkins.value.unshift(payload)
       error.value = err instanceof Error ? err.message : '发布签到失败'
-      return payload
+      throw err
     }
   }
 

@@ -47,7 +47,6 @@ class AuthRegister(Resource):
             return error('User already exists', 400)
 
         user = User(
-            openid='manual_' + username,
             username=username,
             nickname=nickname,
             avatar_url=avatar_url
@@ -86,7 +85,6 @@ class AuthLogin(Resource):
             demo_user = User.query.filter_by(username='demo_user').first()
             if not demo_user:
                 demo_user = User(
-                    openid='demo_openid',
                     username='demo_user',
                     nickname='花园探索者',
                     avatar_url=''
@@ -239,13 +237,37 @@ class LocationList(Resource):
             places = flower.places
         else:
             places = Place.query.all()
-        return success([{
-            'id': p.id,
-            'name': p.name,
-            'description': p.description,
-            'latitude': float(p.latitude),
-            'longitude': float(p.longitude)
-        } for p in places])
+        result = []
+        for p in places:
+            # 获取该地点关联的花卉信息
+            flower_places = FlowerPlace.query.filter_by(place_id=p.id).all()
+            flower_species = None
+            bloom_status = None
+            cover_image = None
+            checkin_count = 0
+            if flower_places:
+                fp = flower_places[0]
+                flower = Flower.query.get(fp.flower_id)
+                if flower:
+                    flower_species = flower.species
+                    bloom_status = flower.bloom_status.value if flower.bloom_status else None
+                    cover_image = flower.cover_image
+                # 统计该地点的打卡数
+                checkin_count = Checkin.query.filter(
+                    Checkin.flower_place_id.in_([fpp.id for fpp in flower_places])
+                ).count()
+            result.append({
+                'id': p.id,
+                'name': p.name,
+                'description': p.description,
+                'latitude': float(p.latitude),
+                'longitude': float(p.longitude),
+                'flower_species': flower_species,
+                'bloom_status': bloom_status,
+                'cover_image': cover_image,
+                'checkin_count': checkin_count
+            })
+        return success(result)
 
 class LocationDetail(Resource):
     def get(self, id):
@@ -325,10 +347,13 @@ class CheckinList(Resource):
         if not flower_place:
             return error('Invalid location_id', 400)
 
+        bloom_report_val = args.get('bloom_report', 'blooming')
+        if bloom_report_val is None:
+            bloom_report_val = 'blooming'
         checkin = Checkin(
             user_id=user_id,
             flower_place_id=flower_place.id,
-            bloom_report=BloomStatus(args.get('bloom_report', 'blooming')),
+            bloom_report=BloomStatus(bloom_report_val),
             content=args.get('content', ''),
             images=args.get('images', [])
         )
@@ -369,6 +394,9 @@ class CheckinList(Resource):
         result = []
         for c in checkins:
             fp = FlowerPlace.query.get(c.flower_place_id)
+            user = User.query.get(c.user_id)
+            place = Place.query.get(fp.place_id) if fp else None
+            flower = Flower.query.get(fp.flower_id) if fp else None
             result.append({
                 'id': c.id,
                 'user_id': c.user_id,
@@ -378,7 +406,19 @@ class CheckinList(Resource):
                 'content': c.content,
                 'images': c.images,
                 'likes_count': c.likes_count,
-                'created_at': c.created_at.isoformat()
+                'comments_count': 0,
+                'created_at': c.created_at.isoformat(),
+                'updated_at': c.created_at.isoformat(),
+                'user': {
+                    'id': user.id,
+                    'nickname': user.nickname,
+                    'avatar': user.avatar_url
+                } if user else None,
+                'location': {
+                    'id': place.id,
+                    'name': place.name,
+                    'flower_species': flower.species if flower else None
+                } if place else None
             })
         return success(result)
 
@@ -511,5 +551,5 @@ class UploadResource(Resource):
         filename = f"{name}_{int(datetime.utcnow().timestamp())}{ext}"
         file_path = os.path.join(UPLOAD_FOLDER, filename)
         file.save(file_path)
-        file_url = url_for('uploads', filename=filename, _external=True)
+        file_url = f'/uploads/{filename}'
         return success({'url': file_url}, 'Upload successful', 201)

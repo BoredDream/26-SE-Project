@@ -1,5 +1,16 @@
-// API服务层
-const API_BASE_URL = 'http://101.37.240.166:3001'
+// API服务层 - 使用相对路径，通过 Vite proxy 转发到后端
+const API_BASE_URL = ''
+
+// 将后端返回的图片 URL 标准化为相对路径（通过 Vite proxy 访问）
+export const normalizeImageUrl = (url: string | null | undefined): string => {
+  if (!url) return ''
+  // 如果是以 http://localhost:3001 开头的绝对路径，替换为相对路径
+  if (url.startsWith('http://localhost:3001')) {
+    return url.replace('http://localhost:3001', '')
+  }
+  // 如果是以 http://101.37.240.166:5555 开头的旧数据路径，保留原样（外部可访问）
+  return url
+}
 
 // API响应类型定义
 export interface ApiResponse<T = any> {
@@ -153,6 +164,10 @@ const apiClient = new ApiClient(API_BASE_URL)
 
 // API服务方法
 export const api = {
+  // 通用请求方法
+  get: <T>(endpoint: string) => apiClient.get<T>(endpoint),
+  post: <T>(endpoint: string, data?: any) => apiClient.post<T>(endpoint, data),
+
   // 健康检查
   health: () => apiClient.get('/health'),
 
@@ -178,7 +193,7 @@ export const api = {
   // 签到相关
   checkins: {
     getList: () => apiClient.get<Checkin[]>('/v1/checkins'),
-    create: (data: { location_id: number; content: string; images: string[] }) =>
+    create: (data: { location_id: number; content: string; images: string[]; bloom_report?: string }) =>
       apiClient.post<Checkin>('/v1/checkins', data),
     like: (id: number) => apiClient.post(`/v1/checkins/${id}/like`),
     report: (id: number, reason: string) => apiClient.post(`/v1/checkins/${id}/report`, { reason }),

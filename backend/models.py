@@ -15,9 +15,9 @@ class BloomStatus(enum.Enum):
 class User(db.Model):
     __tablename__ = 'users'
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    openid = db.Column(db.String(64), unique=True, nullable=False)
-    username = db.Column(db.String(64), unique=True, nullable=True)
-    password_hash = db.Column(db.String(256), nullable=True)
+    # 注意: openid 列在 MySQL 中不存在，已移除
+    username = db.Column(db.String(50), unique=True, nullable=True)
+    password_hash = db.Column(db.String(128), nullable=True)
     nickname = db.Column(db.String(50), nullable=False)
     avatar_url = db.Column(db.String(500))
     role = db.Column(db.Enum(UserRole), default=UserRole.USER)
@@ -29,7 +29,8 @@ class User(db.Model):
 
     def set_password(self, password):
         from werkzeug.security import generate_password_hash
-        self.password_hash = generate_password_hash(password)
+        # 使用 pbkdf2:sha256 以兼容 MySQL varchar(128) 列
+        self.password_hash = generate_password_hash(password, method='pbkdf2:sha256')
 
     def check_password(self, password):
         from werkzeug.security import check_password_hash

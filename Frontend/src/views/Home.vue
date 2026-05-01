@@ -82,7 +82,7 @@
                 :key="index"
                 class="post-image-item"
               >
-                <img :src="image" alt="动态图片" />
+                <img :src="normalizeImageUrl(image)" alt="动态图片" />
               </div>
             </div>
             <div class="post-footer">
@@ -120,6 +120,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useLocationStore } from '@/stores/location'
 import { useCheckinStore } from '@/stores/checkin'
 import type { Location, Checkin } from '@/services/api'
+import { normalizeImageUrl } from '@/services/api'
 
 const router = useRouter()
 const authStore = useAuthStore()

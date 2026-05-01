@@ -53,6 +53,16 @@
                 <span>{{ formatTime(post.created_at) }}</span>
               </div>
               <p>{{ post.content }}</p>
+              <div v-if="post.images && post.images.length" class="modal-post-images">
+                <img
+                  v-for="(img, imgIdx) in post.images"
+                  :key="imgIdx"
+                  :src="normalizeImageUrl(img)"
+                  class="modal-post-image"
+                  alt="打卡图片"
+                  @click.stop="previewImage(img)"
+                />
+              </div>
             </div>
             <div v-else class="no-posts">暂无打卡内容</div>
           </div>
@@ -67,6 +77,7 @@ import { ref, computed, onMounted } from 'vue'
 import BottomNav from '../components/BottomNav.vue'
 import { useLocationStore } from '@/stores/location'
 import { useCheckinStore } from '@/stores/checkin'
+import { normalizeImageUrl } from '@/services/api'
 
 const locationStore = useLocationStore()
 const checkinStore = useCheckinStore()
@@ -106,6 +117,11 @@ const selectedLocationPosts = computed(() => {
 
 const openBadgeDetail = (location: any) => {
   selectedLocation.value = location
+}
+
+// 图片预览（在新窗口打开）
+const previewImage = (url: string) => {
+  window.open(url, '_blank')
 }
 
 const formatTime = (dateString: string) => {
@@ -349,5 +365,26 @@ onMounted(async () => {
   text-align: center;
   color: #7a8b7a;
   padding: 22px 0;
+}
+
+.modal-post-images {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.modal-post-image {
+  width: 80px;
+  height: 80px;
+  object-fit: cover;
+  border-radius: 10px;
+  cursor: pointer;
+  border: 1px solid #e0eae0;
+  transition: transform 0.2s;
+}
+
+.modal-post-image:hover {
+  transform: scale(1.05);
 }
 </style>
