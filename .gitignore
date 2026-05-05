@@ -34,3 +34,6 @@ Thumbs.db
 
 # Misc
 *.bak
+
+# logs
+logs
