@@ -1,42 +1,86 @@
-# hello_vue3
+# 花境 (Flower Garden) 前端 — Vue 3 H5
 
-This template should help get you started developing with Vue 3 in Vite.
+## 项目简介
 
-## Recommended IDE Setup
+花境前端基于 Vue 3 + TypeScript + Vite 构建，使用高德地图 JSAPI 2.0 提供花卉地图展示，Pinia 管理状态，Three.js 实现 3D 花圃效果。
 
-[VS Code](https://code.visualstudio.com/) + [Vue (Official)](https://marketplace.visualstudio.com/items?itemName=Vue.volar) (and disable Vetur).
+## 技术栈
 
-## Recommended Browser Setup
+- **框架**: Vue 3.5 + TypeScript
+- **构建工具**: Vite 7
+- **状态管理**: Pinia 3
+- **路由**: Vue Router 4
+- **地图**: 高德地图 JSAPI 2.0 (`@amap/amap-jsapi-loader`)
+- **3D 渲染**: Three.js 0.183
+- **样式**: Sass (SCSS)
 
-- Chromium-based browsers (Chrome, Edge, Brave, etc.):
-  - [Vue.js devtools](https://chromewebstore.google.com/detail/vuejs-devtools/nhdogjmejiglipccpnnnanhbledajbpd)
-  - [Turn on Custom Object Formatter in Chrome DevTools](http://bit.ly/object-formatters)
-- Firefox:
-  - [Vue.js devtools](https://addons.mozilla.org/en-US/firefox/addon/vue-js-devtools/)
-  - [Turn on Custom Object Formatter in Firefox DevTools](https://fxdx.dev/firefox-devtools-custom-object-formatters/)
+## 页面结构
 
-## Type Support for `.vue` Imports in TS
+| 路径 | 页面 | 说明 |
+|------|------|------|
+| `/` | Home | 主页，展示花卉卡片列表 |
+| `/map` | Map | 高德地图，展示花卉地点与花期状态 |
+| `/checkin` | Checkin | 打卡发布页 |
+| `/garden` | Garden | 3D 花圃成就墙 |
+| `/profile` | Profile | 个人中心 |
+| `/login` | Login | 登录页 |
+| `/register` | Register | 注册页 |
+| `/user/:id` | UserDetail | 用户详情页 |
+| `/navigation` | Navigation | 导航页 |
 
-TypeScript cannot handle type information for `.vue` imports by default, so we replace the `tsc` CLI with `vue-tsc` for type checking. In editors, we need [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) to make the TypeScript language service aware of `.vue` types.
+## 快速开始
 
-## Customize configuration
-
-See [Vite Configuration Reference](https://vite.dev/config/).
-
-## Project Setup
-
-```sh
+```bash
+# 安装依赖
 npm install
-```
 
-### Compile and Hot-Reload for Development
-
-```sh
+# 启动开发服务器（默认 http://localhost:5173）
 npm run dev
-```
 
-### Type-Check, Compile and Minify for Production
-
-```sh
+# 构建生产版本
 npm run build
+
+# 预览生产构建
+npm run preview
 ```
+
+## 环境要求
+
+- Node.js ≥ 20.19 或 ≥ 22.12
+- 后端服务运行在 `http://localhost:5000`（可在 `services/api.ts` 中配置）
+
+## 项目结构
+
+```
+src/
+├── views/           # 页面组件
+│   ├── Home.vue     # 主页
+│   ├── Map.vue      # 地图页
+│   ├── Checkin.vue  # 打卡页
+│   ├── Garden.vue   # 花圃（3D）
+│   ├── Profile.vue  # 个人中心
+│   ├── login.vue    # 登录
+│   ├── Register.vue # 注册
+│   ├── UserDetail.vue # 用户详情
+│   └── Navigation.vue # 导航
+├── components/      # 公共组件
+│   ├── BottomNav.vue    # 底部导航栏
+│   └── FlowerSuggest.vue # 花卉搜索建议
+├── services/        # API 服务层
+│   ├── api.ts       # 后端 API 调用
+│   └── mockData.ts  # Mock 数据（开发用）
+├── stores/          # Pinia 状态管理
+│   ├── auth.ts      # 认证状态
+│   ├── checkin.ts   # 打卡状态
+│   ├── location.ts  # 地点状态
+│   └── achievement.ts # 成就状态
+├── icon/            # SVG 图标
+├── App.vue          # 根组件
+├── main.ts          # 入口文件
+└── router.ts        # 路由配置
+```
+
+## 相关文档
+
+- [API 文档](API_DOC.md) — 后端接口详细说明
+- [根目录 README](../README.md) — 项目整体说明

@@ -1,17 +1,16 @@
-# 🌸 狮山花园
+# 🌸 花境 (Flower Garden)
 
 <div align="center">
 
-
 **不再错过每一次花开**
 
-*一款基于微信小程序的校园花卉实时地图，用众包打卡驱动花期数据，让校园里的每一朵花都被记录、被分享、被珍藏。*
+*一款基于 Vue 3 的校园花卉实时地图 H5，用众包打卡驱动花期数据，让校园里的每一朵花都被记录、被分享、被珍藏。*
 
 ---
 
 ![版本](https://img.shields.io/badge/version-1.1.0-52B788?style=flat-square)
-![微信小程序](https://img.shields.io/badge/微信小程序-基础库≥3.0-07C160?style=flat-square&logo=wechat)
-![Node.js](https://img.shields.io/badge/Node.js-≥18.x-339933?style=flat-square&logo=node.js)
+![Vue 3](https://img.shields.io/badge/Vue_3-3.5-4FC08D?style=flat-square&logo=vue.js)
+![Flask](https://img.shields.io/badge/Flask-3.1-000000?style=flat-square&logo=flask)
 ![MySQL](https://img.shields.io/badge/MySQL-8.0-4479A1?style=flat-square&logo=mysql)
 ![License](https://img.shields.io/badge/license-MIT-F48FB1?style=flat-square)
 
@@ -21,7 +20,7 @@
 
 ## ✨ 产品简介
 
-> **狮山花园**是一款面向校园师生的微信小程序。校园里的花每年如期绽放，却总有人因为不知道地点、错过花期而留下遗憾。狮山花园以校园地图为载体，通过用户众包打卡实时维护花期状态，让每一位同学都能在最美的时刻赶到最美的地点。
+> **花境**是一款面向校园师生的花卉打卡 H5 应用。校园里的花每年如期绽放，却总有人因为不知道地点、错过花期而留下遗憾。花境以高德地图为载体，通过用户众包打卡实时维护花期状态，让每一位同学都能在最美的时刻赶到最美的地点。
 
 ### 核心理念
 
@@ -41,42 +40,40 @@
 
 ### 🌸 实时花卉地图
 
-- 校园地图展示所有花卉地点
+- 高德地图展示所有花卉地点
 - 花点颜色实时反映花期状态
-- 热力图叠加，直观显示打卡热度
 - 按花期状态一键筛选
+- 花卉种类筛选
 
 </td>
 <td width="50%">
 
 ### 📸 打卡众包系统
 
-- 上传现场照片，选择对应地点
-- 花期状态可选填，不强制
-- GPS 后台静默校验（150m 范围）
-- AI 内容审核自动把关
+- 上传现场照片，选择对应花卉与地点
+- 花期状态可选填
+- 图片上传支持
+- 评论互动
 
 </td>
 </tr>
 <tr>
 <td width="50%">
 
-### 🔔 花开通知
+### 🏆 成就花圃
 
-- 订阅感兴趣的花卉地点
-- 花开时微信推送，不再错过
-- 同一花期只推一次，不打扰
-- 称号解锁同步通知
+- 打卡新花种，花圃生长对应盆栽
+- 多种成就解锁
+- 六种称号，记录每个里程碑
 
 </td>
 <td width="50%">
 
-### 🏆 成就花圃
+### 👤 个人中心
 
-- 打卡新花种，花圃生长对应盆栽
-- GPS 验证到访 → 金色盆栽
-- 未验证 → 银色盆栽，可补打升级
-- 六种称号，记录每个里程碑
+- 查看个人打卡记录
+- 成就与称号展示
+- 用户信息管理
 
 </td>
 </tr>
@@ -88,38 +85,40 @@
 
 ```
 ┌─────────────────────────────────────────────┐
-│              微信小程序客户端                  │
-│    主页  ·  地图  ·  打卡  ·  排行  ·  我的   │
+│              前端 (Vue 3 H5)                  │
+│    主页  ·  地图  ·  打卡  ·  花圃  ·  我的   │
+│    Vue 3 + TypeScript + Pinia + Vue Router   │
+│    高德地图 JSAPI 2.0                        │
 └──────────────────┬──────────────────────────┘
-                   │ HTTPS
+                   │ HTTPS (RESTful JSON API)
 ┌──────────────────▼──────────────────────────┐
-│              后端服务层                        │
-│  Node.js 18 + Express                        │
-│  ├── 地图服务      ├── 打卡服务（GPS校验）     │
-│  ├── 审核服务      ├── 成就服务               │
-│  ├── 通知服务      └── 定时任务（5个）         │
+│              后端 (Flask)                     │
+│  Python 3.12 + Flask 3.1                     │
+│  ├── 用户认证 (JWT)    ├── 花卉/地点管理       │
+│  ├── 打卡系统          ├── 评论互动            │
+│  ├── 成就/称号系统     └── 文件上传            │
 └──────────────────┬──────────────────────────┘
                    │
 ┌──────────────────▼──────────────────────────┐
 │              数据层                            │
-│  MySQL 8.0（7张业务表）                       │
-│  Redis 7.0（缓存 · 推送防重）                  │
-│  腾讯云 COS（图片三级存储）                    │
+│  MySQL 8.0（11张业务表）                      │
+│  SQLite（本地开发可选）                        │
 └─────────────────────────────────────────────┘
 ```
 
 ### 技术选型
 
-| 层级   | 技术                | 版本        |
-| ---- | ----------------- | --------- |
-| 前端   | 微信小程序（原生）         | 基础库 ≥ 3.0 |
-| 地图   | 腾讯地图 SDK          | 最新稳定版     |
-| 后端   | Node.js + Express | ≥ 18.x    |
-| 数据库  | MySQL             | ≥ 8.0     |
-| 缓存   | Redis             | ≥ 7.0     |
-| 对象存储 | 腾讯云 COS           | -         |
-| 推送   | 微信订阅消息            | -         |
-| 部署   | 微信云开发             | -         |
+| 层级   | 技术                        | 版本          |
+| ------ | --------------------------- | ------------- |
+| 前端   | Vue 3 + TypeScript          | 3.5+          |
+| 前端   | Pinia（状态管理）            | 3.0+          |
+| 前端   | Vue Router                  | 4.6+          |
+| 地图   | 高德地图 JSAPI 2.0          | 最新稳定版     |
+| 前端   | Three.js（3D 花圃）         | 0.183+        |
+| 后端   | Python + Flask              | 3.12+ / 3.1+  |
+| 数据库 | MySQL                       | 8.0+          |
+| ORM    | Flask-SQLAlchemy            | 3.1+          |
+| 认证   | Flask-JWT-Extended          | -             |
 
 ---
 
@@ -128,74 +127,83 @@
 ### 环境准备
 
 ```bash
-# Node.js 版本要求 ≥ 18
+# Python 版本要求 ≥ 3.12
+python3 --version
+
+# Node.js 版本要求 ≥ 20.19
 node -v
 
 # 克隆项目
-git clone https://github.com/your-org/huaji-miniprogram.git
-cd huaji-miniprogram
+git clone https://github.com/your-org/flower-garden.git
+cd flower-garden
 ```
 
 ### 后端启动
 
 ```bash
-cd server
+cd backend
+
+# 创建虚拟环境
+python3 -m venv venv
+source venv/bin/activate
+
+# 安装依赖
+pip install -r requirements.txt
+
+# 配置环境变量
+cp .env.example .env
+# 编辑 .env 填写数据库连接等信息
+
+# 初始化数据库
+flask db upgrade
+
+# 启动服务
+flask run --host=0.0.0.0 --port=5000
+```
+
+### 前端启动（Vue 3 H5）
+
+```bash
+cd Frontend
 
 # 安装依赖
 npm install
 
-# 配置环境变量
-cp .env.example .env
-# 编辑 .env 填写数据库、微信、COS 等配置
-
-# 初始化数据库
-mysql -u root -p campus_flower < scripts/init.sql
-
-# 启动开发服务
+# 启动开发服务器
 npm run dev
 ```
 
-### 前端启动
+### 前端启动（uni-app，支持微信小程序）
 
 ```bash
-# 1. 下载微信开发者工具
-#    https://developers.weixin.qq.com/miniprogram/dev/devtools/download.html
+cd Frontend-uni
 
-# 2. 导入 miniprogram/ 目录
+# 安装依赖
+npm install
 
-# 3. 填写你的 AppID
+# 启动 H5 开发服务器
+npm run dev:h5
 
-# 4. 开启「不校验合法域名」（仅本地开发）
+# 编译微信小程序
+npm run build:mp-weixin
 ```
 
-### 环境变量说明
+### 一键重启
 
-```env
-# 服务配置
-PORT=3000
+项目根目录提供了一键重启脚本：
 
-# 数据库
-DB_HOST=127.0.0.1
-DB_PORT=3306
-DB_NAME=campus_flower
-DB_USER=root
-DB_PASSWORD=your_password
+```bash
+# 重启所有服务
+./restart.sh all
 
-# Redis
-REDIS_URL=redis://127.0.0.1:6379
+# 仅重启后端
+./restart.sh backend
 
-# 微信小程序（在微信公众平台获取）
-WX_APPID=wx1234567890abcdef
-WX_SECRET=xxxxxxxxxxxxxxxx
+# 仅重启前端 Vue3
+./restart.sh frontend
 
-# 腾讯云 COS
-COS_SECRET_ID=AKIDxxxxxxx
-COS_SECRET_KEY=xxxxxxx
-COS_BUCKET=flower-1234567890
-COS_REGION=ap-guangzhou
-
-# JWT
-JWT_SECRET=your_random_long_secret
+# 仅重启前端 uni-app
+./restart.sh frontend-uni
 ```
 
 ---
@@ -203,106 +211,102 @@ JWT_SECRET=your_random_long_secret
 ## 📁 项目结构
 
 ```
-huaji-miniprogram/
-├── miniprogram/              # 微信小程序前端
-│   ├── pages/
-│   │   ├── home/             # 主页
-│   │   ├── map/              # 地图页
-│   │   ├── checkin/          # 打卡发布页
-│   │   ├── leaderboard/      # 排行榜
-│   │   ├── profile/          # 我的
-│   │   └── garden/           # 花圃成就墙
-│   ├── components/
-│   │   ├── custom-tab-bar/   # 自定义底部导航
-│   │   ├── location-card/    # 地点卡片
-│   │   └── pot-card/         # 花圃盆栽卡片
-│   ├── utils/
-│   │   ├── request.js        # 网络请求封装
-│   │   ├── auth.js           # 登录态管理
-│   │   └── geo.js            # GPS 静默获取
-│   └── constants/
-│       ├── bloom.js          # 花期状态枚举
-│       └── achievement.js    # 成就配置
+flower-garden/
+├── backend/                  # Flask 后端
+│   ├── app.py                # 主应用入口
+│   ├── config.py             # 配置类
+│   ├── extensions.py         # Flask 扩展初始化
+│   ├── models.py             # 数据库模型（11张表）
+│   ├── routes.py             # API 路由
+│   ├── requirements.txt      # Python 依赖
+│   ├── .env                  # 环境变量（不提交）
+│   ├── .env.example          # 环境变量示例
+│   ├── migrations/           # 数据库迁移
+│   └── uploads/              # 上传文件
 │
-├── server/                   # Node.js 后端
-│   ├── routes/               # API 路由
-│   ├── services/             # 业务逻辑
-│   │   ├── auditService.js   # AI 内容审核
-│   │   ├── achievementService.js
-│   │   ├── notifyService.js  # 推送服务
-│   │   └── voteService.js    # 花期投票
-│   ├── utils/
-│   │   ├── geo.js            # Haversine 距离计算
-│   │   ├── db.js             # MySQL 连接池
-│   │   └── redis.js          # Redis 客户端
-│   ├── cron/
-│   │   └── tasks.js          # 定时任务
-│   └── scripts/
-│       └── init.sql          # 数据库初始化
+├── Frontend/                 # Vue 3 H5 前端
+│   ├── src/
+│   │   ├── views/            # 页面组件
+│   │   ├── components/       # 公共组件
+│   │   ├── services/         # API 服务层
+│   │   ├── stores/           # Pinia 状态管理
+│   │   └── router.ts         # 路由配置
+│   ├── package.json
+│   └── vite.config.ts
 │
-└── docs/                     # 项目文档
-    ├── PRD.md                # 产品设计文档
-    ├── API.md                # 接口文档
-    └── ER.drawio             # 数据库 ER 图
+├── Frontend-uni/             # uni-app 前端（H5 + 微信小程序）
+│   ├── src/
+│   │   ├── pages/            # 页面
+│   │   └── manifest.json     # 应用配置
+│   ├── package.json
+│   └── vite.config.mjs
+│
+├── DB-Design/                # 数据库设计文档
+├── docs/                     # 项目文档
+├── static/                   # 静态资源
+├── restart.sh                # 一键重启脚本
+├── CLAUDE.md                 # AI 辅助开发指南
+└── README.md                 # 本文件
 ```
 
 ---
 
 ## 🗄 数据库设计
 
-系统共7张核心数据表：
+系统共 11 张核心数据表：
 
-| 表名              | 说明                      |
-| --------------- | ----------------------- |
-| `users`         | 用户基础信息，含微信 openid 与角色   |
-| `locations`     | 花卉地点，含坐标、品种、花期状态        |
-| `checkins`      | 用户打卡，含图片、GPS校验、审核状态     |
-| `subscriptions` | 用户订阅关系                  |
-| `likes`         | 打卡点赞记录                  |
-| `achievements`  | 花圃成就，每用户每花种唯一，grade 可升级 |
-| `titles`        | 称号解锁记录                  |
+| 表名               | 说明                      |
+| ------------------ | ------------------------- |
+| `users`            | 用户基础信息，含用户名密码与角色 |
+| `flowers`          | 花卉品种信息                |
+| `places`           | 地点信息，含坐标             |
+| `flower_places`    | 花卉-地点多对多关联          |
+| `checkins`         | 用户打卡记录                |
+| `checkin_likes`    | 打卡点赞记录                |
+| `checkin_comments` | 打卡评论                   |
+| `achievements`     | 成就定义                   |
+| `achievements_users` | 用户-成就关联             |
+| `titles`           | 称号定义                   |
+| `titles_users`     | 用户-称号关联               |
 
 ---
 
 ## 📡 核心 API
 
-| 方法   | 路径                       | 说明              |
-| ---- | ------------------------ | --------------- |
-| POST | `/auth/login`            | 微信登录，code 换 JWT |
-| GET  | `/locations`             | 获取花卉地点列表        |
-| GET  | `/locations/:id`         | 地点详情 + 打卡动态     |
-| POST | `/checkins`              | 发布打卡            |
-| POST | `/upload/image`          | 上传图片（三级处理）      |
-| GET  | `/users/me/achievements` | 我的花圃            |
-| GET  | `/leaderboard/checkins`  | 打卡王榜            |
-| GET  | `/leaderboard/heatmap`   | 热力图数据           |
+所有 API 统一使用 `/v1/` 前缀，响应格式为 `{code, message, data}`。
 
-> 完整接口文档见 [docs/API.md](./docs/API.md)
+| 方法   | 路径                                   | 说明              |
+| ------ | -------------------------------------- | ----------------- |
+| POST   | `/v1/auth/register`                    | 用户注册           |
+| POST   | `/v1/auth/login`                       | 用户登录           |
+| GET    | `/v1/users/me`                         | 获取当前用户信息    |
+| GET    | `/v1/flowers`                          | 获取花卉列表        |
+| GET    | `/v1/flowers/<id>`                     | 花卉详情           |
+| GET    | `/v1/locations`                        | 获取地点列表        |
+| GET    | `/v1/map/flowers`                      | 地图花卉数据        |
+| POST   | `/v1/checkins`                         | 发布打卡           |
+| GET    | `/v1/checkins`                         | 打卡列表           |
+| POST   | `/v1/checkins/<id>/like`               | 点赞打卡           |
+| GET    | `/v1/checkins/<id>/comments`           | 获取评论           |
+| POST   | `/v1/checkins/<id>/comments`           | 发表评论           |
+| GET    | `/v1/achievements`                     | 成就列表           |
+| GET    | `/v1/users/me/achievements`            | 我的成就           |
+| GET    | `/v1/health`                           | 健康检查           |
+
+> 完整接口文档见 [`Frontend/API_DOC.md`](Frontend/API_DOC.md)
 
 ---
 
 ## 🎯 称号系统
 
 | 称号       | 解锁条件          |
-| -------- | ------------- |
-| 🌱 花卉初探者 | 完成第 1 次打卡     |
-| 🌸 花卉观察员 | 累计打卡 10 次     |
-| 📸 最美摄影师 | 单条打卡获赞超过 50   |
-| 🔍 探花使   | 某地点某花期首位打卡者   |
+| ---------- | ----------------- |
+| 🌱 花卉初探者 | 完成第 1 次打卡   |
+| 🌸 花卉观察员 | 累计打卡 10 次    |
+| 📸 最美摄影师 | 单条打卡获赞超过 50 |
+| 🔍 探花使     | 某地点某花期首位打卡者 |
 | 🌳 四季守望者 | 同一地点春夏秋冬各打卡一次 |
-| 👑 打卡王   | 当月打卡数量第一名     |
-
----
-
-## ⏰ 定时任务
-
-| 任务       | 执行时间         | 说明                    |
-| -------- | ------------ | --------------------- |
-| 月度打卡王评选  | 每月 1 日 00:05 | 统计上月打卡数，授予称号并推送       |
-| 花期预测提醒   | 每日 08:00     | 提前 7 天推送「即将开放」通知      |
-| 清理审核积压   | 每日 02:00     | pending 超 24h 的内容自动通过 |
-| 更新热力数据   | 每小时          | 更新各地点 checkin_count   |
-| 清理防重 key | 每年 1 月 1 日   | 清空 Redis 上年推送防重记录     |
+| 👑 打卡王     | 当月打卡数量第一名 |
 
 ---
 
@@ -340,7 +344,7 @@ chore:    构建/工具链
 
 <div align="center">
 
-**狮山花园** · 让校园的美被记录、被分享、被珍藏
+**花境 (Flower Garden)** · 让校园的美被记录、被分享、被珍藏
 
 *Made with 🌸 by HuaJi Team*
 
