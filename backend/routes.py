@@ -1,7 +1,7 @@
 import os
 from extensions import api, db, jwt
 from flask_restful import Resource, reqparse
-from models import User, Flower, Place, FlowerPlace, Checkin, Achievement, Title, BloomStatus
+from models import User, Flower, Place, FlowerPlace, Checkin, CheckinLike as CheckinLikeModel, CheckinComment, Achievement, Title, BloomStatus
 from flask import request, url_for
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
 from werkzeug.utils import secure_filename
@@ -406,7 +406,8 @@ class CheckinList(Resource):
                 'content': c.content,
                 'images': c.images,
                 'likes_count': c.likes_count,
-                'comments_count': 0,
+                'dislikes_count': c.dislikes_count,
+                'comments_count': c.comments_count or 0,
                 'created_at': c.created_at.isoformat(),
                 'updated_at': c.created_at.isoformat(),
                 'user': {
@@ -455,14 +456,110 @@ class CheckinDetail(Resource):
             'created_at': checkin.created_at.isoformat()
         })
 
-class CheckinLike(Resource):
-    def put(self, id):
+class CheckinLikeResource(Resource):
+    @jwt_required()
+    def post(self, id):
+        """点赞/取消点赞（切换式）"""
+        current_user_id = get_jwt_identity()
         checkin = Checkin.query.get(id)
         if not checkin:
             return error('Checkin not found', 404)
-        checkin.likes_count += 1
-        db.session.commit()
-        return success({'likes_count': checkin.likes_count})
+
+        # 查找已有的点赞记录
+        existing_like = CheckinLikeModel.query.filter_by(
+            user_id=current_user_id,
+            checkin_id=id,
+            is_like=True
+        ).first()
+
+        if existing_like:
+            # 已点赞 → 取消点赞
+            db.session.delete(existing_like)
+            checkin.likes_count = max(0, (checkin.likes_count or 0) - 1)
+            db.session.commit()
+            return success({
+                'likes_count': checkin.likes_count,
+                'dislikes_count': checkin.dislikes_count,
+                'liked': False
+            })
+        else:
+            # 未点赞 → 检查是否点过踩，如果是则先移除点踩
+            existing_dislike = CheckinLikeModel.query.filter_by(
+                user_id=current_user_id,
+                checkin_id=id,
+                is_like=False
+            ).first()
+            if existing_dislike:
+                db.session.delete(existing_dislike)
+                checkin.dislikes_count = max(0, (checkin.dislikes_count or 0) - 1)
+
+            # 添加点赞记录
+            like_record = CheckinLikeModel(
+                user_id=current_user_id,
+                checkin_id=id,
+                is_like=True
+            )
+            db.session.add(like_record)
+            checkin.likes_count = (checkin.likes_count or 0) + 1
+            db.session.commit()
+            return success({
+                'likes_count': checkin.likes_count,
+                'dislikes_count': checkin.dislikes_count,
+                'liked': True
+            })
+
+
+class CheckinDislikeResource(Resource):
+    @jwt_required()
+    def post(self, id):
+        """点踩/取消点踩（切换式）"""
+        current_user_id = get_jwt_identity()
+        checkin = Checkin.query.get(id)
+        if not checkin:
+            return error('Checkin not found', 404)
+
+        # 查找已有的点踩记录
+        existing_dislike = CheckinLikeModel.query.filter_by(
+            user_id=current_user_id,
+            checkin_id=id,
+            is_like=False
+        ).first()
+
+        if existing_dislike:
+            # 已点踩 → 取消点踩
+            db.session.delete(existing_dislike)
+            checkin.dislikes_count = max(0, (checkin.dislikes_count or 0) - 1)
+            db.session.commit()
+            return success({
+                'likes_count': checkin.likes_count,
+                'dislikes_count': checkin.dislikes_count,
+                'disliked': False
+            })
+        else:
+            # 未点踩 → 检查是否点过赞，如果是则先移除点赞
+            existing_like = CheckinLikeModel.query.filter_by(
+                user_id=current_user_id,
+                checkin_id=id,
+                is_like=True
+            ).first()
+            if existing_like:
+                db.session.delete(existing_like)
+                checkin.likes_count = max(0, checkin.likes_count - 1)
+
+            # 添加点踩记录
+            dislike_record = CheckinLikeModel(
+                user_id=current_user_id,
+                checkin_id=id,
+                is_like=False
+            )
+            db.session.add(dislike_record)
+            checkin.dislikes_count = (checkin.dislikes_count or 0) + 1
+            db.session.commit()
+            return success({
+                'likes_count': checkin.likes_count,
+                'dislikes_count': checkin.dislikes_count,
+                'disliked': True
+            })
 
 class FlowerCheckins(Resource):
     def get(self, id):
@@ -553,3 +650,86 @@ class UploadResource(Resource):
         file.save(file_path)
         file_url = f'/uploads/{filename}'
         return success({'url': file_url}, 'Upload successful', 201)
+
+
+# 评论相关API
+class CheckinCommentList(Resource):
+    """获取打卡的评论列表"""
+    def get(self, checkin_id):
+        checkin = Checkin.query.get(checkin_id)
+        if not checkin:
+            return error('Checkin not found', 404)
+        comments = CheckinComment.query.filter_by(checkin_id=checkin_id).order_by(CheckinComment.created_at.asc()).all()
+        return success([{
+            'id': c.id,
+            'user_id': c.user_id,
+            'checkin_id': c.checkin_id,
+            'content': c.content,
+            'created_at': c.created_at.isoformat(),
+            'user': {
+                'id': c.user.id,
+                'nickname': c.user.nickname,
+                'avatar_url': c.user.avatar_url
+            } if c.user else None
+        } for c in comments])
+
+    @jwt_required()
+    def post(self, checkin_id):
+        """添加评论"""
+        current_user_id = get_jwt_identity()
+        checkin = Checkin.query.get(checkin_id)
+        if not checkin:
+            return error('Checkin not found', 404)
+
+        parser = reqparse.RequestParser()
+        parser.add_argument('content', required=True, help='Content is required')
+        args = parser.parse_args()
+
+        content = args['content'].strip()
+        if not content:
+            return error('Content cannot be empty', 400)
+
+        comment = CheckinComment(
+            user_id=current_user_id,
+            checkin_id=checkin_id,
+            content=content
+        )
+        db.session.add(comment)
+        checkin.comments_count = (checkin.comments_count or 0) + 1
+        db.session.commit()
+
+        user = User.query.get(current_user_id)
+        return success({
+            'id': comment.id,
+            'user_id': comment.user_id,
+            'checkin_id': comment.checkin_id,
+            'content': comment.content,
+            'created_at': comment.created_at.isoformat(),
+            'user': {
+                'id': user.id,
+                'nickname': user.nickname,
+                'avatar_url': user.avatar_url
+            } if user else None
+        }, 'Comment created successfully', 201)
+
+
+class CheckinCommentDetail(Resource):
+    @jwt_required()
+    def delete(self, checkin_id, comment_id):
+        """删除评论（仅评论作者或管理员可删除）"""
+        current_user_id = get_jwt_identity()
+        user = User.query.get(current_user_id)
+        comment = CheckinComment.query.get(comment_id)
+        if not comment:
+            return error('Comment not found', 404)
+        if comment.checkin_id != checkin_id:
+            return error('Comment does not belong to this checkin', 400)
+        if comment.user_id != current_user_id and (not user or user.role != UserRole.ADMIN):
+            return error('Permission denied', 403)
+
+        checkin = Checkin.query.get(checkin_id)
+        db.session.delete(comment)
+        if checkin:
+            checkin.comments_count = max(0, (checkin.comments_count or 1) - 1)
+        db.session.commit()
+        return success(message='Comment deleted successfully')

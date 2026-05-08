@@ -60,9 +60,15 @@
                 花种：{{ locationSpecies(post.location_id) }}
               </button>
               <view class="post-actions-row">
-                <button class="action-button" @click="likePost(post.id)">点赞</button>
-                <button class="action-button" @click="dislikePost(post.id)">点踩</button>
-                <text class="comment-info">评论 {{ post.comments_count || 0 }}</text>
+                <button class="action-button like-btn" :class="{ liked: post.liked }" @click="likePost(post.id)">
+                  👍 {{ post.likes_count || 0 }}
+                </button>
+                <button class="action-button dislike-btn" :class="{ disliked: post.disliked }" @click="dislikePost(post.id)">
+                  👎 {{ post.dislikes_count || 0 }}
+                </button>
+                <button class="action-button comment-btn" @click="openCommentModal(post)">
+                  💬 {{ post.comments_count || 0 }}
+                </button>
               </view>
             </view>
           </view>
@@ -77,6 +83,47 @@
       </view>
     </view>
 
+    <!-- 评论弹窗 -->
+    <view class="comment-overlay" v-if="showCommentModal" @tap="closeCommentModal">
+      <view class="comment-modal" @tap.stop>
+        <view class="comment-modal-header">
+          <text class="comment-modal-title">评论 ({{ commentTarget?.comments_count || 0 }})</text>
+          <text class="close-btn" @tap="closeCommentModal">✕</text>
+        </view>
+        <scroll-view class="comment-list" scroll-y>
+          <view v-if="loadingComments" class="comment-loading">加载中...</view>
+          <view v-else-if="comments.length === 0" class="comment-empty">暂无评论，快来抢沙发吧~</view>
+          <view v-for="comment in comments" :key="comment.id" class="comment-item">
+            <view class="comment-avatar">{{ comment.user?.nickname?.[0] || '匿' }}</view>
+            <view class="comment-body">
+              <text class="comment-user">{{ comment.user?.nickname || '匿名用户' }}</text>
+              <text class="comment-content">{{ comment.content }}</text>
+              <text class="comment-time">{{ formatTime(comment.created_at) }}</text>
+            </view>
+            <text
+              v-if="comment.user_id === currentUserId"
+              class="comment-delete"
+              @tap="removeComment(comment.id)"
+            >删除</text>
+          </view>
+        </scroll-view>
+        <view class="comment-input-area">
+          <input
+            class="comment-input"
+            v-model="commentText"
+            placeholder="写下你的评论..."
+            :adjust-position="false"
+            @confirm="submitComment"
+          />
+          <button
+            class="comment-submit"
+            :disabled="!commentText.trim()"
+            @tap="submitComment"
+          >发送</button>
+        </view>
+      </view>
+    </view>
+
     <button class="back-to-top" v-if="showBackToTop" @click="scrollToTop">返回顶部</button>
   </view>
 </template>
@@ -87,7 +134,7 @@ import { onPageScroll, onReachBottom } from '@dcloudio/uni-app'
 import { useAuthStore } from '@/stores/auth'
 import { useLocationStore } from '@/stores/location'
 import { useCheckinStore } from '@/stores/checkin'
-import type { Location, Checkin } from '@/services/api'
+import type { Location, Checkin, Comment } from '@/services/api'
 
 const authStore = useAuthStore()
 const locationStore = useLocationStore()
@@ -97,6 +144,11 @@ const carouselIntervalId = ref<ReturnType<typeof setInterval> | null>(null)
 const sortOption = ref<'time' | 'hot'>('time')
 const visibleCount = ref(10)
 const showBackToTop = ref(false)
+
+// 评论弹窗状态
+const showCommentModal = ref(false)
+const commentTarget = ref<Checkin | null>(null)
+const commentText = ref('')
 
 const carouselPhotos = [
   '/static/carousel/1.jpg',
@@ -116,6 +168,16 @@ const sortedPosts = computed<Checkin[]>(() => {
 
 const visiblePosts = computed(() => sortedPosts.value.slice(0, visibleCount.value))
 const canLoadMore = computed(() => visibleCount.value < sortedPosts.value.length)
+
+const currentUserId = computed(() => authStore.user?.id || 0)
+const comments = computed<Comment[]>(() => {
+  if (!commentTarget.value) return []
+  return checkinStore.commentsMap[commentTarget.value.id] || []
+})
+const loadingComments = computed(() => {
+  if (!commentTarget.value) return false
+  return checkinStore.loadingComments[commentTarget.value.id] || false
+})
 
 const formatStatus = (status?: string) => {
   if (!status) return '未知状态'
@@ -166,6 +228,38 @@ const likePost = async (id: number) => {
 
 const dislikePost = (id: number) => {
   checkinStore.dislikeCheckin(id)
+}
+
+// 评论弹窗方法
+const openCommentModal = async (post: Checkin) => {
+  commentTarget.value = post
+  showCommentModal.value = true
+  await checkinStore.loadComments(post.id)
+}
+
+const closeCommentModal = () => {
+  showCommentModal.value = false
+  commentTarget.value = null
+  commentText.value = ''
+}
+
+const submitComment = async () => {
+  if (!commentText.value.trim() || !commentTarget.value) return
+  try {
+    await checkinStore.addComment(commentTarget.value.id, commentText.value.trim())
+    commentText.value = ''
+  } catch (err) {
+    console.error('评论失败:', err)
+  }
+}
+
+const removeComment = async (commentId: number) => {
+  if (!commentTarget.value) return
+  try {
+    await checkinStore.deleteComment(commentTarget.value.id, commentId)
+  } catch (err) {
+    console.error('删除评论失败:', err)
+  }
 }
 
 const getImageGridClass = (count: number) => {
@@ -237,8 +331,30 @@ onUnmounted(() => {
 .post-footer { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; align-items: center; margin-top: 12px; }
 .tag-button { border: none; background: #f1fbf2; color: #3b6c3a; border-radius: 16px; padding: 10px 14px; font-size: 12px; }
 .post-actions-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
-.action-button { border: 1px solid #c7dab1; background: #ffffff; color: #4a6d43; border-radius: 16px; padding: 10px 14px; font-size: 12px; }
+.action-button { border: 1px solid #c7dab1; background: #ffffff; color: #4a6d43; border-radius: 16px; padding: 8px 12px; font-size: 12px; }
+.like-btn.liked { background: #fff0f0; border-color: #ff9e9e; color: #e53935; }
+.dislike-btn.disliked { background: #f0f0ff; border-color: #9e9eff; color: #5c6bc0; }
 .comment-info { color: #6b7b61; font-size: 13px; }
+
+/* 评论弹窗样式 */
+.comment-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.45); display: flex; align-items: flex-end; justify-content: center; z-index: 1000; }
+.comment-modal { background: white; border-radius: 20px 20px 0 0; width: 100%; max-height: 70vh; display: flex; flex-direction: column; }
+.comment-modal-header { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; border-bottom: 1px solid #eef3ee; }
+.comment-modal-title { color: #2b5130; font-size: 16px; font-weight: 700; }
+.close-btn { border: none; background: #f0f5f0; color: #5a7a5a; width: 32px; height: 32px; border-radius: 50%; text-align: center; line-height: 32px; font-size: 16px; }
+.comment-list { flex: 1; padding: 12px 20px; max-height: 40vh; }
+.comment-loading, .comment-empty { text-align: center; color: #8a9e8a; padding: 32px 0; font-size: 14px; }
+.comment-item { display: flex; gap: 10px; padding: 12px 0; border-bottom: 1px solid #f0f5f0; }
+.comment-avatar { width: 36px; height: 36px; border-radius: 50%; background: #d9efda; display: flex; align-items: center; justify-content: center; color: #3f6a3e; font-weight: 700; font-size: 14px; flex-shrink: 0; }
+.comment-body { flex: 1; min-width: 0; }
+.comment-user { font-weight: 600; color: #2b5130; font-size: 13px; display: block; }
+.comment-content { color: #4a6146; font-size: 14px; margin: 4px 0; line-height: 1.5; display: block; }
+.comment-time { color: #8a9e8a; font-size: 11px; display: block; }
+.comment-delete { color: #c0392b; font-size: 12px; padding: 4px 8px; flex-shrink: 0; }
+.comment-input-area { display: flex; gap: 10px; padding: 12px 20px; border-top: 1px solid #eef3ee; background: #fafcfa; }
+.comment-input { flex: 1; border: 1px solid #d4e2d4; border-radius: 20px; padding: 10px 16px; font-size: 14px; background: white; }
+.comment-submit { border: none; background: #4caf50; color: white; border-radius: 20px; padding: 10px 20px; font-size: 14px; }
+.comment-submit[disabled] { background: #b8d8b8; }
 .load-more { text-align: center; margin-top: 16px; }
 .load-more button { border: none; background: #4caf50; color: white; border-radius: 18px; padding: 12px 22px; }
 .empty-state { text-align: center; color: #6d7f66; padding: 28px 16px; }

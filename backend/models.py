@@ -76,7 +76,35 @@ class Checkin(db.Model):
     content = db.Column(db.Text)
     images = db.Column(db.JSON)
     likes_count = db.Column(db.Integer, default=0)
+    dislikes_count = db.Column(db.Integer, default=0)
+    comments_count = db.Column(db.Integer, default=0)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    likes = db.relationship('CheckinLike', backref='checkin', lazy='dynamic', cascade='all, delete-orphan')
+    comments = db.relationship('CheckinComment', backref='checkin', lazy='dynamic', cascade='all, delete-orphan', order_by='CheckinComment.created_at.desc()')
+
+
+class CheckinLike(db.Model):
+    """用户点赞/点踩记录表，防止重复操作"""
+    __tablename__ = 'checkin_likes'
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    checkin_id = db.Column(db.Integer, db.ForeignKey('checkins.id'), nullable=False)
+    is_like = db.Column(db.Boolean, nullable=False, comment='True=点赞, False=点踩')
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    __table_args__ = (db.UniqueConstraint('user_id', 'checkin_id', name='uq_user_checkin_like'),)
+
+
+class CheckinComment(db.Model):
+    """打卡评论表"""
+    __tablename__ = 'checkin_comments'
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    checkin_id = db.Column(db.Integer, db.ForeignKey('checkins.id'), nullable=False)
+    content = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    user = db.relationship('User', backref='comments', lazy=True)
 
 class Achievement(db.Model):
     __tablename__ = 'achievements'

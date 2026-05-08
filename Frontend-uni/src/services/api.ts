@@ -50,6 +50,13 @@ export interface Checkin {
   location?: Location
 }
 
+export interface LikeResponse {
+  likes_count: number
+  dislikes_count: number
+  liked?: boolean
+  disliked?: boolean
+}
+
 export interface Achievement {
   id: number
   name: string
@@ -64,6 +71,19 @@ export interface Title {
   name: string
   description: string
   requirement: number
+}
+
+export interface Comment {
+  id: number
+  user_id: number
+  checkin_id: number
+  content: string
+  created_at: string
+  user?: {
+    id: number
+    nickname: string
+    avatar_url: string
+  }
 }
 
 class ApiClient {
@@ -189,8 +209,12 @@ export const api = {
     getList: () => apiClient.get<Checkin[]>('/v1/checkins'),
     create: (data: { location_id: number; content: string; images: string[] }) =>
       apiClient.post<Checkin>('/v1/checkins', data),
-    like: (id: number) => apiClient.post(`/v1/checkins/${id}/like`),
+    like: (id: number) => apiClient.post<LikeResponse>(`/v1/checkins/${id}/like`),
+    dislike: (id: number) => apiClient.post<LikeResponse>(`/v1/checkins/${id}/dislike`),
     report: (id: number, reason: string) => apiClient.post(`/v1/checkins/${id}/report`, { reason }),
+    getComments: (checkinId: number) => apiClient.get<Comment[]>(`/v1/checkins/${checkinId}/comments`),
+    addComment: (checkinId: number, content: string) => apiClient.post<Comment>(`/v1/checkins/${checkinId}/comments`, { content }),
+    deleteComment: (checkinId: number, commentId: number) => apiClient.delete(`/v1/checkins/${checkinId}/comments/${commentId}`),
   },
 
   subscriptions: {

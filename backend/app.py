@@ -10,9 +10,10 @@ from routes import (
     AuthRegister, AuthLogin, UserMe,
     FlowerList, FlowerDetail, FlowerBloomStatus,
     LocationList, LocationDetail, MapFlowers, MapFilter,
-    CheckinList, CheckinDetail, CheckinLike, FlowerCheckins, LocationCheckins,
+    CheckinList, CheckinDetail, CheckinLikeResource, CheckinDislikeResource, FlowerCheckins, LocationCheckins,
     AchievementList, UserAchievements, UserTitles,
-    UploadResource
+    UploadResource,
+    CheckinCommentList, CheckinCommentDetail
 )
 
 app = Flask(__name__)
@@ -38,13 +39,16 @@ api.add_resource(MapFlowers, '/v1/map/flowers')
 api.add_resource(MapFilter, '/v1/map/filter')
 api.add_resource(CheckinList, '/v1/checkins')
 api.add_resource(CheckinDetail, '/v1/checkins/<int:id>')
-api.add_resource(CheckinLike, '/v1/checkins/<int:id>/like')
+api.add_resource(CheckinLikeResource, '/v1/checkins/<int:id>/like')
+api.add_resource(CheckinDislikeResource, '/v1/checkins/<int:id>/dislike')
 api.add_resource(FlowerCheckins, '/v1/flowers/<int:id>/checkins')
 api.add_resource(LocationCheckins, '/v1/locations/<int:id>/checkins')
 api.add_resource(AchievementList, '/v1/achievements')
 api.add_resource(UserAchievements, '/v1/users/me/achievements')
 api.add_resource(UserTitles, '/v1/users/me/titles')
 api.add_resource(UploadResource, '/v1/upload')
+api.add_resource(CheckinCommentList, '/v1/checkins/<int:checkin_id>/comments')
+api.add_resource(CheckinCommentDetail, '/v1/checkins/<int:checkin_id>/comments/<int:comment_id>')
 
 # 初始化API
 api.init_app(app)
