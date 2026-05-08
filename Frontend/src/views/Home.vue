@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div class="home-page">
     <div class="home-scroll" ref="scrollRef" @scroll="onScroll">
       <section class="hero-card">
@@ -675,7 +675,7 @@ onUnmounted(() => {
   display: flex;
   align-items: flex-end;
   justify-content: center;
-  z-index: 1000;
+  z-index: 1400;
 }
 
 .comment-modal {
