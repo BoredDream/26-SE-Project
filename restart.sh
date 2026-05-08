@@ -126,8 +126,8 @@ start_frontend() {
         npm install
     fi
 
-    echo -e "${GREEN}  启动前端开发服务器 (端口: $FRONTEND_PORT)...${NC}"
-    nohup npm run dev > "$PROJECT_DIR/logs/frontend.log" 2>&1 &
+    echo -e "${GREEN}  启动前端开发服务器 (端口: $FRONTEND_PORT, 绑定: 0.0.0.0)...${NC}"
+    nohup npx vite --host 0.0.0.0 --port "$FRONTEND_PORT" > "$PROJECT_DIR/logs/frontend.log" 2>&1 &
     FRONTEND_PID=$!
     echo -e "${GREEN}  ✓ 前端已启动 (PID: $FRONTEND_PID)${NC}"
     cd "$PROJECT_DIR"
@@ -145,8 +145,8 @@ start_frontend_uni() {
         npm install
     fi
 
-    echo -e "${GREEN}  启动 uni-app H5 开发服务器...${NC}"
-    nohup npm run dev:h5 > "$PROJECT_DIR/logs/frontend-uni.log" 2>&1 &
+    echo -e "${GREEN}  启动 uni-app H5 开发服务器 (绑定: 0.0.0.0)...${NC}"
+    nohup npx uni --host 0.0.0.0 > "$PROJECT_DIR/logs/frontend-uni.log" 2>&1 &
     FRONTEND_UNI_PID=$!
     echo -e "${GREEN}  ✓ uni-app 已启动 (PID: $FRONTEND_UNI_PID)${NC}"
     cd "$PROJECT_DIR"
@@ -193,11 +193,13 @@ main() {
             echo ""
             echo -e "${CYAN}═══════════════════════════════════════${NC}"
             echo -e "${GREEN}  ✅ 所有服务已重启${NC}"
-            echo -e "${CYAN}  ┌─────────────────────────────────┐${NC}"
+            echo -e "${CYAN}  ┌──────────────────────────────────────────┐${NC}"
             echo -e "${CYAN}  │ 后端 (Flask)    → http://localhost:$BACKEND_PORT${NC}"
-            echo -e "${CYAN}  │ 前端 (Vue3)     → http://localhost:$FRONTEND_PORT${NC}"
-            echo -e "${CYAN}  │ uni-app (H5)    → http://localhost:5174 (默认)${NC}"
-            echo -e "${CYAN}  └─────────────────────────────────┘${NC}"
+            echo -e "${CYAN}  │ 前端 (Vue3)     → http://<服务器IP>:$FRONTEND_PORT${NC}"
+            echo -e "${CYAN}  │ uni-app (H5)    → http://<服务器IP>:5174 (默认)${NC}"
+            echo -e "${CYAN}  └──────────────────────────────────────────┘${NC}"
+            echo ""
+            echo -e "${YELLOW}  提示: 前端已绑定 0.0.0.0，可通过 http://<服务器IP>:$FRONTEND_PORT 从外网访问${NC}"
             echo ""
             echo -e "${YELLOW}  查看日志:${NC}"
             echo -e "    tail -f $PROJECT_DIR/logs/backend.log"
@@ -221,7 +223,7 @@ main() {
             sleep 1
             start_frontend
             echo ""
-            echo -e "${GREEN}  ✅ 前端已重启 → http://localhost:$FRONTEND_PORT${NC}"
+            echo -e "${GREEN}  ✅ 前端已重启 → http://<服务器IP>:$FRONTEND_PORT (绑定 0.0.0.0)${NC}"
             ;;
 
         frontend-uni)
