@@ -1,62 +1,77 @@
-﻿<template>
+<template>
   <div class="garden-page">
     <div class="garden-scroll">
-      <section class="progress-panel">
-        <div class="progress-title">徽章收集进度</div>
-        <div class="progress-bar">
-          <div class="progress-fill" :style="{ width: progressPercent + '%' }"></div>
+
+      <!-- 顶部 Banner -->
+      <section class="garden-hero">
+        <div class="hero-title">我的花园</div>
+        <div class="hero-sub">收集花卉，记录与自然的相遇</div>
+        <div class="hero-progress-row">
+          <div class="hero-progress-bar">
+            <div class="hero-progress-fill" :style="{ width: progressPercent + '%' }"></div>
+          </div>
+          <span class="hero-progress-label">{{ unlockedCount }}/{{ totalCount }}</span>
         </div>
-        <div class="progress-text">已解锁 {{ unlockedCount }} / {{ totalCount }} 个徽章</div>
       </section>
 
-      <section class="badges-panel">
-        <div class="badge-row" v-for="(row, rowIndex) in badgeRows" :key="row[0]?.id || rowIndex">
-          <div
-            v-for="badge in row"
-            :key="badge.id"
-            class="badge-card"
-            :class="{ locked: !badge.unlocked }"
-            @click="openBadgeDetail(badge)"
-          >
-            <div class="badge-lamp"></div>
-            <div class="badge-body">
-              <div class="badge-glass"></div>
-              <div class="badge-flower" :class="badge.flowerClass"></div>
+      <!-- 成就花卉网格 -->
+      <section class="flowers-grid">
+        <div
+          v-for="flower in flowerList"
+          :key="flower.name"
+          class="flower-card"
+          :class="{ unlocked: flower.unlocked, locked: !flower.unlocked }"
+          @click="openDetail(flower)"
+        >
+          <div class="flower-img-wrap">
+            <img :src="flower.image" :alt="flower.name" class="flower-img" />
+            <div v-if="!flower.unlocked" class="lock-overlay">
+              <div class="lock-icon">🔒</div>
             </div>
-            <div class="badge-name">{{ badge.name }}</div>
+            <div v-else class="unlock-badge">✓</div>
+          </div>
+          <div class="flower-info">
+            <div class="flower-name">{{ flower.name }}</div>
+            <div class="flower-status" :class="{ 'status-unlocked': flower.unlocked }">
+              {{ flower.unlocked ? `已打卡 ${flower.checkinCount} 次` : '前往地图打卡解锁' }}
+            </div>
           </div>
         </div>
       </section>
 
-      <div class="empty-note">点击徽章查看该花的打卡帖子</div>
+      <div class="bottom-tip">点击花卉卡片查看相关打卡帖子</div>
+
     </div>
 
     <BottomNav />
 
-    <div class="detail-modal" v-if="selectedLocation">
-      <div class="modal-backdrop" @click="selectedLocation = null"></div>
+    <!-- 详情弹窗 -->
+    <div class="detail-modal" v-if="selectedFlower">
+      <div class="modal-backdrop" @click="selectedFlower = null"></div>
       <div class="modal-card">
-        <div class="modal-header">
-          <div>
-            <h3>{{ selectedLocation.name }}</h3>
-            <p>花种：{{ selectedLocation.flower_species }}</p>
+        <div class="modal-flower-header">
+          <img :src="selectedFlower.image" :alt="selectedFlower.name" class="modal-flower-img" />
+          <div class="modal-flower-meta">
+            <h3>{{ selectedFlower.name }}</h3>
+            <p>{{ selectedFlower.location?.description || '狮山花园特色花卉' }}</p>
+            <div class="modal-bloom-tag">{{ selectedFlower.location?.bloom_status || '未知花期' }}</div>
           </div>
-          <button class="close-button" @click="selectedLocation = null">关闭</button>
         </div>
-        <div class="modal-body">
-          <div class="modal-status">{{ selectedLocation.bloom_status }}</div>
-          <div class="modal-description">{{ selectedLocation.description }}</div>
-          <div class="modal-posts">
-            <div v-if="selectedLocationPosts.length" class="modal-post" v-for="post in selectedLocationPosts" :key="post.id">
+        <div class="modal-posts">
+          <div v-if="selectedFlowerPosts.length">
+            <div class="modal-post" v-for="post in selectedFlowerPosts" :key="post.id">
               <div class="modal-post-meta">
-                <span>{{ post.user?.nickname || '作者' }}</span>
+                <span class="modal-post-author">{{ post.user?.nickname || '匿名用户' }}</span>
                 <span>{{ formatTime(post.created_at) }}</span>
               </div>
-              <p>{{ post.content }}</p>
+              <p class="modal-post-content">{{ post.content }}</p>
             </div>
-            <div v-else class="no-posts">暂无打卡内容</div>
+          </div>
+          <div v-else class="no-posts">
+            {{ selectedFlower.unlocked ? '暂无打卡内容' : '🔒 完成打卡后可查看相关帖子' }}
           </div>
         </div>
+        <button class="modal-close-btn" @click="selectedFlower = null">关闭</button>
       </div>
     </div>
   </div>
@@ -70,42 +85,38 @@ import { useCheckinStore } from '@/stores/checkin'
 
 const locationStore = useLocationStore()
 const checkinStore = useCheckinStore()
-const selectedLocation = ref<any>(null)
+const selectedFlower = ref<any>(null)
 
-const locations = computed(() => locationStore.locations)
-const totalCount = computed(() => locations.value.length)
-const unlockedCount = computed(() => locations.value.filter(location => checkinStore.checkins.some(post => post.location_id === location.id)).length)
-const progressPercent = computed(() => {
-  if (!totalCount.value) return 0
-  return Math.round((unlockedCount.value / totalCount.value) * 100)
-})
+const FLOWER_NAMES = ['樱花', '格桑花', '梨花', '大金鸡菊', '油菜花', '玉兰花']
 
-const locationWithBadge = computed(() => {
-  return locations.value.map(location => {
-    const unlocked = checkinStore.checkins.some(post => post.location_id === location.id)
+const flowerList = computed(() => {
+  return FLOWER_NAMES.map(name => {
+    const location = locationStore.locations.find(l => l.flower_species === name)
+    const locationCheckins = location
+      ? checkinStore.checkins.filter(p => p.location_id === location.id)
+      : []
+    const unlocked = locationCheckins.length > 0
     return {
-      ...location,
+      name,
+      image: `/flowers/${name}.png`,
       unlocked,
-      flowerClass: `flower-${(location.flower_species || 'none').replace(/[^a-zA-Z0-9]/g, '')}`
+      checkinCount: locationCheckins.length,
+      location,
+      checkins: locationCheckins,
     }
   })
 })
 
-const badgeRows = computed(() => {
-  const rows: any[][] = []
-  for (let i = 0; i < locationWithBadge.value.length; i += 3) {
-    rows.push(locationWithBadge.value.slice(i, i + 3))
-  }
-  return rows
-})
+const totalCount = computed(() => FLOWER_NAMES.length)
+const unlockedCount = computed(() => flowerList.value.filter(f => f.unlocked).length)
+const progressPercent = computed(() =>
+  Math.round((unlockedCount.value / totalCount.value) * 100)
+)
 
-const selectedLocationPosts = computed(() => {
-  if (!selectedLocation.value) return []
-  return checkinStore.checkins.filter(post => post.location_id === selectedLocation.value.id)
-})
+const selectedFlowerPosts = computed(() => selectedFlower.value?.checkins || [])
 
-const openBadgeDetail = (location: any) => {
-  selectedLocation.value = location
+const openDetail = (flower: any) => {
+  selectedFlower.value = flower
 }
 
 const formatTime = (dateString: string) => {
@@ -124,9 +135,22 @@ onMounted(async () => {
 </script>
 
 <style scoped>
+/* ── 变量 ── */
+.garden-page {
+  --c-primary: #3a7d44;
+  --c-primary-light: #6fbb6b;
+  --c-bg: #eef8ed;
+  --c-surface: #ffffff;
+  --c-text: #2a4d2e;
+  --c-text-sub: #5d7a5f;
+  --c-text-muted: #8fa88f;
+  --c-border: #e3f0e3;
+}
+
+/* ── 页面 ── */
 .garden-page {
   min-height: 100vh;
-  background: linear-gradient(180deg, #eef8ee 0%, #f7fbf7 100%);
+  background: var(--c-bg);
   display: flex;
   flex-direction: column;
 }
@@ -134,220 +158,279 @@ onMounted(async () => {
 .garden-scroll {
   flex: 1;
   overflow-y: auto;
-  padding: 20px;
+  padding-bottom: 80px;
 }
 
-.garden-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  margin-bottom: 18px;
-}
-
-.garden-header h2 {
-  margin: 0;
-  font-size: 1.9rem;
-  color: #2d5b31;
-}
-
-.garden-header p {
-  margin: 8px 0 0;
-  color: #5b7655;
-}
-
-.progress-panel {
-  background: white;
-  border-radius: 22px;
-  padding: 20px;
-  box-shadow: 0 18px 38px rgba(79, 117, 66, 0.08);
+/* ── Hero ── */
+.garden-hero {
+  background: linear-gradient(160deg, var(--c-primary) 0%, var(--c-primary-light) 100%);
+  border-radius: 0 0 32px 32px;
+  padding: 48px 24px 28px;
+  color: white;
   margin-bottom: 20px;
 }
 
-.progress-title {
-  font-size: 1rem;
+.hero-title {
+  font-size: 1.7rem;
   font-weight: 700;
-  color: #3c6a38;
-  margin-bottom: 10px;
+  margin-bottom: 4px;
 }
 
-.progress-bar {
-  height: 12px;
+.hero-sub {
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.8);
+  margin-bottom: 18px;
+}
+
+.hero-progress-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.hero-progress-bar {
+  flex: 1;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.3);
   border-radius: 999px;
-  background: #ebf6eb;
   overflow: hidden;
 }
 
-.progress-fill {
+.hero-progress-fill {
   height: 100%;
-  background: linear-gradient(90deg, #79b87c 0%, #4c8d47 100%);
-}
-
-.progress-text {
-  margin-top: 10px;
-  color: #61755d;
-  font-size: 0.95rem;
-}
-
-.badges-panel {
-  display: grid;
-  gap: 16px;
-}
-
-.badge-row {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 16px;
-}
-
-.badge-card {
-  background: #f8fff6;
-  border-radius: 22px;
-  border: 1px solid rgba(124, 182, 124, 0.34);
-  padding: 16px 12px 18px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 12px;
-  cursor: pointer;
-  position: relative;
-}
-
-.badge-card.locked {
-  opacity: 0.44;
-}
-
-.badge-lamp {
-  width: 36px;
-  height: 10px;
-  background: linear-gradient(90deg, #f4f2ae 0%, #f7f9c1 100%);
+  background: white;
   border-radius: 999px;
-  box-shadow: 0 0 18px rgba(223, 227, 165, 0.7);
+  transition: width 0.6s ease;
 }
 
-.badge-body {
-  width: 100%;
-  height: 130px;
+.hero-progress-label {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: white;
+  flex-shrink: 0;
+}
+
+/* ── 花卉网格 ── */
+.flowers-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 14px;
+  padding: 0 16px;
+}
+
+.flower-card {
+  background: var(--c-surface);
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 4px 16px rgba(58, 125, 68, 0.08);
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.flower-card:active {
+  transform: scale(0.97);
+  box-shadow: 0 2px 8px rgba(58, 125, 68, 0.1);
+}
+
+.flower-card.locked {
+  opacity: 0.72;
+}
+
+/* ── 图片区域 ── */
+.flower-img-wrap {
   position: relative;
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  overflow: hidden;
 }
 
-.badge-glass {
-  width: 90%;
-  height: 70px;
-  border-radius: 50% 50% 16px 16px;
-  background: rgba(255, 255, 255, 0.8);
-  border: 1px solid rgba(255, 255, 255, 0.75);
+.flower-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.flower-card.locked .flower-img {
+  filter: grayscale(0.8) brightness(0.7);
+}
+
+.lock-overlay {
   position: absolute;
-  bottom: 18px;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.18);
 }
 
-.badge-flower {
-  width: 46px;
-  height: 46px;
-  border-radius: 12px;
-  background: #8fbc8f;
+.lock-icon {
+  font-size: 2rem;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
 }
 
-.badge-name {
-  color: #385238;
-  font-size: 0.95rem;
-  font-weight: 600;
+.unlock-badge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 28px;
+  height: 28px;
+  background: var(--c-primary);
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.85rem;
+  font-weight: 700;
+  box-shadow: 0 2px 8px rgba(58, 125, 68, 0.4);
+}
+
+/* ── 信息区域 ── */
+.flower-info {
+  padding: 12px 14px;
+}
+
+.flower-name {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--c-text);
+  margin-bottom: 4px;
+}
+
+.flower-status {
+  font-size: 0.78rem;
+  color: var(--c-text-muted);
+}
+
+.flower-status.status-unlocked {
+  color: var(--c-primary);
+}
+
+/* ── 底部提示 ── */
+.bottom-tip {
   text-align: center;
+  color: var(--c-text-muted);
+  font-size: 0.85rem;
+  padding: 20px 16px 8px;
 }
 
-.empty-note {
-  margin-top: 16px;
-  color: #657864;
-  font-size: 0.95rem;
-  text-align: center;
-}
-
+/* ── 弹窗 ── */
 .detail-modal {
   position: fixed;
   inset: 0;
   z-index: 1400;
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   justify-content: center;
 }
 
 .modal-backdrop {
   position: absolute;
   inset: 0;
-  background: rgba(0, 0, 0, 0.28);
+  background: rgba(0, 0, 0, 0.35);
 }
 
 .modal-card {
   position: relative;
-  width: min(560px, calc(100vw - 32px));
-  background: white;
-  border-radius: 24px;
-  padding: 24px;
+  width: 100%;
+  max-width: 560px;
+  background: var(--c-surface);
+  border-radius: 24px 24px 0 0;
+  padding: 20px 20px 36px;
   z-index: 1;
-  box-shadow: 0 28px 60px rgba(58, 84, 38, 0.16);
+  max-height: 80vh;
+  overflow-y: auto;
 }
 
-.modal-header {
+.modal-flower-header {
   display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
   gap: 14px;
-}
-
-.modal-header h3 {
-  margin: 0;
-  color: #2b5e2c;
-}
-
-.close-button {
-  border: none;
-  background: #f1f8ef;
-  color: #4a6e44;
-  padding: 10px 14px;
-  border-radius: 16px;
-  cursor: pointer;
-}
-
-.modal-body {
-  margin-top: 16px;
-  color: #576b57;
-}
-
-.modal-status {
-  font-weight: 700;
-  color: #3d6a3f;
-  margin-bottom: 12px;
-}
-
-.modal-description {
   margin-bottom: 18px;
-  line-height: 1.7;
+}
+
+.modal-flower-img {
+  width: 90px;
+  height: 90px;
+  object-fit: cover;
+  border-radius: 16px;
+  flex-shrink: 0;
+}
+
+.modal-flower-meta {
+  flex: 1;
+}
+
+.modal-flower-meta h3 {
+  margin: 0 0 6px;
+  font-size: 1.2rem;
+  color: var(--c-text);
+}
+
+.modal-flower-meta p {
+  margin: 0 0 10px;
+  font-size: 0.85rem;
+  color: var(--c-text-sub);
+  line-height: 1.5;
+}
+
+.modal-bloom-tag {
+  display: inline-block;
+  background: #e8f5e9;
+  color: var(--c-primary);
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 999px;
 }
 
 .modal-posts {
   display: grid;
-  gap: 14px;
+  gap: 12px;
+  margin-bottom: 16px;
 }
 
 .modal-post {
-  padding: 14px;
   background: #f6fbf6;
-  border-radius: 18px;
+  border-radius: 14px;
+  padding: 12px 14px;
 }
 
 .modal-post-meta {
   display: flex;
   justify-content: space-between;
-  color: #5a6f5c;
-  font-size: 12px;
-  margin-bottom: 8px;
+  font-size: 0.78rem;
+  color: var(--c-text-muted);
+  margin-bottom: 6px;
+}
+
+.modal-post-author {
+  color: var(--c-primary);
+  font-weight: 600;
+}
+
+.modal-post-content {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--c-text-sub);
+  line-height: 1.6;
 }
 
 .no-posts {
   text-align: center;
-  color: #7a8b7a;
-  padding: 22px 0;
+  color: var(--c-text-muted);
+  padding: 24px 0;
+  font-size: 0.9rem;
+}
+
+.modal-close-btn {
+  width: 100%;
+  padding: 14px;
+  background: var(--c-border);
+  color: var(--c-text-sub);
+  border: none;
+  border-radius: 16px;
+  font-size: 0.95rem;
+  cursor: pointer;
 }
 </style>
