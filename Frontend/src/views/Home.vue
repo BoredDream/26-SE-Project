@@ -91,8 +91,9 @@
               </button>
               <div class="post-actions-row">
                 <button class="action-button" @click="likePost(post.id)">点赞</button>
-                <button class="action-button" @click="dislikePost(post.id)">点踩</button>
-                <span class="comment-info">评论 {{ post.comments_count || 0 }}</span>
+                <button class="action-button comment-btn" @click="openComments(post)">
+                  💬 {{ post.comments_count || 0 }}
+                </button>
               </div>
             </div>
           </article>
@@ -107,8 +108,9 @@
       </section>
     </div>
 
-    <button class="back-to-top" v-if="showBackToTop" @click="scrollToTop">返回顶部</button>
+    <button class="back-to-top" v-if="showBackToTop" @click="scrollToTop" aria-label="返回顶部">↑</button>
     <BottomNav />
+    <CommentSheet :postId="commentPostId" :visible="commentVisible" @close="commentVisible = false" />
   </div>
 </template>
 
@@ -116,6 +118,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import BottomNav from '../components/BottomNav.vue'
+import CommentSheet from '../components/CommentSheet.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useLocationStore } from '@/stores/location'
 import { useCheckinStore } from '@/stores/checkin'
@@ -131,6 +134,8 @@ const carouselIntervalId = ref<number | null>(null)
 const sortOption = ref<'time' | 'hot'>('time')
 const visibleCount = ref(10)
 const showBackToTop = ref(false)
+const commentVisible = ref(false)
+const commentPostId = ref(0)
 const carouselPhotos = [
   'https://images.unsplash.com/photo-1493246507139-91e8fad9978e?auto=format&fit=crop&w=900&q=80',
   'https://images.unsplash.com/photo-1501004318641-b39e6451bec6?auto=format&fit=crop&w=900&q=80',
@@ -222,6 +227,11 @@ const likePost = async (id: number) => {
 
 const dislikePost = (id: number) => {
   checkinStore.dislikeCheckin(id)
+}
+
+const openComments = (post: any) => {
+  commentPostId.value = post.id
+  commentVisible.value = true
 }
 
 const getImageGridClass = (count: number) => {
@@ -563,14 +573,29 @@ onUnmounted(() => {
 
 .back-to-top {
   position: fixed;
-  right: 18px;
-  bottom: 86px;
+  right: 16px;
+  bottom: 80px;
+  width: 40px;
+  height: 40px;
   border: none;
-  background: #4caf50;
+  background: rgba(58, 125, 68, 0.88);
   color: white;
-  padding: 12px 16px;
-  border-radius: 999px;
+  border-radius: 50%;
   cursor: pointer;
-  box-shadow: 0 18px 34px rgba(76, 175, 80, 0.22);
+  font-size: 1.1rem;
+  display: grid;
+  place-items: center;
+  box-shadow: 0 4px 14px rgba(58, 125, 68, 0.28);
+  backdrop-filter: blur(4px);
+  transition: background 0.15s;
+}
+
+.back-to-top:active {
+  background: rgba(42, 100, 53, 0.95);
+}
+
+.comment-btn {
+  background: #f1fbf2;
+  color: #3b6c3a;
 }
 </style>

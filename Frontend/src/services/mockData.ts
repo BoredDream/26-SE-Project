@@ -1,5 +1,13 @@
 import type { Achievement, Checkin, Location, User } from '@/services/api'
 
+export interface Comment {
+  id: number
+  post_id: number
+  user: Pick<User, 'id' | 'nickname' | 'avatar'>
+  content: string
+  created_at: string
+}
+
 export const mockUser: User = {
   id: 1,
   openid: 'demo_openid',
@@ -216,6 +224,47 @@ export const mockCheckins: Checkin[] = [
     updated_at: new Date().toISOString(),
     user: mockUser,
   }
+]
+
+const u2 = { id: 2, nickname: '花间一壶酒', avatar: '' }
+const u3 = { id: 3, nickname: '绿叶边', avatar: '' }
+const u4 = { id: 4, nickname: '秋水伊人', avatar: '' }
+const u5 = { id: 5, nickname: '春风十里', avatar: '' }
+const u6 = { id: 6, nickname: '山间清泉', avatar: '' }
+
+const ago = (minutes: number) => new Date(Date.now() - minutes * 60000).toISOString()
+
+export const mockComments: Comment[] = [
+  // Post 101 — 3条
+  { id: 1, post_id: 101, user: u2, content: '太美了！春天的樱花径每年都要来一次。', created_at: ago(25) },
+  { id: 2, post_id: 101, user: u3, content: '这个角度拍出来真好看，下次带相机去。', created_at: ago(60) },
+  { id: 3, post_id: 101, user: u4, content: '花瓣飘落的时候最有意境了。', created_at: ago(180) },
+
+  // Post 102 — 6条
+  { id: 4, post_id: 102, user: u3, content: '玉兰花园的光线真的很好！', created_at: ago(30) },
+  { id: 5, post_id: 102, user: u5, content: '白色花瓣看着很清净，心情舒畅。', created_at: ago(90) },
+  { id: 6, post_id: 102, user: u6, content: '这个打卡地点加入收藏了，计划下周去。', created_at: ago(150) },
+  { id: 7, post_id: 102, user: u2, content: '牡丹和玉兰哪个先开呀？', created_at: ago(240) },
+  { id: 8, post_id: 102, user: u4, content: '花香飘得很远，路过就能闻到。', created_at: ago(360) },
+  { id: 9, post_id: 102, user: u3, content: '好想去！最近天气这么好正是时候。', created_at: ago(480) },
+
+  // Post 103 — 2条
+  { id: 10, post_id: 103, user: u5, content: '格桑花坡的视野真的很开阔。', created_at: ago(45) },
+  { id: 11, post_id: 103, user: u6, content: '幸福之花，名字就很美。', created_at: ago(200) },
+
+  // Post 104 — 9条
+  { id: 12, post_id: 104, user: u2, content: '油菜花田金灿灿的，每年都过来看。', created_at: ago(20) },
+  { id: 13, post_id: 104, user: u3, content: '这片油菜花好像比去年大了一圈！', created_at: ago(55) },
+  { id: 14, post_id: 104, user: u5, content: '蜜蜂特别多，空气里都是花蜜香。', created_at: ago(100) },
+  { id: 15, post_id: 104, user: u6, content: '拍照的时候注意逆光，效果更好。', created_at: ago(180) },
+  { id: 16, post_id: 104, user: u4, content: '下次早点去，人少光线也好。', created_at: ago(260) },
+  { id: 17, post_id: 104, user: u2, content: '带娃去玩，孩子特别开心！', created_at: ago(380) },
+  { id: 18, post_id: 104, user: u3, content: '花期还有多久呀？想约朋友来。', created_at: ago(500) },
+  { id: 19, post_id: 104, user: u5, content: '停车方便吗？打算自驾过去。', created_at: ago(620) },
+  { id: 20, post_id: 104, user: u6, content: '记得带防晒，太阳有点晒。', created_at: ago(720) },
+
+  // Post 105 — 1条
+  { id: 21, post_id: 105, user: u4, content: '梨花开了！清香真的很宜人。', created_at: ago(70) },
 ]
 
 export const mockAchievements: Achievement[] = [
