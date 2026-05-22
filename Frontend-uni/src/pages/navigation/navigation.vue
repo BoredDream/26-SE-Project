@@ -1,34 +1,40 @@
 <template>
-  <view class="navigation-page">
-    <view class="nav-header">
-      <button class="back-btn" @click="goBack">返回</button>
-      <text class="nav-title">导航到 {{ targetName }}</text>
-    </view>
+  <view class="nav">
+    <md-app-bar :title="`导航 · ${targetName}`" show-back @back="goBack" />
 
     <!-- #ifdef H5 -->
-    <view id="nav-map-container" class="nav-map-box"></view>
+    <view id="nav-map-container" class="nav__map"></view>
     <!-- #endif -->
     <!-- #ifdef MP-WEIXIN -->
-    <map id="nav-map-mp" class="nav-map-box" :latitude="targetLat" :longitude="targetLng" :scale="15" :markers="navMarkers" :polyline="polyline"></map>
+    <map
+      id="nav-map-mp"
+      class="nav__map"
+      :latitude="targetLat"
+      :longitude="targetLng"
+      :scale="15"
+      :markers="navMarkers"
+      :polyline="polyline"
+    ></map>
     <!-- #endif -->
 
-    <view class="nav-info">
-      <view class="route-summary">
-        <view class="summary-item">
-          <text class="label">距离：</text>
-          <text class="value">{{ routeDistance }}</text>
+    <md-card class="nav__info">
+      <view class="nav__row">
+        <view class="nav__metric">
+          <text class="nav__metric-label">距离</text>
+          <text class="nav__metric-value">{{ routeDistance || '—' }}</text>
         </view>
-        <view class="summary-item">
-          <text class="label">预计时间：</text>
-          <text class="value">{{ routeTime }}</text>
+        <view class="nav__divider"></view>
+        <view class="nav__metric">
+          <text class="nav__metric-label">预计时间</text>
+          <text class="nav__metric-value">{{ routeTime || '—' }}</text>
         </view>
       </view>
-    </view>
+    </md-card>
   </view>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 
 const targetName = ref('目标位置')
@@ -64,16 +70,18 @@ onMounted(async () => {
   }
   // #ifdef MP-WEIXIN
   navMarkers.value = [
-    { id: 1, latitude: targetLat.value, longitude: targetLng.value, title: targetName.value }
+    { id: 1, latitude: targetLat.value, longitude: targetLng.value, title: targetName.value },
   ]
-  polyline.value = [{
-    points: [
-      { latitude: userLocation.value?.lat || 30.4714, longitude: userLocation.value?.lng || 114.3645 },
-      { latitude: targetLat.value, longitude: targetLng.value }
-    ],
-    color: '#4CAF50',
-    width: 4
-  }]
+  polyline.value = [
+    {
+      points: [
+        { latitude: userLocation.value?.lat || 30.4714, longitude: userLocation.value?.lng || 114.3645 },
+        { latitude: targetLat.value, longitude: targetLng.value },
+      ],
+      color: '#4CAF50',
+      width: 4,
+    },
+  ]
   routeDistance.value = '直线距离'
   routeTime.value = '请步行前往'
   // #endif
@@ -95,7 +103,7 @@ const initMap = async () => {
   const AMap = await AMapLoader.load({
     key: 'f3ebc39f2c1ffa41660503eff25b13d1',
     version: '2.0',
-    plugins: ['AMap.Driving']
+    plugins: ['AMap.Driving'],
   })
   mapInstance = new AMap.Map('nav-map-container', { zoom: 15, center: [targetLng.value, targetLat.value] })
   driving = new AMap.Driving({ map: mapInstance, panel: false })
@@ -112,7 +120,7 @@ const getCurrentPosition = async () => {
         () => {
           userLocation.value = { lng: 114.3645, lat: 30.4714 }
           resolve()
-        }
+        },
       )
     } else {
       userLocation.value = { lng: 114.3645, lat: 30.4714 }
@@ -151,15 +159,43 @@ const formatTime = (time: number) => {
 }
 </script>
 
-<style scoped>
-.navigation-page { display: flex; flex-direction: column; height: 100vh; background: #f5f5f5; }
-.nav-header { display: flex; align-items: center; padding: 16px 20px; background: #ffffff; border-bottom: 1px solid #e0e0e0; }
-.back-btn { background: none; border: none; font-size: 16px; color: #4CAF50; margin-right: 16px; }
-.nav-title { font-size: 18px; color: #333; }
-.nav-map-box { flex: 1; width: 100%; min-height: 400px; }
-.nav-info { padding: 16px 20px; background: #ffffff; border-top: 1px solid #e0e0e0; }
-.route-summary { display: flex; justify-content: space-between; gap: 20px; }
-.summary-item { display: flex; flex-direction: column; align-items: center; }
-.label { font-size: 14px; color: #666; margin-bottom: 4px; }
-.value { font-size: 16px; font-weight: bold; color: #333; }
+<style scoped lang="scss">
+.nav {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background: $md-background;
+}
+.nav__map {
+  flex: 1;
+  width: 100%;
+  min-height: 360px;
+}
+.nav__info {
+  margin: $md-space-4;
+}
+.nav__row {
+  display: flex;
+  align-items: center;
+}
+.nav__metric {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.nav__metric-label {
+  @include md-type('body-small');
+  color: $md-on-surface-variant;
+}
+.nav__metric-value {
+  margin-top: $md-space-1;
+  @include md-type('title-medium');
+  color: $md-on-surface;
+}
+.nav__divider {
+  width: 1px;
+  height: 32px;
+  background: $md-outline-variant;
+}
 </style>

@@ -36,16 +36,6 @@ export const useLocationStore = defineStore('location', () => {
     }
   }
 
-  const updateLocationStatus = async (id: number, status: number) => {
-    try {
-      await api.locations.updateStatus(id, status)
-      console.log(`位置 ${id} 状态已更新为 ${status}`)
-    } catch (err) {
-      error.value = err instanceof Error ? err.message : '更新状态失败'
-      throw err
-    }
-  }
-
   return {
     locations,
     currentLocation,
@@ -53,6 +43,5 @@ export const useLocationStore = defineStore('location', () => {
     error,
     loadLocations,
     getLocationById,
-    updateLocationStatus,
   }
 })

@@ -1,37 +1,30 @@
 <template>
-  <view class="login-container">
-    <view class="login-form">
-      <view class="logo">
-        <text class="title">狮山花园</text>
-        <text class="subtitle">探索花卉之美，发现自然魅力</text>
-      </view>
+  <view class="auth">
+    <view class="auth__brand">
+      <view class="auth__logo"><text>狮</text></view>
+      <text class="auth__title">狮山花园</text>
+      <text class="auth__subtitle">探索花卉之美，发现自然魅力</text>
+    </view>
 
-      <view v-if="isLoading" class="loading">
-        <view class="spinner"></view>
-        <text>登录中...</text>
-      </view>
-
-      <view v-else-if="error" class="error-message">
+    <md-card class="auth__card">
+      <view v-if="error" class="auth__error">
         <text>{{ error }}</text>
       </view>
-
-      <view v-else class="login-content">
-        <button @click="handleDemoLogin" class="demo-login-btn" :disabled="isLoading">
-          演示模式
-        </button>
-        <button @click="goRegister" class="register-link-btn">
-          去注册
-        </button>
-      </view>
-    </view>
+      <md-button block :disabled="isLoading" @click="handleDemoLogin">
+        {{ isLoading ? '登录中...' : '演示模式进入' }}
+      </md-button>
+      <view class="auth__gap" />
+      <md-button block variant="outlined" :disabled="isLoading" @click="goRegister">
+        注册新账号
+      </md-button>
+    </md-card>
   </view>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import { useAuthStore } from '@/stores/auth'
-import { api } from '@/services/api'
 
 const authStore = useAuthStore()
 const isLoading = ref(false)
@@ -70,86 +63,58 @@ const goRegister = () => {
 }
 </script>
 
-<style scoped>
-.login-container {
-  display: flex;
-  justify-content: center;
-  align-items: center;
+<style scoped lang="scss">
+.auth {
   min-height: 100vh;
-  background: linear-gradient(135deg, #4CAF50 0%, #81C784 50%, #A5D6A7 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: $md-space-6;
+  background: $md-background;
 }
-.login-form {
-  background: rgba(255, 255, 255, 0.95);
-  border-radius: 20px;
-  padding: 40px;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+.auth__brand {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: $md-space-8;
+}
+.auth__logo {
+  width: 72px;
+  height: 72px;
+  border-radius: $md-shape-xl;
+  background: $md-primary-container;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: $md-space-4;
+}
+.auth__logo text {
+  @include md-type('headline-small');
+  color: $md-on-primary-container;
+}
+.auth__title {
+  @include md-type('display-small');
+  color: $md-primary;
+}
+.auth__subtitle {
+  margin-top: $md-space-2;
+  @include md-type('body-medium');
+  color: $md-on-surface-variant;
+}
+.auth__card {
   width: 100%;
-  max-width: 400px;
-  margin: 0 20px;
+  max-width: 420px;
 }
-.logo {
-  text-align: center;
-  margin-bottom: 30px;
+.auth__gap {
+  height: $md-space-3;
 }
-.title {
-  display: block;
-  color: #4CAF50;
-  font-size: 2.5rem;
-  font-weight: 700;
-}
-.subtitle {
-  display: block;
-  color: #666;
-  margin-top: 10px;
-  font-size: 1rem;
-}
-.loading {
-  text-align: center;
-  padding: 20px;
-}
-.spinner {
-  width: 40px;
-  height: 40px;
-  border: 4px solid #f3f3f3;
-  border-top: 4px solid #4CAF50;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-  margin: 0 auto 15px;
-}
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-.error-message {
-  background: #ffebee;
-  color: #c62828;
-  padding: 15px;
-  border-radius: 10px;
-  margin-bottom: 20px;
-  text-align: center;
-  border: 1px solid #ffcdd2;
-}
-.login-content {
-  text-align: center;
-}
-.demo-login-btn {
-  width: 100%;
-  padding: 15px 20px;
-  border: none;
-  border-radius: 12px;
-  font-size: 1.1rem;
-  font-weight: 600;
-  background: linear-gradient(135deg, #FF9800, #F57C00);
-  color: white;
-  margin-bottom: 12px;
-}
-.register-link-btn {
-  width: 100%;
-  padding: 12px 20px;
-  border: 1px solid #4CAF50;
-  border-radius: 12px;
-  font-size: 1rem;
-  background: white;
-  color: #4CAF50;
+.auth__error {
+  background: $md-error-container;
+  color: $md-on-error-container;
+  border-radius: $md-shape-sm;
+  padding: $md-space-3 $md-space-4;
+  margin-bottom: $md-space-4;
+  @include md-type('body-medium');
 }
 </style>

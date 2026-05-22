@@ -1,7 +1,7 @@
 import os
 from extensions import api, db, jwt
 from flask_restful import Resource, reqparse
-from models import User, Flower, Place, FlowerPlace, Checkin, Achievement, Title, BloomStatus
+from models import User, Flower, Place, FlowerPlace, Checkin, Comment, Like, Achievement, Title, BloomStatus
 from flask import request, url_for
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
 from werkzeug.utils import secure_filename
@@ -309,6 +309,14 @@ UPLOAD_FOLDER = 'uploads'
 if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
 
+def _comments_count(checkin_id):
+    return Comment.query.filter_by(checkin_id=checkin_id).count()
+
+def _liked_by(checkin_id, user_id):
+    if not user_id:
+        return False
+    return Like.query.filter_by(checkin_id=checkin_id, user_id=int(user_id)).first() is not None
+
 class CheckinList(Resource):
     @jwt_required()
     def post(self):
@@ -343,10 +351,14 @@ class CheckinList(Resource):
             'content': checkin.content,
             'images': checkin.images,
             'likes_count': checkin.likes_count,
+            'comments_count': 0,
+            'liked': False,
             'created_at': checkin.created_at.isoformat()
         }, 'Checkin created successfully', 201)
 
+    @jwt_required(optional=True)
     def get(self):
+        current_user_id = get_jwt_identity()
         start_time = request.args.get('start_time')
         end_time = request.args.get('end_time')
         status = request.args.get('status')
@@ -369,21 +381,33 @@ class CheckinList(Resource):
         result = []
         for c in checkins:
             fp = FlowerPlace.query.get(c.flower_place_id)
+            place = Place.query.get(fp.place_id) if fp else None
+            author = User.query.get(c.user_id)
             result.append({
                 'id': c.id,
                 'user_id': c.user_id,
+                'user': {
+                    'id': author.id,
+                    'nickname': author.nickname,
+                    'avatar_url': author.avatar_url
+                } if author else None,
                 'flower_place_id': c.flower_place_id,
                 'location_id': fp.place_id if fp else None,
+                'place_name': place.name if place else None,
                 'bloom_report': c.bloom_report.value,
                 'content': c.content,
                 'images': c.images,
                 'likes_count': c.likes_count,
+                'comments_count': _comments_count(c.id),
+                'liked': _liked_by(c.id, current_user_id),
                 'created_at': c.created_at.isoformat()
             })
         return success(result)
 
 class CheckinDetail(Resource):
+    @jwt_required(optional=True)
     def get(self, id):
+        current_user_id = get_jwt_identity()
         checkin = Checkin.query.get(id)
         if not checkin:
             return error('Checkin not found', 404)
@@ -412,17 +436,94 @@ class CheckinDetail(Resource):
             'content': checkin.content,
             'images': checkin.images,
             'likes_count': checkin.likes_count,
+            'comments_count': _comments_count(checkin.id),
+            'liked': _liked_by(checkin.id, current_user_id),
             'created_at': checkin.created_at.isoformat()
         })
 
 class CheckinLike(Resource):
+    @jwt_required()
     def put(self, id):
+        user_id = int(get_jwt_identity())
         checkin = Checkin.query.get(id)
         if not checkin:
             return error('Checkin not found', 404)
-        checkin.likes_count += 1
+        existing = Like.query.filter_by(checkin_id=id, user_id=user_id).first()
+        if existing:
+            db.session.delete(existing)
+            checkin.likes_count = max(0, (checkin.likes_count or 0) - 1)
+            liked = False
+        else:
+            db.session.add(Like(checkin_id=id, user_id=user_id))
+            checkin.likes_count = (checkin.likes_count or 0) + 1
+            liked = True
         db.session.commit()
-        return success({'likes_count': checkin.likes_count})
+        return success({'likes_count': checkin.likes_count, 'liked': liked})
+
+class CheckinComments(Resource):
+    def get(self, id):
+        checkin = Checkin.query.get(id)
+        if not checkin:
+            return error('Checkin not found', 404)
+        comments = Comment.query.filter_by(checkin_id=id).order_by(Comment.created_at.desc()).all()
+        result = []
+        for c in comments:
+            author = User.query.get(c.user_id)
+            result.append({
+                'id': c.id,
+                'checkin_id': c.checkin_id,
+                'user_id': c.user_id,
+                'content': c.content,
+                'created_at': c.created_at.isoformat(),
+                'user': {
+                    'id': author.id,
+                    'nickname': author.nickname,
+                    'avatar_url': author.avatar_url
+                } if author else None
+            })
+        return success(result)
+
+    @jwt_required()
+    def post(self, id):
+        user_id = int(get_jwt_identity())
+        checkin = Checkin.query.get(id)
+        if not checkin:
+            return error('Checkin not found', 404)
+        parser = reqparse.RequestParser()
+        parser.add_argument('content', required=True)
+        args = parser.parse_args()
+        content = (args['content'] or '').strip()
+        if not content:
+            return error('Comment content is required', 400)
+        comment = Comment(checkin_id=id, user_id=user_id, content=content)
+        db.session.add(comment)
+        db.session.commit()
+        author = User.query.get(user_id)
+        return success({
+            'id': comment.id,
+            'checkin_id': comment.checkin_id,
+            'user_id': comment.user_id,
+            'content': comment.content,
+            'created_at': comment.created_at.isoformat(),
+            'user': {
+                'id': author.id,
+                'nickname': author.nickname,
+                'avatar_url': author.avatar_url
+            } if author else None
+        }, 'Comment created successfully', 201)
+
+class CommentDetail(Resource):
+    @jwt_required()
+    def delete(self, id, comment_id):
+        user_id = int(get_jwt_identity())
+        comment = Comment.query.filter_by(id=comment_id, checkin_id=id).first()
+        if not comment:
+            return error('Comment not found', 404)
+        if comment.user_id != user_id:
+            return error('Not allowed to delete this comment', 403)
+        db.session.delete(comment)
+        db.session.commit()
+        return success(None, 'Comment deleted')
 
 class FlowerCheckins(Resource):
     def get(self, id):

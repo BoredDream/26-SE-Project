@@ -1,102 +1,127 @@
 <template>
-  <view class="home-page">
-    <view class="home-scroll">
-      <view class="hero-card">
-        <view class="hero-meta">
-          <text>花卉打卡与分享平台</text>
-        </view>
-        <swiper class="carousel" :indicator-dots="true" :autoplay="true" :interval="4500" :duration="500">
-          <swiper-item v-for="(photo, index) in carouselPhotos" :key="index">
-            <image class="slide" :src="photo" mode="aspectFill" />
+  <view class="home">
+    <md-app-bar title="狮山花园" />
+
+    <view class="home__body">
+      <!-- 轮播 -->
+      <md-card class="hero" :padding="false">
+        <swiper
+          class="hero__carousel"
+          :indicator-dots="true"
+          :autoplay="true"
+          :interval="4500"
+          :duration="500"
+          indicator-color="rgba(255,255,255,0.45)"
+          indicator-active-color="#ffffff"
+        >
+          <swiper-item v-for="(photo, i) in carouselPhotos" :key="i">
+            <image class="hero__slide" :src="photo" mode="aspectFill" />
           </swiper-item>
         </swiper>
+      </md-card>
+
+      <!-- 花卉推荐 -->
+      <view class="section">
+        <text class="section__title">花卉推荐</text>
+        <view class="recommend">
+          <md-card
+            v-for="item in recommendationList"
+            :key="item.id"
+            variant="filled"
+            clickable
+            @click="openMap(item)"
+          >
+            <view class="recommend__row">
+              <image class="recommend__img" :src="item.cover_image" mode="aspectFill" />
+              <view class="recommend__info">
+                <text class="recommend__name">{{ item.name }}</text>
+                <text class="recommend__species">{{ item.flower_species }}</text>
+                <md-chip class="recommend__status" :label="formatStatus(item.bloom_status)" />
+              </view>
+            </view>
+          </md-card>
+        </view>
       </view>
 
-      <view class="recommend-section">
-        <text class="section-title">花卉推荐</text>
-        <view class="recommend-grid">
-          <view v-for="item in recommendationList" :key="item.id" class="recommend-card" @click="openMap(item)">
-            <view class="recommend-image">
-              <image :src="item.cover_image" mode="aspectFill" />
-            </view>
-            <view class="recommend-content">
-              <text class="recommend-name">{{ item.name }}</text>
-              <text class="recommend-species">{{ item.flower_species }}</text>
-              <view class="recommend-status">{{ formatStatus(item.bloom_status) }}</view>
-            </view>
-          </view>
-        </view>
-      </view>
-
-      <view class="post-section">
-        <view class="post-header">
-          <view>
-            <text class="post-header-title">花园帖子</text>
-            <text class="post-header-sub">按时间或热度查看最新动态</text>
-          </view>
-          <view class="post-actions">
-            <button :class="{ active: sortOption === 'time' }" @click="sortOption = 'time'">按时间排序</button>
-            <button :class="{ active: sortOption === 'hot' }" @click="sortOption = 'hot'">按热度排序</button>
+      <!-- 花园帖子 -->
+      <view class="section">
+        <view class="posts__head">
+          <text class="section__title">花园帖子</text>
+          <view class="posts__sort">
+            <md-chip label="最新" :selected="sortOption === 'time'" @click="sortOption = 'time'" />
+            <md-chip label="最热" :selected="sortOption === 'hot'" @click="sortOption = 'hot'" />
           </view>
         </view>
 
-        <view class="post-list">
-          <view v-for="post in visiblePosts" :key="post.id" class="post-card">
-            <view class="post-author" @click="openUser(post.user?.id)">
-              <view class="author-avatar">{{ authorNameInitial(post.user?.nickname) }}</view>
-              <view>
-                <text class="author-name">{{ post.user?.nickname || '匿名用户' }}</text>
-                <text class="author-meta">{{ formatTime(post.created_at) }}</text>
+        <view class="posts">
+          <md-card v-for="post in visiblePosts" :key="post.id" class="post">
+            <view class="post__author" @click="openUser(post.user?.id)">
+              <view class="post__avatar">{{ authorNameInitial(post.user?.nickname) }}</view>
+              <view class="post__author-meta">
+                <text class="post__author-name">{{ post.user?.nickname || '匿名用户' }}</text>
+                <text class="post__time">{{ formatTime(post.created_at) }}</text>
               </view>
             </view>
-            <text class="post-content">{{ post.content }}</text>
-            <view v-if="post.images?.length" :class="['post-image-grid', getImageGridClass(post.images.length)]">
-              <view v-for="(image, idx) in post.images" :key="idx" class="post-image-item">
-                <image :src="image" mode="aspectFill" />
+            <text class="post__content">{{ post.content }}</text>
+            <view v-if="post.images?.length" :class="['post__images', getImageGridClass(post.images.length)]">
+              <view v-for="(img, idx) in post.images" :key="idx" class="post__image">
+                <image :src="img" mode="aspectFill" />
               </view>
             </view>
-            <view class="post-footer">
-              <button class="tag-button" @click="openMap(post)" type="button">
-                花种：{{ locationSpecies(post.location_id) }}
-              </button>
-              <view class="post-actions-row">
-                <button class="action-button" @click="likePost(post.id)">点赞</button>
-                <button class="action-button" @click="dislikePost(post.id)">点踩</button>
-                <text class="comment-info">评论 {{ post.comments_count || 0 }}</text>
+            <view class="post__footer">
+              <md-chip :label="`花种 · ${locationSpecies(post.location_id)}`" @click="openMap(post)" />
+              <view class="post__actions">
+                <view
+                  class="post__like"
+                  :class="{ 'post__like--active': post.liked }"
+                  hover-class="post__like--hover"
+                  @click="likePost(post.id)"
+                >
+                  <text class="post__like-icon">{{ post.liked ? '♥' : '♡' }}</text>
+                  <text class="post__like-count">{{ post.likes_count }}</text>
+                </view>
+                <view class="post__comment" hover-class="post__comment--hover" @click="openComments(post.id)">
+                  <text>评论 {{ post.comments_count || 0 }}</text>
+                </view>
               </view>
             </view>
-          </view>
+          </md-card>
         </view>
 
-        <view class="load-more" v-if="canLoadMore">
-          <button @click="loadMore">加载更多帖子</button>
+        <view v-if="canLoadMore" class="posts__more">
+          <md-button variant="tonal" @click="loadMore">加载更多</md-button>
         </view>
-        <view class="empty-state" v-if="!visiblePosts.length">
-          <text>暂无帖子，请先发布你的第一条打卡。</text>
+        <view v-if="!visiblePosts.length" class="empty">
+          <text>暂无帖子，去发布你的第一条打卡吧。</text>
         </view>
       </view>
     </view>
 
-    <button class="back-to-top" v-if="showBackToTop" @click="scrollToTop">返回顶部</button>
+    <md-button v-if="showBackToTop" class="to-top" variant="tonal" @click="scrollToTop">↑ 顶部</md-button>
+    <md-fab @click="goCheckin" />
+
+    <comment-sheet
+      :visible="commentSheetVisible"
+      :checkin-id="activeCommentCheckinId"
+      @close="commentSheetVisible = false"
+    />
   </view>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { onPageScroll, onReachBottom } from '@dcloudio/uni-app'
-import { useAuthStore } from '@/stores/auth'
 import { useLocationStore } from '@/stores/location'
 import { useCheckinStore } from '@/stores/checkin'
 import type { Location, Checkin } from '@/services/api'
 
-const authStore = useAuthStore()
 const locationStore = useLocationStore()
 const checkinStore = useCheckinStore()
-const activePhoto = ref(0)
-const carouselIntervalId = ref<ReturnType<typeof setInterval> | null>(null)
 const sortOption = ref<'time' | 'hot'>('time')
 const visibleCount = ref(10)
 const showBackToTop = ref(false)
+const commentSheetVisible = ref(false)
+const activeCommentCheckinId = ref(0)
 
 const carouselPhotos = [
   '/static/carousel/1.jpg',
@@ -109,7 +134,10 @@ const recommendationList = computed(() => locationStore.locations.slice(0, 3))
 const sortedPosts = computed<Checkin[]>(() => {
   const list = [...checkinStore.checkins]
   if (sortOption.value === 'hot') {
-    return list.sort((a, b) => (b.likes_count + (b.comments_count || 0)) - (a.likes_count + (a.comments_count || 0)))
+    return list.sort(
+      (a, b) =>
+        (b.likes_count + (b.comments_count || 0)) - (a.likes_count + (a.comments_count || 0)),
+    )
   }
   return list.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
 })
@@ -117,11 +145,7 @@ const sortedPosts = computed<Checkin[]>(() => {
 const visiblePosts = computed(() => sortedPosts.value.slice(0, visibleCount.value))
 const canLoadMore = computed(() => visibleCount.value < sortedPosts.value.length)
 
-const formatStatus = (status?: string) => {
-  if (!status) return '未知状态'
-  if (status.includes('预计')) return status
-  return status
-}
+const formatStatus = (status?: string) => status || '未知状态'
 
 const locationSpecies = (locationId?: number) => {
   const item = locationStore.locations.find(l => l.id === locationId)
@@ -136,12 +160,11 @@ const scrollToTop = () => {
   uni.pageScrollTo({ scrollTop: 0, duration: 300 })
 }
 
-const authorNameInitial = (name?: string) => name ? name[0] : '访'
+const authorNameInitial = (name?: string) => (name ? name[0] : '访')
 
 const formatTime = (dateString: string) => {
   const date = new Date(dateString)
-  const now = new Date()
-  const diff = now.getTime() - date.getTime()
+  const diff = Date.now() - date.getTime()
   const minutes = Math.floor(diff / 60000)
   const hours = Math.floor(diff / 3600000)
   const days = Math.floor(diff / 86400000)
@@ -161,11 +184,20 @@ const openUser = (id?: number) => {
 }
 
 const likePost = async (id: number) => {
-  await checkinStore.likeCheckin(id)
+  try {
+    await checkinStore.likeCheckin(id)
+  } catch (err) {
+    console.error('点赞失败', err)
+  }
 }
 
-const dislikePost = (id: number) => {
-  checkinStore.dislikeCheckin(id)
+const openComments = (id: number) => {
+  activeCommentCheckinId.value = id
+  commentSheetVisible.value = true
+}
+
+const goCheckin = () => {
+  uni.navigateTo({ url: '/pages/checkin/checkin' })
 }
 
 const getImageGridClass = (count: number) => {
@@ -185,62 +217,212 @@ onReachBottom(() => {
 
 onMounted(async () => {
   await Promise.all([locationStore.loadLocations(), checkinStore.loadCheckins()])
-  carouselIntervalId.value = setInterval(() => {
-    activePhoto.value = (activePhoto.value + 1) % carouselPhotos.length
-  }, 4500)
-})
-
-onUnmounted(() => {
-  if (carouselIntervalId.value !== null) {
-    clearInterval(carouselIntervalId.value)
-  }
 })
 </script>
 
-<style scoped>
-.home-page { min-height: 100vh; display: flex; flex-direction: column; background: #f3f9f3; }
-.home-scroll { flex: 1; padding: 20px; }
-.hero-card { background: linear-gradient(135deg, #edf7ec 0%, #dff2d8 100%); border-radius: 24px; padding: 24px; margin-bottom: 20px; }
-.hero-meta text { color: #5a7f5a; font-size: 14px; }
-.carousel { margin-top: 22px; border-radius: 20px; overflow: hidden; height: 220px; }
-.slide { width: 100%; height: 100%; }
-.recommend-section, .post-section { margin-bottom: 22px; }
-.section-title { font-size: 18px; color: #2b5130; margin-bottom: 16px; }
-.recommend-grid { display: grid; gap: 16px; }
-.recommend-card { display: grid; grid-template-columns: 100px 1fr; gap: 16px; padding: 18px; background: white; border-radius: 18px; }
-.recommend-image { width: 100px; height: 100px; border-radius: 18px; overflow: hidden; }
-.recommend-image image { width: 100%; height: 100%; }
-.recommend-name { display: block; font-size: 1.05rem; color: #2f5630; font-weight: 600; }
-.recommend-species { display: block; color: #5e715f; margin: 6px 0 10px; }
-.recommend-status { border-radius: 999px; background: #eef7ed; color: #3f7b44; font-size: 12px; padding: 8px 12px; display: inline-block; }
-.post-header { display: flex; justify-content: space-between; gap: 12px; align-items: center; margin-bottom: 16px; }
-.post-header-title { display: block; color: #2b5130; font-size: 1.25rem; font-weight: 700; }
-.post-header-sub { display: block; color: #637860; font-size: 0.95rem; margin-top: 4px; }
-.post-actions { display: flex; gap: 10px; }
-.post-actions button { border: 1px solid #c9dbc4; background: transparent; color: #4a6c47; padding: 10px 14px; border-radius: 16px; font-size: 12px; }
-.post-actions button.active { background: #edf7ee; border-color: #8bc48b; }
-.post-list { display: grid; gap: 18px; }
-.post-card { background: white; border-radius: 20px; padding: 18px; }
-.post-author { display: flex; gap: 12px; align-items: center; }
-.author-avatar { width: 42px; height: 42px; border-radius: 50%; background: #d9efda; display: flex; align-items: center; justify-content: center; color: #3f6a3e; font-weight: 700; }
-.author-name { display: block; font-weight: 700; color: #2b5130; }
-.author-meta { display: block; color: #6e806e; font-size: 12px; }
-.post-content { margin: 14px 0; color: #4a6146; line-height: 1.8; }
-.post-image-grid { display: grid; gap: 8px; margin-bottom: 12px; }
-.post-image-grid.one-image { grid-template-columns: 1fr; }
-.post-image-grid.two-images { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-.post-image-grid.three-images { grid-template-columns: 1.6fr 1fr; grid-template-rows: repeat(2, 100px); }
-.post-image-grid.three-images .post-image-item:first-child { grid-row: span 2; }
-.post-image-grid.many-images { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-.post-image-item { overflow: hidden; border-radius: 16px; min-height: 100px; }
-.post-image-item image { width: 100%; height: 100%; }
-.post-footer { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; align-items: center; margin-top: 12px; }
-.tag-button { border: none; background: #f1fbf2; color: #3b6c3a; border-radius: 16px; padding: 10px 14px; font-size: 12px; }
-.post-actions-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
-.action-button { border: 1px solid #c7dab1; background: #ffffff; color: #4a6d43; border-radius: 16px; padding: 10px 14px; font-size: 12px; }
-.comment-info { color: #6b7b61; font-size: 13px; }
-.load-more { text-align: center; margin-top: 16px; }
-.load-more button { border: none; background: #4caf50; color: white; border-radius: 18px; padding: 12px 22px; }
-.empty-state { text-align: center; color: #6d7f66; padding: 28px 16px; }
-.back-to-top { position: fixed; right: 18px; bottom: 86px; border: none; background: #4caf50; color: white; padding: 12px 16px; border-radius: 999px; z-index: 100; }
+<style scoped lang="scss">
+.home {
+  min-height: 100vh;
+  background: $md-background;
+}
+.home__body {
+  padding: $md-space-4;
+}
+
+/* 轮播 */
+.hero {
+  margin-bottom: $md-space-6;
+}
+.hero__carousel {
+  height: 200px;
+}
+.hero__slide {
+  width: 100%;
+  height: 100%;
+}
+
+/* 区块 */
+.section {
+  margin-bottom: $md-space-6;
+}
+.section__title {
+  display: block;
+  @include md-type('title-medium');
+  color: $md-on-surface;
+  margin-bottom: $md-space-3;
+}
+
+/* 花卉推荐 */
+.recommend {
+  display: flex;
+  flex-direction: column;
+  gap: $md-space-3;
+}
+.recommend__row {
+  display: flex;
+  align-items: center;
+  gap: $md-space-4;
+}
+.recommend__img {
+  width: 96px;
+  height: 96px;
+  border-radius: $md-shape-md;
+  flex-shrink: 0;
+}
+.recommend__info {
+  flex: 1;
+  min-width: 0;
+}
+.recommend__name {
+  display: block;
+  @include md-type('title-small');
+  color: $md-on-surface;
+}
+.recommend__species {
+  display: block;
+  @include md-type('body-small');
+  color: $md-on-surface-variant;
+  margin: $md-space-1 0 $md-space-2;
+}
+
+/* 帖子 */
+.posts__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: $md-space-3;
+}
+.posts__sort {
+  display: flex;
+  gap: $md-space-2;
+}
+.posts {
+  display: flex;
+  flex-direction: column;
+  gap: $md-space-4;
+}
+.post__author {
+  display: flex;
+  align-items: center;
+  gap: $md-space-3;
+}
+.post__avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: $md-shape-full;
+  background: $md-primary-container;
+  color: $md-on-primary-container;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  @include md-type('title-small');
+}
+.post__author-name {
+  display: block;
+  @include md-type('title-small');
+  color: $md-on-surface;
+}
+.post__time {
+  display: block;
+  @include md-type('body-small');
+  color: $md-on-surface-variant;
+}
+.post__content {
+  display: block;
+  margin: $md-space-3 0;
+  @include md-type('body-medium');
+  color: $md-on-surface-variant;
+}
+.post__images {
+  display: grid;
+  gap: $md-space-2;
+  margin-bottom: $md-space-3;
+}
+.post__images.one-image {
+  grid-template-columns: 1fr;
+}
+.post__images.two-images {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.post__images.three-images {
+  grid-template-columns: 1.6fr 1fr;
+  grid-template-rows: repeat(2, 92px);
+}
+.post__images.three-images .post__image:first-child {
+  grid-row: span 2;
+}
+.post__images.many-images {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.post__image {
+  overflow: hidden;
+  border-radius: $md-shape-md;
+  min-height: 100px;
+}
+.post__image image {
+  width: 100%;
+  height: 100%;
+}
+.post__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $md-space-3;
+  flex-wrap: wrap;
+}
+.post__actions {
+  display: flex;
+  align-items: center;
+  gap: $md-space-4;
+}
+.post__like {
+  display: flex;
+  align-items: center;
+  gap: $md-space-1;
+  padding: $md-space-1 $md-space-2;
+  border-radius: $md-shape-full;
+}
+.post__like--hover {
+  background: rgba(76, 175, 80, 0.12);
+}
+.post__like-icon {
+  font-size: 16px;
+  color: $md-on-surface-variant;
+}
+.post__like--active .post__like-icon {
+  color: $md-primary;
+}
+.post__like-count {
+  @include md-type('label-medium');
+  color: $md-on-surface-variant;
+}
+.post__comment {
+  padding: $md-space-1 $md-space-2;
+  border-radius: $md-shape-full;
+  @include md-type('body-small');
+  color: $md-on-surface-variant;
+}
+.post__comment--hover {
+  background: rgba(76, 175, 80, 0.12);
+}
+
+/* 其它 */
+.posts__more {
+  display: flex;
+  justify-content: center;
+  margin-top: $md-space-4;
+}
+.empty {
+  text-align: center;
+  padding: $md-space-8 $md-space-4;
+  @include md-type('body-medium');
+  color: $md-on-surface-variant;
+}
+.to-top {
+  position: fixed;
+  left: $md-space-4;
+  bottom: 96px;
+  z-index: 50;
+  @include md-elevation(2);
+}
 </style>

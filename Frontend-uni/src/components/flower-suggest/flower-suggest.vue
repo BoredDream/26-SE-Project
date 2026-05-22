@@ -1,12 +1,15 @@
 <template>
   <view class="flower-suggest">
-    <text class="flower-header">花卉联想</text>
-    <view v-if="filteredSpecies.length" class="flower-list">
-      <button v-for="name in filteredSpecies" :key="name" class="flower-chip" @click="selectFlower(name)">
-        {{ name }}
-      </button>
+    <text class="flower-suggest__title">花卉联想</text>
+    <view v-if="filteredSpecies.length" class="flower-suggest__list">
+      <md-chip
+        v-for="name in filteredSpecies"
+        :key="name"
+        :label="name"
+        @click="selectFlower(name)"
+      />
     </view>
-    <view v-else class="flower-empty">
+    <view v-else class="flower-suggest__empty">
       <text>没有匹配到相关花卉，试试其他关键词。</text>
     </view>
   </view>
@@ -20,7 +23,7 @@ const emit = defineEmits<{ (e: 'select', flower: string): void }>()
 
 const flowerSpecies = [
   '玫瑰', '百合', '向日葵', '牡丹', '荷花', '樱花', '兰花', '郁金香', '紫藤',
-  '康乃馨', '桃花', '茶花', '木槿', '海棠', '杜鹃花'
+  '康乃馨', '桃花', '茶花', '木槿', '海棠', '杜鹃花',
 ]
 
 const filteredSpecies = computed(() => {
@@ -34,10 +37,26 @@ const selectFlower = (flower: string) => {
 }
 </script>
 
-<style scoped>
-.flower-suggest { margin-top: 24px; background: rgba(255,255,255,0.92); border-radius: 22px; padding: 18px; box-shadow: 0 20px 40px rgba(84,131,80,0.08); border: 1px solid rgba(105,152,83,0.14); }
-.flower-header { display: block; font-size: 1rem; font-weight: 700; color: #3d5d38; margin-bottom: 12px; }
-.flower-list { display: flex; flex-wrap: wrap; gap: 10px; }
-.flower-chip { border: none; border-radius: 18px; padding: 10px 14px; background: #f4fbf4; color: #3f6d42; font-weight: 600; }
-.flower-empty { color: #7a8b76; font-size: 0.95rem; line-height: 1.6; }
+<style scoped lang="scss">
+.flower-suggest {
+  background: $md-surface;
+  border-radius: $md-shape-lg;
+  padding: $md-space-4;
+  @include md-elevation(1);
+}
+.flower-suggest__title {
+  display: block;
+  margin-bottom: $md-space-3;
+  @include md-type('title-small');
+  color: $md-on-surface;
+}
+.flower-suggest__list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $md-space-2;
+}
+.flower-suggest__empty {
+  @include md-type('body-medium');
+  color: $md-on-surface-variant;
+}
 </style>

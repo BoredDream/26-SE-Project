@@ -1,54 +1,62 @@
 <template>
-  <view class="profile-page">
-    <view class="profile-scroll">
-      <view class="profile-card">
-        <view class="avatar-box">{{ avatarInitial }}</view>
-        <view class="profile-info">
-          <text class="user-name">{{ userName }}</text>
-          <text class="user-role">{{ userRole }}</text>
-          <view class="profile-stats">
-            <view>
-              <text class="stat-number">{{ userExp }}</text>
-              <text class="stat-label">经验</text>
-            </view>
-            <view>
-              <text class="stat-number">{{ totalCheckins }}</text>
-              <text class="stat-label">打卡数</text>
-            </view>
-            <view>
-              <text class="stat-number">{{ achievementCount }}</text>
-              <text class="stat-label">徽章</text>
-            </view>
+  <view class="profile">
+    <md-app-bar title="我的" />
+
+    <view class="profile__body">
+      <md-card class="profile__card">
+        <view class="profile__head">
+          <view class="profile__avatar">{{ avatarInitial }}</view>
+          <view class="profile__ident">
+            <text class="profile__name">{{ userName }}</text>
+            <text class="profile__role">{{ userRole }}</text>
           </view>
         </view>
-      </view>
-
-      <view class="progress-panel">
-        <text class="progress-title">成长进度</text>
-        <view class="progress-bar">
-          <view class="progress-fill" :style="{ width: progressPercent + '%' }"></view>
+        <view class="profile__stats">
+          <view class="stat">
+            <text class="stat__num">{{ userExp }}</text>
+            <text class="stat__label">经验</text>
+          </view>
+          <view class="stat">
+            <text class="stat__num">{{ totalCheckins }}</text>
+            <text class="stat__label">打卡数</text>
+          </view>
+          <view class="stat">
+            <text class="stat__num">{{ achievementCount }}</text>
+            <text class="stat__label">徽章</text>
+          </view>
         </view>
-        <text class="progress-meta">当前等级 {{ userLevel }} · {{ progressPercent }}%</text>
-      </view>
+      </md-card>
 
-      <view class="post-section">
-        <view class="post-title-row">
-          <text class="post-section-title">我的帖子</text>
-          <button @click="goToCheckins">查看全部</button>
+      <md-card class="profile__progress">
+        <text class="profile__progress-title">成长进度</text>
+        <view class="bar">
+          <view class="bar__fill" :style="{ width: progressPercent + '%' }"></view>
         </view>
-        <view v-if="myPosts.length" class="post-list">
-          <view v-for="post in myPosts" :key="post.id" class="post-card" @click="openPost(post)">
-            <view class="post-main">
-              <text class="post-title">{{ post.location?.name || locationSpecies(post.location_id) }}</text>
-              <text class="post-text">{{ post.content }}</text>
-            </view>
-            <view class="post-meta-row">
+        <text class="profile__progress-meta">当前等级 {{ userLevel }} · {{ progressPercent }}%</text>
+      </md-card>
+
+      <view class="posts">
+        <view class="posts__head">
+          <text class="posts__title">我的帖子</text>
+          <md-button variant="text" @click="goToCheckins">查看全部</md-button>
+        </view>
+        <view v-if="myPosts.length" class="posts__list">
+          <md-card
+            v-for="post in myPosts"
+            :key="post.id"
+            variant="filled"
+            clickable
+            @click="openPost(post)"
+          >
+            <text class="post__title">{{ post.location?.name || locationSpecies(post.location_id) }}</text>
+            <text class="post__text">{{ post.content }}</text>
+            <view class="post__meta">
               <text>{{ formatTime(post.created_at) }}</text>
               <text>点赞 {{ post.likes_count }} · 评论 {{ post.comments_count || 0 }}</text>
             </view>
-          </view>
+          </md-card>
         </view>
-        <view v-else class="empty-state">你还没有发布过帖子。</view>
+        <view v-else class="empty">你还没有发布过帖子。</view>
       </view>
     </view>
   </view>
@@ -83,14 +91,13 @@ const myPosts = computed(() => {
   return checkinStore.checkins.filter(post => post.user?.id === authStore.user?.id)
 })
 
-const locationSpecies = (id?: number) => locationStore.locations.find(item => item.id === id)?.flower_species || '未知'
+const locationSpecies = (id?: number) =>
+  locationStore.locations.find(item => item.id === id)?.flower_species || '未知'
 
 const formatTime = (dateString: string) => {
-  const date = new Date(dateString)
-  const now = new Date()
-  const diff = now.getTime() - date.getTime()
-  const hours = Math.floor(diff / (1000 * 60 * 60))
-  const days = Math.floor(diff / (1000 * 60 * 60 * 24))
+  const diff = Date.now() - new Date(dateString).getTime()
+  const hours = Math.floor(diff / 3600000)
+  const days = Math.floor(diff / 86400000)
   if (hours < 24) return `${hours}小时前`
   return `${days}天前`
 }
@@ -115,30 +122,129 @@ onMounted(async () => {
 })
 </script>
 
-<style scoped>
-.profile-page { min-height: 100vh; display: flex; flex-direction: column; background: #eef8ed; }
-.profile-scroll { padding: 20px; flex: 1; }
-.profile-card { display: flex; gap: 16px; padding: 20px; background: white; border-radius: 22px; box-shadow: 0 18px 38px rgba(85,118,79,0.08); margin-bottom: 18px; }
-.avatar-box { width: 78px; height: 78px; border-radius: 22px; background: linear-gradient(135deg, #d9f0d7, #f7fff5); display: flex; align-items: center; justify-content: center; font-size: 30px; font-weight: 700; color: #3f6d44; }
-.user-name { display: block; font-size: 1.8rem; color: #2f5630; }
-.user-role { display: block; color: #637960; margin: 8px 0 16px; }
-.profile-stats { display: flex; gap: 16px; }
-.profile-stats view { text-align: center; }
-.stat-number { display: block; font-size: 1.2rem; font-weight: 700; color: #3e6e40; }
-.stat-label { display: block; color: #6d7f6a; font-size: 0.85rem; }
-.progress-panel { background: white; border-radius: 22px; padding: 18px; box-shadow: 0 14px 32px rgba(79,117,66,0.08); margin-bottom: 18px; }
-.progress-title { display: block; font-weight: 700; color: #2f5630; margin-bottom: 10px; }
-.progress-bar { width: 100%; height: 12px; border-radius: 999px; background: #edf7ed; overflow: hidden; }
-.progress-fill { height: 100%; background: linear-gradient(90deg, #7cbc79 0%, #4c8d47 100%); }
-.progress-meta { display: block; margin-top: 10px; color: #5d7f63; font-size: 0.95rem; }
-.post-section { margin-bottom: 18px; }
-.post-title-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
-.post-section-title { font-size: 16px; font-weight: 700; color: #2b5130; }
-.post-title-row button { border: none; background: #edf7ee; color: #3c6940; border-radius: 16px; padding: 10px 14px; font-size: 12px; }
-.post-list { display: grid; gap: 14px; }
-.post-card { background: white; border-radius: 20px; padding: 16px; box-shadow: 0 14px 32px rgba(77,111,73,0.08); }
-.post-title { display: block; font-weight: 700; color: #2f5530; margin-bottom: 8px; }
-.post-text { display: block; color: #556a57; line-height: 1.7; }
-.post-meta-row { display: flex; justify-content: space-between; color: #6e7f6b; font-size: 13px; margin-top: 10px; }
-.empty-state { text-align: center; color: #6c7c66; padding: 24px 0; }
+<style scoped lang="scss">
+.profile {
+  min-height: 100vh;
+  background: $md-background;
+}
+.profile__body {
+  padding: $md-space-4;
+}
+.profile__card {
+  margin-bottom: $md-space-4;
+}
+.profile__head {
+  display: flex;
+  align-items: center;
+  gap: $md-space-4;
+}
+.profile__avatar {
+  width: 64px;
+  height: 64px;
+  border-radius: $md-shape-full;
+  background: $md-primary-container;
+  color: $md-on-primary-container;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  @include md-type('headline-small');
+}
+.profile__name {
+  display: block;
+  @include md-type('title-large');
+  color: $md-on-surface;
+}
+.profile__role {
+  display: block;
+  margin-top: 2px;
+  @include md-type('body-small');
+  color: $md-on-surface-variant;
+}
+.profile__stats {
+  display: flex;
+  margin-top: $md-space-5;
+}
+.stat {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.stat__num {
+  @include md-type('title-large');
+  color: $md-primary;
+}
+.stat__label {
+  margin-top: 2px;
+  @include md-type('body-small');
+  color: $md-on-surface-variant;
+}
+
+.profile__progress {
+  margin-bottom: $md-space-5;
+}
+.profile__progress-title {
+  display: block;
+  margin-bottom: $md-space-3;
+  @include md-type('title-medium');
+  color: $md-on-surface;
+}
+.bar {
+  height: 8px;
+  border-radius: $md-shape-full;
+  background: $md-surface-variant;
+  overflow: hidden;
+}
+.bar__fill {
+  height: 100%;
+  border-radius: $md-shape-full;
+  background: $md-primary;
+  transition: width $md-duration-medium $md-easing-standard;
+}
+.profile__progress-meta {
+  display: block;
+  margin-top: $md-space-3;
+  @include md-type('body-small');
+  color: $md-on-surface-variant;
+}
+
+.posts__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: $md-space-2;
+}
+.posts__title {
+  @include md-type('title-medium');
+  color: $md-on-surface;
+}
+.posts__list {
+  display: flex;
+  flex-direction: column;
+  gap: $md-space-3;
+}
+.post__title {
+  display: block;
+  margin-bottom: $md-space-1;
+  @include md-type('title-small');
+  color: $md-on-surface;
+}
+.post__text {
+  display: block;
+  @include md-type('body-medium');
+  color: $md-on-surface-variant;
+}
+.post__meta {
+  display: flex;
+  justify-content: space-between;
+  margin-top: $md-space-3;
+  @include md-type('body-small');
+  color: $md-on-surface-variant;
+}
+.empty {
+  text-align: center;
+  padding: $md-space-8 0;
+  @include md-type('body-medium');
+  color: $md-on-surface-variant;
+}
 </style>

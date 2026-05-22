@@ -6,11 +6,21 @@ export interface ApiResponse<T = any> {
   data: T
 }
 
+export interface ApiError extends Error {
+  statusCode?: number
+}
+
+function makeError(message: string, statusCode?: number): ApiError {
+  const err = new Error(message) as ApiError
+  if (statusCode !== undefined) err.statusCode = statusCode
+  return err
+}
+
 export interface User {
   id: number
   openid: string
   nickname: string
-  avatar: string
+  avatar_url: string
   level: number
   exp: number
   total_checkins: number
@@ -42,12 +52,21 @@ export interface Checkin {
   content: string
   images: string[]
   likes_count: number
-  dislikes_count?: number
   comments_count?: number
+  liked?: boolean
   created_at: string
   updated_at: string
   user?: User
   location?: Location
+}
+
+export interface Comment {
+  id: number
+  checkin_id: number
+  user_id: number
+  content: string
+  created_at: string
+  user?: Pick<User, 'id' | 'nickname' | 'avatar_url'>
 }
 
 export interface Achievement {
@@ -107,11 +126,11 @@ class ApiClient {
           if (statusCode >= 200 && statusCode < 300) {
             resolve(responseData)
           } else {
-            reject(new Error(responseData?.message || `HTTP ${statusCode}`))
+            reject(makeError(responseData?.message || `HTTP ${statusCode}`, statusCode))
           }
         },
         fail: (err) => {
-          reject(new Error(err.errMsg || 'Network error'))
+          reject(makeError(err.errMsg || 'Network error'))
         },
       })
     })
@@ -123,6 +142,10 @@ class ApiClient {
 
   post<T>(endpoint: string, data?: any): Promise<ApiResponse<T>> {
     return this.request<T>('POST', endpoint, data)
+  }
+
+  put<T>(endpoint: string, data?: any): Promise<ApiResponse<T>> {
+    return this.request<T>('PUT', endpoint, data)
   }
 
   patch<T>(endpoint: string, data?: any): Promise<ApiResponse<T>> {
@@ -146,15 +169,22 @@ class ApiClient {
         name: 'file',
         header,
         success: (res) => {
+          const statusCode = res.statusCode || 0
+          let data: any
           try {
-            const data = JSON.parse(res.data)
-            resolve(data)
+            data = JSON.parse(res.data)
           } catch {
-            reject(new Error('Invalid upload response'))
+            reject(makeError('Invalid upload response', statusCode))
+            return
+          }
+          if (statusCode >= 200 && statusCode < 300) {
+            resolve(data)
+          } else {
+            reject(makeError(data?.message || data?.msg || `HTTP ${statusCode}`, statusCode))
           }
         },
         fail: (err) => {
-          reject(new Error(err.errMsg || 'Upload failed'))
+          reject(makeError(err.errMsg || 'Upload failed'))
         },
       })
     })
@@ -174,7 +204,6 @@ export const api = {
   },
 
   users: {
-    getList: () => apiClient.get<User[]>('/v1/users'),
     getById: (id: number) => apiClient.get<User>(`/v1/users/${id}`),
     getCurrent: () => apiClient.get<User>('/v1/users/me'),
   },
@@ -182,19 +211,18 @@ export const api = {
   locations: {
     getList: () => apiClient.get<Location[]>('/v1/locations'),
     getById: (id: number) => apiClient.get<Location>(`/v1/locations/${id}`),
-    updateStatus: (id: number, status: number) => apiClient.patch(`/v1/locations/${id}/status`, { status }),
   },
 
   checkins: {
     getList: () => apiClient.get<Checkin[]>('/v1/checkins'),
-    create: (data: { location_id: number; content: string; images: string[] }) =>
+    create: (data: { location_id: number; content: string; images: string[]; bloom_report?: string }) =>
       apiClient.post<Checkin>('/v1/checkins', data),
-    like: (id: number) => apiClient.post(`/v1/checkins/${id}/like`),
-    report: (id: number, reason: string) => apiClient.post(`/v1/checkins/${id}/report`, { reason }),
-  },
-
-  subscriptions: {
-    getList: () => apiClient.get('/v1/subscriptions'),
+    like: (id: number) => apiClient.put<{ likes_count: number; liked: boolean }>(`/v1/checkins/${id}/like`),
+    getComments: (id: number) => apiClient.get<Comment[]>(`/v1/checkins/${id}/comments`),
+    addComment: (id: number, content: string) =>
+      apiClient.post<Comment>(`/v1/checkins/${id}/comments`, { content }),
+    deleteComment: (id: number, commentId: number) =>
+      apiClient.delete(`/v1/checkins/${id}/comments/${commentId}`),
   },
 
   achievements: {
@@ -202,11 +230,7 @@ export const api = {
   },
 
   titles: {
-    getList: () => apiClient.get<Title[]>('/v1/titles'),
-  },
-
-  admin: {
-    getStats: () => apiClient.get('/v1/admin/stats'),
+    getList: () => apiClient.get<Title[]>('/v1/users/me/titles'),
   },
 
   upload: (filePath: string) => apiClient.uploadFile('/v1/upload', filePath),

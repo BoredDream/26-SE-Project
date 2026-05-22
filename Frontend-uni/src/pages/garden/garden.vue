@@ -1,53 +1,60 @@
 <template>
-  <view class="garden-page">
-    <view class="garden-scroll">
-      <view class="progress-panel">
-        <text class="progress-title">徽章收集进度</text>
-        <view class="progress-bar">
-          <view class="progress-fill" :style="{ width: progressPercent + '%' }"></view>
-        </view>
-        <text class="progress-text">已解锁 {{ unlockedCount }} / {{ totalCount }} 个徽章</text>
-      </view>
+  <view class="garden">
+    <md-app-bar title="我的花园" />
 
-      <view class="badges-panel">
-        <view class="badge-row" v-for="(row, rowIndex) in badgeRows" :key="row[0]?.id || rowIndex">
-          <view v-for="badge in row" :key="badge.id" class="badge-card" :class="{ locked: !badge.unlocked }" @click="openBadgeDetail(badge)">
-            <view class="badge-lamp"></view>
-            <view class="badge-body">
-              <view class="badge-glass"></view>
-              <view class="badge-flower" :class="badge.flowerClass"></view>
-            </view>
-            <text class="badge-name">{{ badge.name }}</text>
+    <view class="garden__body">
+      <md-card class="progress">
+        <text class="progress__title">徽章收集进度</text>
+        <view class="progress__track">
+          <view class="progress__fill" :style="{ width: progressPercent + '%' }"></view>
+        </view>
+        <text class="progress__text">已解锁 {{ unlockedCount }} / {{ totalCount }} 个徽章</text>
+      </md-card>
+
+      <view class="badges">
+        <md-card
+          v-for="badge in badges"
+          :key="badge.id"
+          variant="filled"
+          clickable
+          class="badge"
+          :class="{ 'badge--locked': !badge.unlocked }"
+          @click="openBadgeDetail(badge)"
+        >
+          <view class="badge__emblem">
+            <text class="badge__emblem-text">{{ badge.unlocked ? emblemChar(badge) : '?' }}</text>
           </view>
-        </view>
+          <text class="badge__name">{{ badge.name }}</text>
+          <text class="badge__species">{{ badge.flower_species }}</text>
+        </md-card>
       </view>
 
-      <text class="empty-note">点击徽章查看该花的打卡帖子</text>
+      <text class="garden__hint">点击徽章查看该地点的打卡帖子</text>
     </view>
 
-    <view class="detail-modal" v-if="selectedLocation">
-      <view class="modal-backdrop" @click="selectedLocation = null"></view>
-      <view class="modal-card">
-        <view class="modal-header">
-          <view>
-            <text class="modal-title">{{ selectedLocation.name }}</text>
-            <text class="modal-sub">花种：{{ selectedLocation.flower_species }}</text>
-          </view>
-          <button class="close-button" @click="selectedLocation = null">关闭</button>
-        </view>
-        <view class="modal-body">
-          <text class="modal-status">{{ selectedLocation.bloom_status }}</text>
-          <text class="modal-description">{{ selectedLocation.description }}</text>
-          <view class="modal-posts">
-            <view v-if="selectedLocationPosts.length" v-for="post in selectedLocationPosts" :key="post.id" class="modal-post">
-              <view class="modal-post-meta">
-                <text>{{ post.user?.nickname || '作者' }}</text>
+    <view class="dialog" v-if="selectedLocation">
+      <view class="dialog__scrim" @click="closeDetail"></view>
+      <view class="dialog__card">
+        <text class="dialog__title">{{ selectedLocation.name }}</text>
+        <text class="dialog__sub">花种 · {{ selectedLocation.flower_species }}</text>
+        <md-chip class="dialog__status" :label="selectedLocation.bloom_status" />
+        <text class="dialog__desc">{{ selectedLocation.description }}</text>
+
+        <view class="dialog__posts">
+          <template v-if="selectedLocationPosts.length">
+            <view v-for="post in selectedLocationPosts" :key="post.id" class="dialog__post">
+              <view class="dialog__post-meta">
+                <text>{{ post.user?.nickname || '花园用户' }}</text>
                 <text>{{ formatTime(post.created_at) }}</text>
               </view>
-              <text>{{ post.content }}</text>
+              <text class="dialog__post-content">{{ post.content }}</text>
             </view>
-            <view v-else class="no-posts">暂无打卡内容</view>
-          </view>
+          </template>
+          <view v-else class="dialog__empty">暂无打卡内容</view>
+        </view>
+
+        <view class="dialog__actions">
+          <md-button variant="text" @click="closeDetail">关闭</md-button>
         </view>
       </view>
     </view>
@@ -58,47 +65,50 @@
 import { ref, computed, onMounted } from 'vue'
 import { useLocationStore } from '@/stores/location'
 import { useCheckinStore } from '@/stores/checkin'
+import type { Location } from '@/services/api'
+
+type Badge = Location & { unlocked: boolean }
 
 const locationStore = useLocationStore()
 const checkinStore = useCheckinStore()
-const selectedLocation = ref<any>(null)
+const selectedLocation = ref<Badge | null>(null)
 
 const locations = computed(() => locationStore.locations)
 const totalCount = computed(() => locations.value.length)
-const unlockedCount = computed(() => locations.value.filter(l => checkinStore.checkins.some(p => p.location_id === l.id)).length)
-const progressPercent = computed(() => {
-  if (!totalCount.value) return 0
-  return Math.round((unlockedCount.value / totalCount.value) * 100)
-})
+const unlockedCount = computed(
+  () =>
+    locations.value.filter(l => checkinStore.checkins.some(p => p.location_id === l.id)).length,
+)
+const progressPercent = computed(() =>
+  totalCount.value ? Math.round((unlockedCount.value / totalCount.value) * 100) : 0,
+)
 
-const locationWithBadge = computed(() => locations.value.map(l => {
-  const unlocked = checkinStore.checkins.some(p => p.location_id === l.id)
-  return { ...l, unlocked, flowerClass: `flower-${(l.flower_species || 'none').replace(/[^a-zA-Z0-9]/g, '')}` }
-}))
-
-const badgeRows = computed(() => {
-  const rows: any[][] = []
-  for (let i = 0; i < locationWithBadge.value.length; i += 3) {
-    rows.push(locationWithBadge.value.slice(i, i + 3))
-  }
-  return rows
-})
+const badges = computed<Badge[]>(() =>
+  locations.value.map(l => ({
+    ...l,
+    unlocked: checkinStore.checkins.some(p => p.location_id === l.id),
+  })),
+)
 
 const selectedLocationPosts = computed(() => {
   if (!selectedLocation.value) return []
-  return checkinStore.checkins.filter(p => p.location_id === selectedLocation.value.id)
+  return checkinStore.checkins.filter(p => p.location_id === selectedLocation.value!.id)
 })
 
-const openBadgeDetail = (location: any) => {
-  selectedLocation.value = location
+const emblemChar = (badge: Location) => (badge.flower_species ? badge.flower_species[0] : '花')
+
+const openBadgeDetail = (badge: Badge) => {
+  selectedLocation.value = badge
+}
+
+const closeDetail = () => {
+  selectedLocation.value = null
 }
 
 const formatTime = (dateString: string) => {
-  const date = new Date(dateString)
-  const now = new Date()
-  const diff = now.getTime() - date.getTime()
-  const hours = Math.floor(diff / (1000 * 60 * 60))
-  const days = Math.floor(diff / (1000 * 60 * 60 * 24))
+  const diff = Date.now() - new Date(dateString).getTime()
+  const hours = Math.floor(diff / 3600000)
+  const days = Math.floor(diff / 86400000)
   if (hours < 24) return `${hours}小时前`
   return `${days}天前`
 }
@@ -108,35 +118,175 @@ onMounted(async () => {
 })
 </script>
 
-<style scoped>
-.garden-page { min-height: 100vh; background: linear-gradient(180deg, #eef8ee 0%, #f7fbf7 100%); display: flex; flex-direction: column; }
-.garden-scroll { flex: 1; padding: 20px; }
-.progress-panel { background: white; border-radius: 22px; padding: 20px; box-shadow: 0 18px 38px rgba(79,117,66,0.08); margin-bottom: 20px; }
-.progress-title { display: block; font-size: 1rem; font-weight: 700; color: #3c6a38; margin-bottom: 10px; }
-.progress-bar { height: 12px; border-radius: 999px; background: #ebf6eb; overflow: hidden; }
-.progress-fill { height: 100%; background: linear-gradient(90deg, #79b87c 0%, #4c8d47 100%); }
-.progress-text { display: block; margin-top: 10px; color: #61755d; font-size: 0.95rem; }
-.badges-panel { display: grid; gap: 16px; }
-.badge-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
-.badge-card { background: #f8fff6; border-radius: 22px; border: 1px solid rgba(124,182,124,0.34); padding: 16px 12px 18px; display: flex; flex-direction: column; align-items: center; gap: 12px; }
-.badge-card.locked { opacity: 0.44; }
-.badge-lamp { width: 36px; height: 10px; background: linear-gradient(90deg, #f4f2ae 0%, #f7f9c1 100%); border-radius: 999px; }
-.badge-body { width: 100%; height: 130px; position: relative; display: flex; align-items: flex-end; justify-content: center; }
-.badge-glass { width: 90%; height: 70px; border-radius: 50% 50% 16px 16px; background: rgba(255,255,255,0.8); border: 1px solid rgba(255,255,255,0.75); position: absolute; bottom: 18px; }
-.badge-flower { width: 46px; height: 46px; border-radius: 12px; background: #8fbc8f; }
-.badge-name { color: #385238; font-size: 0.95rem; font-weight: 600; text-align: center; }
-.empty-note { display: block; margin-top: 16px; color: #657864; font-size: 0.95rem; text-align: center; }
-.detail-modal { position: fixed; inset: 0; z-index: 1400; display: flex; align-items: center; justify-content: center; }
-.modal-backdrop { position: absolute; inset: 0; background: rgba(0,0,0,0.28); }
-.modal-card { position: relative; width: min(560px, calc(100vw - 32px)); background: white; border-radius: 24px; padding: 24px; z-index: 1; }
-.modal-title { display: block; font-size: 1.1rem; font-weight: 700; color: #2b5e2c; }
-.modal-sub { display: block; color: #5d715b; font-size: 0.9rem; margin-top: 4px; }
-.close-button { border: none; background: #f1f8ef; color: #4a6e44; padding: 10px 14px; border-radius: 16px; }
-.modal-body { margin-top: 16px; color: #576b57; }
-.modal-status { display: block; font-weight: 700; color: #3d6a3f; margin-bottom: 12px; }
-.modal-description { display: block; margin-bottom: 18px; line-height: 1.7; }
-.modal-posts { display: grid; gap: 14px; }
-.modal-post { padding: 14px; background: #f6fbf6; border-radius: 18px; }
-.modal-post-meta { display: flex; justify-content: space-between; color: #5a6f5c; font-size: 12px; margin-bottom: 8px; }
-.no-posts { text-align: center; color: #7a8b7a; padding: 22px 0; }
+<style scoped lang="scss">
+.garden {
+  min-height: 100vh;
+  background: $md-background;
+}
+.garden__body {
+  padding: $md-space-4;
+}
+
+/* 进度卡 */
+.progress {
+  margin-bottom: $md-space-5;
+}
+.progress__title {
+  display: block;
+  @include md-type('title-medium');
+  color: $md-on-surface;
+  margin-bottom: $md-space-3;
+}
+.progress__track {
+  height: 8px;
+  border-radius: $md-shape-full;
+  background: $md-surface-variant;
+  overflow: hidden;
+}
+.progress__fill {
+  height: 100%;
+  border-radius: $md-shape-full;
+  background: $md-primary;
+  transition: width $md-duration-medium $md-easing-standard;
+}
+.progress__text {
+  display: block;
+  margin-top: $md-space-3;
+  @include md-type('body-small');
+  color: $md-on-surface-variant;
+}
+
+/* 徽章网格 */
+.badges {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: $md-space-3;
+}
+.badge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.badge--locked {
+  opacity: 0.5;
+}
+.badge__emblem {
+  width: 56px;
+  height: 56px;
+  border-radius: $md-shape-full;
+  background: $md-primary-container;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: $md-space-2;
+}
+.badge__emblem-text {
+  @include md-type('title-medium');
+  color: $md-on-primary-container;
+}
+.badge__name {
+  @include md-type('label-large');
+  color: $md-on-surface;
+  text-align: center;
+}
+.badge__species {
+  margin-top: 2px;
+  @include md-type('body-small');
+  color: $md-on-surface-variant;
+  text-align: center;
+}
+.garden__hint {
+  display: block;
+  margin-top: $md-space-5;
+  text-align: center;
+  @include md-type('body-small');
+  color: $md-on-surface-variant;
+}
+
+/* 详情对话框 */
+.dialog {
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: $md-space-4;
+}
+.dialog__scrim {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.32);
+}
+.dialog__card {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 480px;
+  max-height: 80vh;
+  overflow-y: auto;
+  background: $md-surface;
+  border-radius: $md-shape-xl;
+  padding: $md-space-6;
+  @include md-elevation(3);
+}
+.dialog__title {
+  display: block;
+  @include md-type('headline-small');
+  color: $md-on-surface;
+}
+.dialog__sub {
+  display: block;
+  margin-top: $md-space-1;
+  @include md-type('body-medium');
+  color: $md-on-surface-variant;
+}
+.dialog__status {
+  margin-top: $md-space-3;
+}
+.dialog__desc {
+  display: block;
+  margin-top: $md-space-3;
+  @include md-type('body-medium');
+  color: $md-on-surface-variant;
+}
+.dialog__posts {
+  display: flex;
+  flex-direction: column;
+  gap: $md-space-3;
+  margin-top: $md-space-4;
+}
+.dialog__post {
+  background: $md-surface-container;
+  border-radius: $md-shape-md;
+  padding: $md-space-3 $md-space-4;
+}
+.dialog__post-meta {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: $md-space-2;
+  @include md-type('body-small');
+  color: $md-on-surface-variant;
+}
+.dialog__post-content {
+  @include md-type('body-medium');
+  color: $md-on-surface;
+}
+.dialog__empty {
+  text-align: center;
+  padding: $md-space-6 0;
+  @include md-type('body-medium');
+  color: $md-on-surface-variant;
+}
+.dialog__actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: $md-space-4;
+}
 </style>

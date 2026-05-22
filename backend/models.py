@@ -77,6 +77,22 @@ class Checkin(db.Model):
     likes_count = db.Column(db.Integer, default=0)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
+class Comment(db.Model):
+    __tablename__ = 'comments'
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    checkin_id = db.Column(db.Integer, db.ForeignKey('checkins.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    content = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+class Like(db.Model):
+    __tablename__ = 'likes'
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    checkin_id = db.Column(db.Integer, db.ForeignKey('checkins.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    __table_args__ = (db.UniqueConstraint('checkin_id', 'user_id', name='uq_like_checkin_user'),)
+
 class Achievement(db.Model):
     __tablename__ = 'achievements'
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)

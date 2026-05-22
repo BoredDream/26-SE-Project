@@ -1,43 +1,30 @@
 <template>
-  <view class="login-container">
-    <view class="login-form">
-      <view class="logo">
-        <text class="title">注册新账号</text>
-        <text class="subtitle">创建账号后即可访问花园数据</text>
+  <view class="auth-page">
+    <md-app-bar title="注册" show-back @back="goLogin" />
+
+    <view class="auth-page__body">
+      <view class="auth__brand">
+        <text class="auth__title">创建账号</text>
+        <text class="auth__subtitle">注册后即可记录你的花园打卡</text>
       </view>
 
-      <view v-if="isLoading" class="loading">
-        <view class="spinner"></view>
-        <text>注册中...</text>
-      </view>
-
-      <view v-else-if="error" class="error-message">
-        <text>{{ error }}</text>
-      </view>
-
-      <view v-else class="login-content">
-        <view class="login-fields">
-          <label>
-            <text>用户名</text>
-            <input v-model="username" type="text" placeholder="请输入用户名" />
-          </label>
-          <label>
-            <text>密码</text>
-            <input v-model="password" type="password" placeholder="请输入密码" />
-          </label>
-          <label>
-            <text>昵称</text>
-            <input v-model="nickname" type="text" placeholder="请输入昵称" />
-          </label>
-          <button @click="handleRegister" class="login-btn" :disabled="isLoading">
-            注册
-          </button>
+      <md-card>
+        <view v-if="error" class="auth__error">
+          <text>{{ error }}</text>
         </view>
-
-        <view class="login-actions">
-          <text>已有账号？</text>
-          <text class="link" @click="goLogin">登录</text>
+        <view class="auth__fields">
+          <md-text-field v-model="username" label="用户名" placeholder="请输入用户名" />
+          <md-text-field v-model="password" label="密码" type="password" placeholder="请输入密码" />
+          <md-text-field v-model="nickname" label="昵称" placeholder="请输入昵称" />
         </view>
+        <md-button block :disabled="isLoading" @click="handleRegister">
+          {{ isLoading ? '注册中...' : '注册' }}
+        </md-button>
+      </md-card>
+
+      <view class="auth__foot">
+        <text>已有账号？</text>
+        <text class="auth__link" @click="goLogin">返回登录</text>
       </view>
     </view>
   </view>
@@ -87,101 +74,51 @@ const handleRegister = async () => {
 }
 </script>
 
-<style scoped>
-.login-container {
-  display: flex;
-  justify-content: center;
-  align-items: center;
+<style scoped lang="scss">
+.auth-page {
   min-height: 100vh;
-  background: linear-gradient(135deg, #4CAF50 0%, #81C784 50%, #A5D6A7 100%);
+  background: $md-background;
 }
-.login-form {
-  background: rgba(255, 255, 255, 0.95);
-  border-radius: 20px;
-  padding: 40px;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
-  width: 100%;
-  max-width: 420px;
-  margin: 0 20px;
+.auth-page__body {
+  padding: $md-space-6 $md-space-4;
 }
-.logo {
+.auth__brand {
   text-align: center;
-  margin-bottom: 30px;
+  margin-bottom: $md-space-6;
 }
-.title {
+.auth__title {
   display: block;
-  color: #4CAF50;
-  font-size: 2rem;
-  font-weight: 700;
+  @include md-type('headline-small');
+  color: $md-on-surface;
 }
-.subtitle {
+.auth__subtitle {
   display: block;
-  color: #666;
-  margin-top: 10px;
-  font-size: 1rem;
+  margin-top: $md-space-2;
+  @include md-type('body-medium');
+  color: $md-on-surface-variant;
 }
-.login-fields {
-  display: grid;
-  gap: 16px;
+.auth__error {
+  background: $md-error-container;
+  color: $md-on-error-container;
+  border-radius: $md-shape-sm;
+  padding: $md-space-3 $md-space-4;
+  margin-bottom: $md-space-4;
+  @include md-type('body-medium');
 }
-.login-fields label {
+.auth__fields {
   display: flex;
   flex-direction: column;
-  font-size: 0.95rem;
-  color: #444;
+  gap: $md-space-4;
+  margin-bottom: $md-space-5;
 }
-.login-fields input {
-  margin-top: 8px;
-  padding: 12px 14px;
-  border: 1px solid #dcdcdc;
-  border-radius: 12px;
-  font-size: 1rem;
-}
-.login-btn {
-  width: 100%;
-  padding: 14px 20px;
-  border: none;
-  border-radius: 12px;
-  font-size: 1rem;
-  font-weight: 600;
-  background: linear-gradient(135deg, #4caf50, #66bb6a);
-  color: white;
-  margin-top: 8px;
-}
-.login-actions {
-  margin-top: 16px;
+.auth__foot {
   text-align: center;
-  color: #666;
-  font-size: 0.95rem;
+  margin-top: $md-space-5;
+  @include md-type('body-medium');
+  color: $md-on-surface-variant;
 }
-.link {
-  color: #4caf50;
-  margin-left: 4px;
-}
-.loading {
-  text-align: center;
-  padding: 20px;
-}
-.spinner {
-  width: 40px;
-  height: 40px;
-  border: 4px solid #f3f3f3;
-  border-top: 4px solid #4caf50;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-  margin: 0 auto 15px;
-}
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-.error-message {
-  background: #ffebee;
-  color: #c62828;
-  padding: 15px;
-  border-radius: 10px;
-  margin-bottom: 20px;
-  text-align: center;
-  border: 1px solid #ffcdd2;
+.auth__link {
+  color: $md-primary;
+  margin-left: $md-space-1;
 }
 </style>

@@ -1,4 +1,133 @@
-/* 全局 SCSS 变量 */
-$primary-color: #4CAF50;
-$primary-light: #81C784;
-$bg-page: #f3f9f3;
+/* ============================================================
+ * Material Design 3 全局设计令牌（种子色：花园绿 #4CAF50）
+ * uni.scss 会被自动注入每个组件的 <style lang="scss">，
+ * 因此下列变量与 mixin 全局可用。
+ * ============================================================ */
+
+/* ---- 颜色：主色 Primary ---- */
+$md-primary: #4caf50;
+$md-on-primary: #ffffff;
+$md-primary-container: #c7ecc8;
+$md-on-primary-container: #08390f;
+
+/* ---- 颜色：次色 Secondary ---- */
+$md-secondary: #52634f;
+$md-on-secondary: #ffffff;
+$md-secondary-container: #d5e8cf;
+$md-on-secondary-container: #111f10;
+
+/* ---- 颜色：第三色 Tertiary（点缀，如花期标签）---- */
+$md-tertiary: #38656a;
+$md-on-tertiary: #ffffff;
+$md-tertiary-container: #bcebf0;
+$md-on-tertiary-container: #002023;
+
+/* ---- 颜色：背景与表面 ---- */
+$md-background: #f6fbf2;
+$md-on-background: #191d17;
+$md-surface: #ffffff;
+$md-on-surface: #191d17;
+$md-surface-variant: #dfe4d7;
+$md-on-surface-variant: #43483f;
+$md-surface-container: #eef2e8;
+$md-surface-container-high: #e7ebe1;
+
+/* ---- 颜色：轮廓 ---- */
+$md-outline: #73796c;
+$md-outline-variant: #c3c8b9;
+
+/* ---- 颜色：错误 ---- */
+$md-error: #ba1a1a;
+$md-on-error: #ffffff;
+$md-error-container: #ffdad6;
+$md-on-error-container: #410002;
+
+/* ---- 状态层不透明度 ---- */
+$md-state-hover: 0.08;
+$md-state-pressed: 0.12;
+
+/* ---- 形状：圆角 ---- */
+$md-shape-xs: 4px;
+$md-shape-sm: 8px;
+$md-shape-md: 12px;
+$md-shape-lg: 16px;
+$md-shape-xl: 28px;
+$md-shape-full: 999px;
+
+/* ---- 间距：4dp 栅格 ---- */
+$md-space-1: 4px;
+$md-space-2: 8px;
+$md-space-3: 12px;
+$md-space-4: 16px;
+$md-space-5: 20px;
+$md-space-6: 24px;
+$md-space-8: 32px;
+
+/* ---- 动效 ---- */
+$md-duration-short: 150ms;
+$md-duration-medium: 250ms;
+$md-duration-long: 350ms;
+$md-easing-standard: cubic-bezier(0.2, 0, 0, 1);
+$md-easing-emphasized: cubic-bezier(0.2, 0, 0, 1);
+
+/* ---- 兼容旧变量名 ---- */
+$primary-color: $md-primary;
+$primary-light: $md-primary-container;
+$bg-page: $md-background;
+
+/* ---- 高度（elevation）：绿调阴影，level 0-5 ---- */
+@mixin md-elevation($level) {
+  @if $level == 0 {
+    box-shadow: none;
+  } @else if $level == 1 {
+    box-shadow: 0 1px 3px rgba(45, 70, 40, 0.12), 0 1px 2px rgba(45, 70, 40, 0.08);
+  } @else if $level == 2 {
+    box-shadow: 0 2px 6px rgba(45, 70, 40, 0.14), 0 1px 3px rgba(45, 70, 40, 0.1);
+  } @else if $level == 3 {
+    box-shadow: 0 4px 12px rgba(45, 70, 40, 0.16), 0 2px 5px rgba(45, 70, 40, 0.1);
+  } @else if $level == 4 {
+    box-shadow: 0 6px 18px rgba(45, 70, 40, 0.18), 0 3px 8px rgba(45, 70, 40, 0.12);
+  } @else if $level == 5 {
+    box-shadow: 0 10px 28px rgba(45, 70, 40, 0.2), 0 5px 12px rgba(45, 70, 40, 0.14);
+  }
+}
+
+/* ---- 排版：MD3 字体角色 ---- */
+@mixin md-type($role) {
+  @if $role == 'display-small' {
+    font-size: 34px; line-height: 42px; font-weight: 600;
+  } @else if $role == 'headline-medium' {
+    font-size: 26px; line-height: 34px; font-weight: 600;
+  } @else if $role == 'headline-small' {
+    font-size: 22px; line-height: 30px; font-weight: 600;
+  } @else if $role == 'title-large' {
+    font-size: 20px; line-height: 28px; font-weight: 600;
+  } @else if $role == 'title-medium' {
+    font-size: 16px; line-height: 24px; font-weight: 600;
+  } @else if $role == 'title-small' {
+    font-size: 14px; line-height: 20px; font-weight: 600;
+  } @else if $role == 'body-large' {
+    font-size: 16px; line-height: 24px; font-weight: 400;
+  } @else if $role == 'body-medium' {
+    font-size: 14px; line-height: 21px; font-weight: 400;
+  } @else if $role == 'body-small' {
+    font-size: 12px; line-height: 16px; font-weight: 400;
+  } @else if $role == 'label-large' {
+    font-size: 14px; line-height: 20px; font-weight: 600;
+  } @else if $role == 'label-medium' {
+    font-size: 12px; line-height: 16px; font-weight: 600;
+  }
+}
+
+/* ---- 多行文本省略 ---- */
+@mixin md-ellipsis($lines: 1) {
+  overflow: hidden;
+  @if $lines == 1 {
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  } @else {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: $lines;
+  }
+}

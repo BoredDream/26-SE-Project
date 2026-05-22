@@ -5,12 +5,13 @@ from config import Config
 from extensions import db, api, jwt
 
 # 导入模型和路由
-from models import User, Flower, Place, FlowerPlace, Checkin, Achievement, Title
+from models import User, Flower, Place, FlowerPlace, Checkin, Comment, Like, Achievement, Title
 from routes import (
     AuthRegister, AuthLogin, UserMe,
     FlowerList, FlowerDetail, FlowerBloomStatus,
     LocationList, LocationDetail, MapFlowers, MapFilter,
-    CheckinList, CheckinDetail, CheckinLike, FlowerCheckins, LocationCheckins,
+    CheckinList, CheckinDetail, CheckinLike, CheckinComments, CommentDetail,
+    FlowerCheckins, LocationCheckins,
     AchievementList, UserAchievements, UserTitles,
     UploadResource
 )
@@ -39,6 +40,8 @@ api.add_resource(MapFilter, '/v1/map/filter')
 api.add_resource(CheckinList, '/v1/checkins')
 api.add_resource(CheckinDetail, '/v1/checkins/<int:id>')
 api.add_resource(CheckinLike, '/v1/checkins/<int:id>/like')
+api.add_resource(CheckinComments, '/v1/checkins/<int:id>/comments')
+api.add_resource(CommentDetail, '/v1/checkins/<int:id>/comments/<int:comment_id>')
 api.add_resource(FlowerCheckins, '/v1/flowers/<int:id>/checkins')
 api.add_resource(LocationCheckins, '/v1/locations/<int:id>/checkins')
 api.add_resource(AchievementList, '/v1/achievements')
