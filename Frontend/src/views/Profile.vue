@@ -1,55 +1,67 @@
-﻿<template>
+<template>
   <div class="profile-page">
     <div class="profile-scroll">
-      <section class="profile-card">
-        <div class="avatar-box">{{ avatarInitial }}</div>
-        <div class="profile-info">
-          <h2>{{ userName }}</h2>
-          <p>{{ userRole }}</p>
-          <div class="profile-stats">
-            <div>
-              <div class="stat-number">{{ userExp }}</div>
-              <div class="stat-label">经验</div>
-            </div>
-            <div>
-              <div class="stat-number">{{ totalCheckins }}</div>
-              <div class="stat-label">打卡数</div>
-            </div>
-            <div>
-              <div class="stat-number">{{ achievementCount }}</div>
-              <div class="stat-label">徽章</div>
-            </div>
+
+      <!-- 顶部 Hero Banner -->
+      <section class="profile-hero">
+        <div class="avatar-circle">{{ avatarInitial }}</div>
+        <div class="hero-name">{{ userName }}</div>
+        <div class="hero-tag">Lv.{{ userLevel }} · {{ userRole }}</div>
+        <div class="hero-stats">
+          <div class="stat-item">
+            <div class="stat-number">{{ userExp }}</div>
+            <div class="stat-label">经验</div>
+          </div>
+          <div class="stat-divider"></div>
+          <div class="stat-item">
+            <div class="stat-number">{{ totalCheckins }}</div>
+            <div class="stat-label">打卡</div>
+          </div>
+          <div class="stat-divider"></div>
+          <div class="stat-item">
+            <div class="stat-number">{{ achievementCount }}</div>
+            <div class="stat-label">徽章</div>
           </div>
         </div>
       </section>
 
+      <!-- 成长进度 -->
       <section class="progress-panel">
-        <div class="progress-title">成长进度</div>
+        <div class="progress-header">
+          <span class="level-badge">Lv.{{ userLevel }}</span>
+          <span class="progress-title">成长进度</span>
+        </div>
         <div class="progress-bar">
           <div class="progress-fill" :style="{ width: progressPercent + '%' }"></div>
         </div>
-        <div class="progress-meta">当前等级 {{ userLevel }} · {{ progressPercent }}%</div>
+        <div class="progress-meta">
+          <span>{{ progressPercent }}%</span>
+          <span>还需 {{ nextExpNeeded }} 经验升至下一级</span>
+        </div>
       </section>
 
+      <!-- 我的帖子 -->
       <section class="post-section">
         <div class="post-title-row">
           <h3>我的帖子</h3>
           <button @click="goToCheckins">查看全部</button>
         </div>
         <div v-if="myPosts.length" class="post-list">
-          <article v-for="post in myPosts" :key="post.id" class="post-card">
-            <div class="post-main" @click="openPost(post)">
-              <div class="post-title">{{ post.location?.name || locationSpecies(post.location_id) }}</div>
-              <p class="post-text">{{ post.content }}</p>
-            </div>
+          <article v-for="post in myPosts" :key="post.id" class="post-card" @click="openPost(post)">
+            <div class="post-tag">{{ post.location?.name || locationSpecies(post.location_id) }}</div>
+            <div class="post-title">{{ post.content }}</div>
             <div class="post-meta-row">
               <span>{{ formatTime(post.created_at) }}</span>
-              <span>点赞 {{ post.likes_count }} · 评论 {{ post.comments_count || 0 }}</span>
+              <span>👍 {{ post.likes_count }} &nbsp; 💬 {{ post.comments_count || 0 }}</span>
             </div>
           </article>
         </div>
         <div v-else class="empty-state">你还没有发布过帖子。</div>
       </section>
+
+      <!-- 退出登录 -->
+      <button class="logout-btn" @click="logout">退出登录</button>
+
     </div>
     <BottomNav />
   </div>
@@ -79,6 +91,11 @@ const achievementCount = computed(() => achievementStore.achievements.length)
 const progressPercent = computed(() => {
   const nextExp = Math.max(100, (authStore.user?.exp || 0) * 1.5)
   return Math.min(100, Math.round(((authStore.user?.exp || 0) / nextExp) * 100))
+})
+const nextExpNeeded = computed(() => {
+  const exp = authStore.user?.exp || 0
+  const nextExp = Math.max(100, exp * 1.5)
+  return Math.round(nextExp - exp)
 })
 const avatarInitial = computed(() => userName.value.slice(0, 1))
 
@@ -111,6 +128,11 @@ const openPost = (post: any) => {
   }
 }
 
+const logout = () => {
+  authStore.logout()
+  router.push('/login')
+}
+
 onMounted(async () => {
   await Promise.all([
     authStore.loadUser(),
@@ -122,107 +144,161 @@ onMounted(async () => {
 </script>
 
 <style scoped>
+/* ── 色彩变量 ── */
+.profile-page {
+  --c-primary: #3a7d44;
+  --c-primary-light: #6fbb6b;
+  --c-surface: #ffffff;
+  --c-bg: #eef8ed;
+  --c-text: #2a4d2e;
+  --c-text-sub: #5d7a5f;
+  --c-text-muted: #8fa88f;
+  --c-border: #e3f0e3;
+}
+
+/* ── 页面容器 ── */
 .profile-page {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  background: #eef8ed;
+  background: var(--c-bg);
 }
 
 .profile-scroll {
-  padding: 20px;
   flex: 1;
   overflow-y: auto;
+  padding-bottom: 80px;
 }
 
-.profile-card {
-  display: flex;
-  gap: 16px;
-  padding: 20px;
-  background: white;
-  border-radius: 22px;
-  box-shadow: 0 18px 38px rgba(85, 118, 79, 0.08);
-  margin-bottom: 18px;
+/* ── 顶部 Hero ── */
+.profile-hero {
+  background: linear-gradient(160deg, var(--c-primary) 0%, var(--c-primary-light) 100%);
+  border-radius: 0 0 32px 32px;
+  padding: 52px 24px 28px;
+  text-align: center;
+  color: white;
+  margin-bottom: 20px;
 }
 
-.avatar-box {
-  width: 78px;
-  height: 78px;
-  border-radius: 22px;
-  background: linear-gradient(135deg, #d9f0d7, #f7fff5);
+.avatar-circle {
+  width: 88px;
+  height: 88px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.22);
+  border: 3px solid rgba(255, 255, 255, 0.6);
   display: grid;
   place-items: center;
-  font-size: 30px;
+  font-size: 34px;
   font-weight: 700;
-  color: #3f6d44;
+  color: white;
+  margin: 0 auto 14px;
 }
 
-.profile-info h2 {
-  margin: 0;
-  font-size: 1.8rem;
-  color: #2f5630;
+.hero-name {
+  font-size: 1.6rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  margin-bottom: 6px;
 }
 
-.profile-info p {
-  margin: 8px 0 16px;
-  color: #637960;
+.hero-tag {
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.8);
+  margin-bottom: 20px;
 }
 
-.profile-stats {
+.hero-stats {
   display: flex;
-  gap: 16px;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 18px;
+  padding: 14px 0;
 }
 
-.profile-stats div {
+.stat-item {
+  flex: 1;
   text-align: center;
 }
 
-.stat-number {
-  font-size: 1.2rem;
+.stat-item .stat-number {
+  font-size: 1.35rem;
   font-weight: 700;
-  color: #3e6e40;
+  color: white;
+  line-height: 1.2;
 }
 
-.stat-label {
-  color: #6d7f6a;
-  font-size: 0.85rem;
+.stat-item .stat-label {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.75);
+  margin-top: 3px;
 }
 
+.stat-divider {
+  width: 1px;
+  height: 28px;
+  background: rgba(255, 255, 255, 0.3);
+  flex-shrink: 0;
+}
+
+/* ── 进度面板 ── */
 .progress-panel {
-  background: white;
+  background: var(--c-surface);
   border-radius: 22px;
-  padding: 18px;
-  box-shadow: 0 14px 32px rgba(79, 117, 66, 0.08);
-  margin-bottom: 18px;
+  padding: 18px 20px;
+  box-shadow: 0 4px 20px rgba(58, 125, 68, 0.08);
+  margin: 0 16px 16px;
+}
+
+.progress-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.level-badge {
+  background: var(--c-primary);
+  color: white;
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 999px;
+  flex-shrink: 0;
 }
 
 .progress-title {
   font-weight: 700;
-  color: #2f5630;
-  margin-bottom: 10px;
+  color: var(--c-text);
+  font-size: 0.95rem;
 }
 
 .progress-bar {
   width: 100%;
-  height: 12px;
+  height: 10px;
   border-radius: 999px;
-  background: #edf7ed;
+  background: var(--c-border);
   overflow: hidden;
 }
 
 .progress-fill {
   height: 100%;
-  background: linear-gradient(90deg, #7cbc79 0%, #4c8d47 100%);
+  background: linear-gradient(90deg, var(--c-primary-light) 0%, var(--c-primary) 100%);
+  border-radius: 999px;
+  transition: width 0.6s ease;
 }
 
 .progress-meta {
-  margin-top: 10px;
-  color: #5d7f63;
-  font-size: 0.95rem;
+  display: flex;
+  justify-content: space-between;
+  margin-top: 8px;
+  color: var(--c-text-sub);
+  font-size: 0.85rem;
 }
 
+/* ── 帖子区域 ── */
 .post-section {
-  margin-bottom: 18px;
+  margin: 0 16px 16px;
 }
 
 .post-title-row {
@@ -234,57 +310,99 @@ onMounted(async () => {
 
 .post-title-row h3 {
   margin: 0;
-  color: #2b5130;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--c-text);
 }
 
 .post-title-row button {
   border: none;
-  background: #edf7ee;
-  color: #3c6940;
+  background: var(--c-border);
+  color: var(--c-primary);
   border-radius: 16px;
-  padding: 10px 14px;
+  padding: 6px 14px;
+  font-size: 0.85rem;
   cursor: pointer;
+  transition: background 0.15s;
+}
+
+.post-title-row button:active {
+  background: #c8e6c9;
 }
 
 .post-list {
   display: grid;
-  gap: 14px;
+  gap: 12px;
 }
 
 .post-card {
-  background: white;
-  border-radius: 20px;
-  padding: 16px;
-  box-shadow: 0 14px 32px rgba(77, 111, 73, 0.08);
+  background: var(--c-surface);
+  border-radius: 18px;
+  padding: 14px 16px 14px 20px;
+  box-shadow: 0 4px 16px rgba(58, 125, 68, 0.07);
+  border-left: 4px solid var(--c-primary-light);
   cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s;
 }
 
-.post-main {
-  margin-bottom: 10px;
+.post-card:active {
+  transform: scale(0.98);
+  box-shadow: 0 2px 8px rgba(58, 125, 68, 0.1);
+}
+
+.post-tag {
+  display: inline-block;
+  background: #e8f5e9;
+  color: var(--c-primary);
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 2px 9px;
+  border-radius: 999px;
+  margin-bottom: 8px;
 }
 
 .post-title {
-  margin: 0 0 8px;
-  font-weight: 700;
-  color: #2f5530;
-}
-
-.post-text {
-  margin: 0;
-  color: #556a57;
-  line-height: 1.7;
+  font-size: 0.95rem;
+  color: var(--c-text);
+  line-height: 1.6;
+  margin-bottom: 10px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .post-meta-row {
   display: flex;
   justify-content: space-between;
-  color: #6e7f6b;
-  font-size: 13px;
+  color: var(--c-text-muted);
+  font-size: 0.8rem;
 }
 
 .empty-state {
   text-align: center;
-  color: #6c7c66;
-  padding: 24px 0;
+  color: var(--c-text-muted);
+  padding: 32px 0;
+  font-size: 0.95rem;
+}
+
+/* ── 退出登录 ── */
+.logout-btn {
+  display: block;
+  width: calc(100% - 32px);
+  margin: 4px 16px 24px;
+  padding: 14px;
+  background: transparent;
+  border: 1.5px solid var(--c-border);
+  border-radius: 16px;
+  color: var(--c-text-muted);
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.logout-btn:active {
+  border-color: #e57373;
+  color: #e57373;
 }
 </style>
