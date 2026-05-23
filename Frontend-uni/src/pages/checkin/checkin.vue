@@ -15,11 +15,14 @@
       </md-card>
 
       <md-card class="checkin__card" variant="filled">
-        <text class="checkin__label">照片</text>
+        <view class="checkin__label-row">
+          <text class="checkin__label checkin__label--inline">照片</text>
+          <text class="checkin__counter">{{ selectedImages.length }}/9</text>
+        </view>
         <view class="image-grid">
           <view v-for="(image, index) in selectedImages" :key="index" class="image-grid__item">
-            <image :src="image" mode="aspectFill" />
-            <view class="image-grid__remove" @click="removeImage(index)">
+            <image :src="image" mode="aspectFill" @click="previewSelected(index)" />
+            <view class="image-grid__remove" @click.stop="removeImage(index)">
               <text>✕</text>
             </view>
           </view>
@@ -31,6 +34,7 @@
           >
             <text class="image-grid__add-icon">＋</text>
             <text class="image-grid__add-text">添加照片</text>
+            <text class="image-grid__add-hint">可一次选多张</text>
           </view>
         </view>
       </md-card>
@@ -112,8 +116,13 @@ const toggleStatus = (value: string) => {
 }
 
 const chooseImage = () => {
+  const remaining = 9 - selectedImages.value.length
+  if (remaining <= 0) {
+    uni.showToast({ title: '最多 9 张', icon: 'none' })
+    return
+  }
   uni.chooseImage({
-    count: 9 - selectedImages.value.length,
+    count: remaining,
     sizeType: ['original', 'compressed'],
     sourceType: ['album', 'camera'],
     success: (res) => {
@@ -124,6 +133,13 @@ const chooseImage = () => {
 
 const removeImage = (index: number) => {
   selectedImages.value.splice(index, 1)
+}
+
+const previewSelected = (index: number) => {
+  uni.previewImage({
+    urls: [...selectedImages.value],
+    current: selectedImages.value[index],
+  })
 }
 
 const uploadImages = async (): Promise<string[]> => {
@@ -199,6 +215,23 @@ onMounted(async () => {
   padding-bottom: $md-space-2;
   border-bottom: 1px solid rgba(0, 0, 0, 0.06);
 }
+.checkin__label-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: $md-space-3;
+  padding-bottom: $md-space-2;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+.checkin__label--inline {
+  margin-bottom: 0;
+  padding-bottom: 0;
+  border-bottom: none;
+}
+.checkin__counter {
+  @include md-type('body-small');
+  color: $md-on-surface-variant;
+}
 
 /* 图片网格 */
 .image-grid {
@@ -250,6 +283,11 @@ onMounted(async () => {
 .image-grid__add-text {
   margin-top: $md-space-1;
   @include md-type('body-small');
+}
+.image-grid__add-hint {
+  margin-top: 2px;
+  font-size: 10px;
+  color: $md-on-surface-variant;
 }
 
 /* 字段 */
