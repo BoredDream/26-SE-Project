@@ -3,7 +3,7 @@
     <md-app-bar title="发布打卡" show-back @back="goBack" />
 
     <view class="checkin__body">
-      <md-card class="checkin__card">
+      <md-card class="checkin__card" variant="filled">
         <text class="checkin__label">打卡内容</text>
         <md-text-field
           v-model="content"
@@ -14,7 +14,7 @@
         />
       </md-card>
 
-      <md-card class="checkin__card">
+      <md-card class="checkin__card" variant="filled">
         <text class="checkin__label">照片</text>
         <view class="image-grid">
           <view v-for="(image, index) in selectedImages" :key="index" class="image-grid__item">
@@ -35,7 +35,7 @@
         </view>
       </md-card>
 
-      <md-card class="checkin__card">
+      <md-card class="checkin__card" variant="filled">
         <text class="checkin__label">打卡信息</text>
         <view class="field">
           <text class="field__name">打卡地点</text>
@@ -186,6 +186,9 @@ onMounted(async () => {
   padding: $md-space-4;
 }
 .checkin__card {
+  margin-bottom: $md-space-5;
+}
+.checkin__card:last-of-type {
   margin-bottom: $md-space-4;
 }
 .checkin__label {
@@ -193,6 +196,8 @@ onMounted(async () => {
   @include md-type('title-small');
   color: $md-on-surface;
   margin-bottom: $md-space-3;
+  padding-bottom: $md-space-2;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
 }
 
 /* 图片网格 */
@@ -261,7 +266,8 @@ onMounted(async () => {
   color: $md-on-surface-variant;
 }
 .field__value {
-  background: $md-surface-container;
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(0, 0, 0, 0.06);
   border-radius: $md-shape-sm;
   padding: $md-space-3 $md-space-4;
   @include md-type('body-large');
