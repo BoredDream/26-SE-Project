@@ -97,7 +97,9 @@
       </view>
     </view>
 
-    <md-button v-if="showBackToTop" class="to-top" variant="tonal" @click="scrollToTop">↑ 顶部</md-button>
+    <view v-if="showBackToTop" class="to-top" hover-class="to-top--hover" @click="scrollToTop">
+      <text class="to-top__icon">↑</text>
+    </view>
 
     <comment-sheet
       :visible="commentSheetVisible"
@@ -424,9 +426,27 @@ onMounted(async () => {
 }
 .to-top {
   position: fixed;
-  left: $md-space-4;
-  bottom: 96px;
+  right: $md-space-4;
+  bottom: 110px;
   z-index: 50;
-  @include md-elevation(2);
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+.to-top--hover {
+  opacity: 0.85;
+  transform: scale(0.94);
+}
+.to-top__icon {
+  font-size: 22px;
+  font-weight: 600;
+  color: #4caf50;
+  line-height: 1;
 }
 </style>
