@@ -97,8 +97,13 @@
           </md-card>
         </view>
 
-        <view v-if="canLoadMore" class="posts__more">
-          <md-button variant="tonal" @click="loadMore">加载更多</md-button>
+        <view v-if="visiblePosts.length" class="posts__footer">
+          <text v-if="canLoadMore" class="posts__footer-text">上拉加载更多...</text>
+          <view v-else class="posts__footer-end">
+            <view class="posts__footer-line"></view>
+            <text class="posts__footer-text">已经到底啦</text>
+            <view class="posts__footer-line"></view>
+          </view>
         </view>
         <view v-if="!visiblePosts.length" class="empty">
           <text>暂无帖子，去发布你的第一条打卡吧。</text>
@@ -455,10 +460,26 @@ onMounted(async () => {
 }
 
 /* 其它 */
-.posts__more {
+.posts__footer {
   display: flex;
+  align-items: center;
   justify-content: center;
-  margin-top: $md-space-4;
+  margin-top: $md-space-5;
+  padding: $md-space-3 0;
+}
+.posts__footer-end {
+  display: flex;
+  align-items: center;
+  gap: $md-space-3;
+}
+.posts__footer-line {
+  width: 32px;
+  height: 1px;
+  background: rgba(0, 0, 0, 0.12);
+}
+.posts__footer-text {
+  @include md-type('body-small');
+  color: $md-on-surface-variant;
 }
 .empty {
   text-align: center;
