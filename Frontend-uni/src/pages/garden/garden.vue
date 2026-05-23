@@ -38,15 +38,18 @@
                     hover-class="flower-card--hover"
                     @click="openFlower(flower)"
                 >
-                    <view class="flower-card__img-wrap">
+                    <view class="flower-card__img-container">
                         <image
                             class="flower-card__img"
                             :src="flower.image"
                             mode="aspectFill"
                         />
 
-                        <view v-if="!flower.unlocked" class="flower-card__lock">
-                            <view class="flower-card__lock-shield">
+                        <view
+                            v-if="!flower.unlocked"
+                            class="flower-card__lock-mask"
+                        >
+                            <view class="flower-card__lock-icon-box">
                                 <svg
                                     viewBox="0 0 24 24"
                                     class="flower-card__lock-svg"
@@ -281,12 +284,6 @@ onMounted(async () => {
     opacity: 0.85;
     margin-bottom: $md-space-4;
 }
-.hero__stats {
-    display: flex;
-    align-items: center;
-    gap: $md-space-3;
-}
-/* 修正点：加粗加硬度进度条轨道 */
 .hero__progress {
     flex: 1;
     height: 10px;
@@ -297,7 +294,7 @@ onMounted(async () => {
 }
 .hero__progress-fill {
     height: 100%;
-    background: #faf8f5; /* 象牙卡片白填充 */
+    background: #faf8f5;
     border-radius: $md-shape-full;
     transition: width 0.6s cubic-bezier(0.2, 0, 0, 1);
 }
@@ -309,16 +306,16 @@ onMounted(async () => {
     white-space: nowrap;
 }
 
-/* ── 花卉收录网格 ── */
+/* ── 花卉收录网格：重塑为 3:4 黄金长宽比 ── */
 .flowers {
     padding: 0 $md-space-4;
     display: grid;
     grid-template-columns: repeat(2, 1fr);
-    gap: $md-space-3;
+    gap: $md-space-4; /* 稍微拉大间距，给长方形卡片呼吸空间 */
 }
 .flower-card {
     background: #faf8f5;
-    border-radius: $md-shape-lg;
+    border-radius: 4px; /* 改为更为古典、微方的 4px 圆角 */
     overflow: hidden;
     border: 1px solid #d8d3c5;
     box-shadow: 0 2px 6px rgba(58, 42, 32, 0.04);
@@ -330,51 +327,54 @@ onMounted(async () => {
     transform: translateY(-2px);
     box-shadow: 0 5px 14px rgba(58, 42, 32, 0.08);
 }
-.flower-card__img-wrap {
+
+/* 🎨 关键重构点：改用 3:4 黄金古典比例容器，内缩 1px 彻底断绝双边框外露 */
+.flower-card__img-container {
     position: relative;
     width: 100%;
-    aspect-ratio: 1 / 1;
+    height: 0;
+    padding-bottom: 133.33%; /* 严格锁定 3:4 比例控制线 (4/3 = 1.3333) */
     background: #efece4;
     overflow: hidden;
-    border-bottom: 1px solid #d8d3c5;
 }
 .flower-card__img {
+    position: absolute;
+    top: 0;
+    left: 0;
     width: 100%;
     height: 100%;
 }
 
-/* 🔒 未解锁卡片视觉机制修正 */
+/* 🔒 未解锁视觉控制：淡墨水白描质感 */
 .flower-card--locked .flower-card__img {
-    filter: grayscale(1) contrast(1.1) brightness(0.85);
-    opacity: 0.3; /* 渲染淡淡的纸上墨线感 */
-}
-.flower-card__lock {
-    position: absolute;
-    inset: 0;
-    background: rgba(58, 42, 32, 0.02);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-/* 修正点：消灭高亮纯白大圆圈，改用极具宣纸融合度的精致小盾牌 */
-.flower-card__lock-shield {
-    width: 32px;
-    height: 32px;
-    border-radius: 4px; /* 抛弃无趣大圆形 */
-    background: rgba(250, 248, 245, 0.85); /* 柔和半透明象牙宣纸色 */
-    border: 1px solid #8b867a; /* 古董灰线勾边 */
-    color: #6e7268;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow: 0 2px 6px rgba(58, 42, 32, 0.06);
-}
-.flower-card__lock-svg {
-    width: 15px;
-    height: 15px;
+    filter: grayscale(1) contrast(1.1) brightness(0.9);
+    opacity: 0.22; /* 进一步降低不透明度，让白描墨线更空灵自然 */
 }
 
-/* 💮 已解锁卡片：红底火漆签章 */
+/* 🔒 修正点：彻底击碎纯白大圆块加载伪影，改用纯粹悬浮的复古暗青铜独立锁扣 */
+.flower-card__lock-mask {
+    position: absolute;
+    inset: 0;
+    background: rgba(58, 42, 32, 0.01); /* 极弱的陈旧纸张底色 */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.flower-card__lock-icon-box {
+    width: 32px;
+    height: 32px;
+    color: #8b867a; /* 纯粹古铜灰线 */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    filter: drop-shadow(0 2px 4px rgba(58, 42, 32, 0.15));
+}
+.flower-card__lock-svg {
+    width: 24px; /* 放大内联 SVG，不需要外层套圆圈白块 */
+    height: 24px;
+}
+
+/* 💮 已解锁印章 */
 .flower-card__seal {
     position: absolute;
     top: 8px;
@@ -392,6 +392,7 @@ onMounted(async () => {
         0 2px 5px rgba(188, 71, 73, 0.3),
         inset 0 -1px 2px rgba(0, 0, 0, 0.2);
     border: 1px solid rgba(255, 255, 255, 0.1);
+    z-index: 2;
 }
 .flower-card__seal-num {
     font-family: "Georgia", serif;
@@ -406,19 +407,19 @@ onMounted(async () => {
 }
 
 .flower-card__body {
-    padding: $md-space-2 $md-space-3;
-    text-align: center; /* 居中编排 */
+    padding: $md-space-2;
+    text-align: center;
     background: #faf8f5;
+    border-top: 1px solid #d8d3c5; /* 增加一道古籍横向裁切线 */
 }
 .flower-card__status {
     display: block;
-    font-size: 12px;
-    font-weight: 500;
+    font-size: 11px;
+    font-weight: 600;
     color: #6e7268;
 }
 .flower-card--unlocked .flower-card__status {
-    color: #a3704c; /* 已解锁采用古典胡桃褐 */
-    font-weight: 600;
+    color: #a3704c; /* 已解锁采用胡桃褐 */
 }
 .garden__hint {
     display: block;
