@@ -14,7 +14,10 @@
 
       <view class="bab__publish-wrap" @click="goPublish">
         <view class="bab__publish" hover-class="bab__publish--hover">
-          <text class="bab__publish-icon">+</text>
+          <view class="bab__plus">
+            <view class="bab__plus-h"></view>
+            <view class="bab__plus-v"></view>
+          </view>
         </view>
         <text class="bab__publish-label">发布</text>
       </view>
@@ -151,11 +154,30 @@ const goPublish = () => {
   opacity: 0.9;
   transform: scale(0.95);
 }
-.bab__publish-icon {
-  color: #ffffff;
-  font-size: 32px;
-  line-height: 1;
-  font-weight: 300;
+.bab__plus {
+  position: relative;
+  width: 24px;
+  height: 24px;
+}
+.bab__plus-h,
+.bab__plus-v {
+  position: absolute;
+  background: #ffffff;
+  border-radius: 2px;
+}
+.bab__plus-h {
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 3px;
+  transform: translateY(-50%);
+}
+.bab__plus-v {
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  transform: translateX(-50%);
 }
 .bab__publish-label {
   font-size: 11px;
