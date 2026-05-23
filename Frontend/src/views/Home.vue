@@ -137,9 +137,9 @@ const showBackToTop = ref(false)
 const commentVisible = ref(false)
 const commentPostId = ref(0)
 const carouselPhotos = [
-  'https://images.unsplash.com/photo-1493246507139-91e8fad9978e?auto=format&fit=crop&w=900&q=80',
-  'https://images.unsplash.com/photo-1501004318641-b39e6451bec6?auto=format&fit=crop&w=900&q=80',
-  'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=900&q=80',
+  '/carousel/1.png',
+  '/carousel/2.jpg',
+  '/carousel/3.jpg',
 ]
 
 const recommendationList = computed(() => {

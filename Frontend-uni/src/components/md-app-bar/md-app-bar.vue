@@ -21,7 +21,7 @@
 defineProps<{ title?: string; showBack?: boolean }>()
 defineEmits<{ (e: 'back'): void }>()
 
-const statusBarHeight = uni.getSystemInfoSync().statusBarHeight || 0
+const statusBarHeight = uni.getWindowInfo().statusBarHeight || 0
 </script>
 
 <style scoped lang="scss">

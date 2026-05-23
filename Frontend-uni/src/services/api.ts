@@ -120,6 +120,7 @@ class ApiClient {
         method: method as any,
         header,
         data,
+        timeout: 8000,
         success: (res) => {
           const statusCode = res.statusCode || 0
           const responseData = res.data as ApiResponse<T>

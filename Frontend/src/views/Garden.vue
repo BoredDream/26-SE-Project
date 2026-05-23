@@ -27,6 +27,7 @@
             <img :src="flower.image" :alt="flower.name" class="flower-img" />
             <div v-if="!flower.unlocked" class="lock-overlay">
               <div class="lock-icon">🔒</div>
+              <div class="lock-hint">待解锁</div>
             </div>
             <div v-else class="unlock-badge">✓</div>
           </div>
@@ -233,7 +234,7 @@ onMounted(async () => {
 }
 
 .flower-card.locked {
-  opacity: 0.72;
+  opacity: 1;
 }
 
 /* ── 图片区域 ── */
@@ -252,21 +253,40 @@ onMounted(async () => {
 }
 
 .flower-card.locked .flower-img {
-  filter: grayscale(0.8) brightness(0.7);
+  filter: grayscale(1) brightness(0.55);
+}
+
+.flower-card.unlocked .flower-img {
+  animation: unlockReveal 0.4s ease both;
+}
+
+@keyframes unlockReveal {
+  from { opacity: 0.6; transform: scale(1.04); }
+  to   { opacity: 1;   transform: scale(1); }
 }
 
 .lock-overlay {
   position: absolute;
   inset: 0;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: rgba(0, 0, 0, 0.18);
+  gap: 6px;
+  background: linear-gradient(rgba(0,0,0,0.04), rgba(0,0,0,0.52));
 }
 
 .lock-icon {
   font-size: 2rem;
-  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.4));
+}
+
+.lock-hint {
+  font-size: 0.72rem;
+  color: rgba(255,255,255,0.85);
+  letter-spacing: 0.05em;
+  font-weight: 600;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.5);
 }
 
 .unlock-badge {

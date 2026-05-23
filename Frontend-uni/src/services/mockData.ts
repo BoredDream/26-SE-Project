@@ -188,7 +188,7 @@ export const mockCheckins: Checkin[] = [
     user_id: 1,
     location_id: 5,
     content: '兰花苑开始显露花苞，颜色柔和，非常适合静心。',
-    images: ['https://images.unsplash.com/photo-1597987335282-a5dd4a6c4569?auto=format&fit=crop&w=720&q=80'],
+    images: ['https://images.unsplash.com/photo-1464207551237-040338b17096?auto=format&fit=crop&w=720&q=80'],
     likes_count: 5,
     comments_count: 1,
     created_at: new Date(Date.now() - 1000 * 60 * 60 * 40).toISOString(),

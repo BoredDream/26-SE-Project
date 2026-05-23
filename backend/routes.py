@@ -239,13 +239,26 @@ class LocationList(Resource):
             places = flower.places
         else:
             places = Place.query.all()
-        return success([{
-            'id': p.id,
-            'name': p.name,
-            'description': p.description,
-            'latitude': float(p.latitude),
-            'longitude': float(p.longitude)
-        } for p in places])
+
+        result = []
+        for p in places:
+            flower = p.flowers[0] if p.flowers else None
+            fps = FlowerPlace.query.filter_by(place_id=p.id).all()
+            checkin_count = sum(len(fp.checkins) for fp in fps)
+            result.append({
+                'id': p.id,
+                'name': p.name,
+                'description': p.description,
+                'latitude': float(p.latitude),
+                'longitude': float(p.longitude),
+                'flower_species': flower.species if flower else '',
+                'bloom_status': flower.bloom_status.value if flower and flower.bloom_status else '',
+                'historical_bloom_start': flower.historical_bloom_start if flower else None,
+                'historical_bloom_end': flower.historical_bloom_end if flower else None,
+                'cover_image': flower.cover_image if flower else '',
+                'checkin_count': checkin_count,
+            })
+        return success(result)
 
 class LocationDetail(Resource):
     def get(self, id):

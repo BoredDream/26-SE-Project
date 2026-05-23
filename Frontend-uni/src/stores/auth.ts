@@ -59,8 +59,13 @@ export const useAuthStore = defineStore('auth', () => {
 
   const loadUser = async () => {
     if (!token.value) return
+    // 清理早期前端演示模式遗留的伪 token（'demo-' 前缀），它不是有效 JWT
+    if (token.value.startsWith('demo-')) {
+      logout()
+      return
+    }
+    api.setToken(token.value)
     try {
-      api.setToken(token.value)
       const response = await api.users.getCurrent()
       user.value = response.data
     } catch (err) {
