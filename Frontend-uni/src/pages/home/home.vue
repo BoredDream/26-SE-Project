@@ -64,8 +64,17 @@
             </view>
             <text class="post__content">{{ post.content }}</text>
             <view v-if="post.images?.length" :class="['post__images', getImageGridClass(post.images.length)]">
-              <view v-for="(img, idx) in post.images" :key="idx" class="post__image">
+              <view
+                v-for="(img, idx) in post.images"
+                :key="idx"
+                class="post__image"
+                hover-class="post__image--hover"
+                @click.stop="previewImages(post.images, idx)"
+              >
                 <image :src="img" mode="aspectFill" />
+                <view v-if="post.images.length > 9 && idx === 8" class="post__image-more">
+                  <text>+{{ post.images.length - 9 }}</text>
+                </view>
               </view>
             </view>
             <view class="post__footer">
@@ -199,6 +208,14 @@ const likePost = async (id: number) => {
 const openComments = (id: number) => {
   activeCommentCheckinId.value = id
   commentSheetVisible.value = true
+}
+
+const previewImages = (urls: string[], index: number) => {
+  if (!urls?.length) return
+  uni.previewImage({
+    urls,
+    current: urls[index],
+  })
 }
 
 const goCheckin = () => {
@@ -347,12 +364,18 @@ onMounted(async () => {
 .post__images.one-image {
   grid-template-columns: 1fr;
 }
+.post__images.one-image .post__image {
+  aspect-ratio: 4 / 3;
+}
 .post__images.two-images {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
+.post__images.two-images .post__image {
+  aspect-ratio: 1 / 1;
+}
 .post__images.three-images {
   grid-template-columns: 1.6fr 1fr;
-  grid-template-rows: repeat(2, 92px);
+  grid-template-rows: repeat(2, 96px);
 }
 .post__images.three-images .post__image:first-child {
   grid-row: span 2;
@@ -360,14 +383,33 @@ onMounted(async () => {
 .post__images.many-images {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
+.post__images.many-images .post__image {
+  aspect-ratio: 1 / 1;
+}
 .post__image {
+  position: relative;
   overflow: hidden;
   border-radius: $md-shape-md;
-  min-height: 100px;
+  transition: transform 0.15s ease, opacity 0.15s ease;
+}
+.post__image--hover {
+  opacity: 0.85;
+  transform: scale(0.98);
 }
 .post__image image {
   width: 100%;
   height: 100%;
+}
+.post__image-more {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  font-weight: 600;
 }
 .post__footer {
   display: flex;
