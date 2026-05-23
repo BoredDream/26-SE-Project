@@ -44,7 +44,6 @@
           <md-card
             v-for="post in myPosts"
             :key="post.id"
-            variant="filled"
             clickable
             @click="openPost(post)"
           >
@@ -132,9 +131,9 @@ onMounted(async () => {
 .profile__body {
   padding: $md-space-4;
   padding-bottom: 100px;
-}
-.profile__card {
-  margin-bottom: $md-space-4;
+  display: flex;
+  flex-direction: column;
+  gap: $md-space-4;
 }
 .profile__head {
   display: flex;
@@ -184,7 +183,7 @@ onMounted(async () => {
 }
 
 .profile__progress {
-  margin-bottom: $md-space-5;
+  /* 间距由父容器 gap 统一管理 */
 }
 .profile__progress-title {
   display: block;

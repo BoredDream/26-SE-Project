@@ -128,11 +128,14 @@ onMounted(async () => {
 .garden__body {
   padding: $md-space-4;
   padding-bottom: 100px;
+  display: flex;
+  flex-direction: column;
+  gap: $md-space-4;
 }
 
 /* 进度卡 */
 .progress {
-  margin-bottom: $md-space-5;
+  /* 间距由父容器 gap 统一管理 */
 }
 .progress__title {
   display: block;
@@ -200,7 +203,6 @@ onMounted(async () => {
 }
 .garden__hint {
   display: block;
-  margin-top: $md-space-5;
   text-align: center;
   @include md-type('body-small');
   color: $md-on-surface-variant;
