@@ -3,7 +3,6 @@
         <md-app-bar title="百草本纪" />
 
         <view class="garden__body">
-            <!-- Hero banner（古典学札卷轴视觉） -->
             <view class="hero">
                 <view class="hero__inner-border">
                     <view class="hero__content">
@@ -26,7 +25,6 @@
                 </view>
             </view>
 
-            <!-- 花卉收集网格（复古框线与白描机制） -->
             <view class="flowers">
                 <view
                     v-for="flower in flowerCollection"
@@ -47,9 +45,8 @@
                             mode="aspectFill"
                         />
 
-                        <!-- 未解锁状态：渲染精细线条古锁 -->
                         <view v-if="!flower.unlocked" class="flower-card__lock">
-                            <view class="flower-card__lock-box">
+                            <view class="flower-card__lock-shield">
                                 <svg
                                     viewBox="0 0 24 24"
                                     class="flower-card__lock-svg"
@@ -62,7 +59,6 @@
                             </view>
                         </view>
 
-                        <!-- 已解锁状态：渲染具有立体感的红底火漆印章，内标打卡数 -->
                         <view v-else class="flower-card__seal">
                             <text class="flower-card__seal-num">{{
                                 flower.checkinCount
@@ -72,7 +68,6 @@
                     </view>
 
                     <view class="flower-card__body">
-                        <text class="flower-card__name">{{ flower.name }}</text>
                         <text class="flower-card__status">
                             {{
                                 flower.unlocked
@@ -89,7 +84,6 @@
             >
         </view>
 
-        <!-- 详情弹窗（重构为古典植物考察档案袋质感） -->
         <view class="dialog" v-if="selectedFlower">
             <view class="dialog__scrim" @click="closeDetail"></view>
             <view class="dialog__card">
@@ -114,7 +108,6 @@
                         </view>
                     </view>
 
-                    <!-- 帖子流渲染成带有手写记录本横格线的质感 -->
                     <view class="dialog__posts">
                         <template v-if="selectedFlower.checkins.length">
                             <view
@@ -181,7 +174,7 @@ const FLOWER_LIST = [
     "蔷薇花",
     "紫藤花",
     "杜鹃花",
-    "夹竹桃",
+    "夹桃",
 ];
 
 interface FlowerEntry {
@@ -202,7 +195,6 @@ const flowerCollection = computed<FlowerEntry[]>(() => {
         });
         return {
             name,
-            // 解锁和未解锁共用相同路径，配合 class 层的 css 滤镜实现水彩与白描线条的优雅平滑过渡
             image: `/static/flowers/${name}.png`,
             unlocked: relatedCheckins.length > 0,
             checkinCount: relatedCheckins.length,
@@ -255,17 +247,17 @@ onMounted(async () => {
     gap: $md-space-4;
 }
 
-/* ── Hero Banner（复古标本夹外框视觉） ── */
+/* ── Hero Banner ── */
 .hero {
     position: relative;
     margin: $md-space-4 $md-space-4 0;
     padding: $md-space-2;
-    background: #3a5a40; /* 标本深绿 */
+    background: #3a5a40;
     border-radius: $md-shape-lg;
     box-shadow: 0 4px 12px rgba(58, 90, 64, 0.15);
 }
 .hero__inner-border {
-    border: 1px dashed rgba(230, 237, 223, 0.4); /* 仿线装书内页虚线框 */
+    border: 1px dashed rgba(230, 237, 223, 0.4);
     padding: $md-space-4 $md-space-4 $md-space-5;
     border-radius: $md-shape-md;
 }
@@ -294,17 +286,18 @@ onMounted(async () => {
     align-items: center;
     gap: $md-space-3;
 }
+/* 修正点：加粗加硬度进度条轨道 */
 .hero__progress {
     flex: 1;
-    height: 6px;
-    background: rgba(255, 255, 255, 0.15);
+    height: 10px;
+    background: rgba(255, 255, 255, 0.12);
     border-radius: $md-shape-full;
     overflow: hidden;
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.15);
 }
 .hero__progress-fill {
     height: 100%;
-    background: #e6eddf; /* 浅色进度条 */
+    background: #faf8f5; /* 象牙卡片白填充 */
     border-radius: $md-shape-full;
     transition: width 0.6s cubic-bezier(0.2, 0, 0, 1);
 }
@@ -316,7 +309,7 @@ onMounted(async () => {
     white-space: nowrap;
 }
 
-/* ── 花卉收录网格（学术画框美学） ── */
+/* ── 花卉收录网格 ── */
 .flowers {
     padding: 0 $md-space-4;
     display: grid;
@@ -324,7 +317,7 @@ onMounted(async () => {
     gap: $md-space-3;
 }
 .flower-card {
-    background: $md-surface;
+    background: #faf8f5;
     border-radius: $md-shape-lg;
     overflow: hidden;
     border: 1px solid #d8d3c5;
@@ -348,42 +341,40 @@ onMounted(async () => {
 .flower-card__img {
     width: 100%;
     height: 100%;
-    transition:
-        filter 0.4s ease,
-        transform 0.4s ease;
 }
 
-/* 🔒 未解锁卡片视觉控制：白描与陈旧泛黄效果 */
+/* 🔒 未解锁卡片视觉机制修正 */
 .flower-card--locked .flower-card__img {
-    filter: grayscale(1) contrast(1.2) brightness(0.8);
-    opacity: 0.25; /* 配合半透明模拟淡淡的墨线白描质感 */
+    filter: grayscale(1) contrast(1.1) brightness(0.85);
+    opacity: 0.3; /* 渲染淡淡的纸上墨线感 */
 }
 .flower-card__lock {
     position: absolute;
     inset: 0;
-    background: rgba(58, 42, 32, 0.03); /* 淡淡的纸张陈旧黄阴影 */
+    background: rgba(58, 42, 32, 0.02);
     display: flex;
     align-items: center;
     justify-content: center;
 }
-.flower-card__lock-box {
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    background: #faf8f5;
-    border: 1px solid #d8d3c5;
-    color: #8b867a; /* 古铜灰 */
+/* 修正点：消灭高亮纯白大圆圈，改用极具宣纸融合度的精致小盾牌 */
+.flower-card__lock-shield {
+    width: 32px;
+    height: 32px;
+    border-radius: 4px; /* 抛弃无趣大圆形 */
+    background: rgba(250, 248, 245, 0.85); /* 柔和半透明象牙宣纸色 */
+    border: 1px solid #8b867a; /* 古董灰线勾边 */
+    color: #6e7268;
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.04);
+    box-shadow: 0 2px 6px rgba(58, 42, 32, 0.06);
 }
 .flower-card__lock-svg {
-    width: 18px;
-    height: 18px;
+    width: 15px;
+    height: 15px;
 }
 
-/* 💮 已解锁卡片：红底火漆文书签章效果 */
+/* 💮 已解锁卡片：红底火漆签章 */
 .flower-card__seal {
     position: absolute;
     top: 8px;
@@ -391,7 +382,7 @@ onMounted(async () => {
     width: 28px;
     height: 28px;
     border-radius: 50%;
-    background: #bc4749; /* 火漆红 */
+    background: #bc4749;
     color: #ffffff;
     display: flex;
     flex-direction: column;
@@ -416,22 +407,17 @@ onMounted(async () => {
 
 .flower-card__body {
     padding: $md-space-2 $md-space-3;
+    text-align: center; /* 居中编排 */
     background: #faf8f5;
-}
-.flower-card__name {
-    display: block;
-    font-size: 14px;
-    font-weight: 600;
-    color: $md-on-surface;
-    margin-bottom: 2px;
 }
 .flower-card__status {
     display: block;
-    font-size: 11px;
+    font-size: 12px;
+    font-weight: 500;
     color: #6e7268;
 }
 .flower-card--unlocked .flower-card__status {
-    color: #a3704c; /* 已解锁采用胡桃褐强调 */
+    color: #a3704c; /* 已解锁采用古典胡桃褐 */
     font-weight: 600;
 }
 .garden__hint {
@@ -443,7 +429,7 @@ onMounted(async () => {
     letter-spacing: 0.5px;
 }
 
-/* ── 详情弹窗（考察记录薄本美学） ── */
+/* ── 详情弹窗 ── */
 .dialog {
     position: fixed;
     left: 0;
@@ -459,7 +445,7 @@ onMounted(async () => {
 .dialog__scrim {
     position: absolute;
     inset: 0;
-    background: rgba(42, 44, 36, 0.4); /* 墨灰遮罩 */
+    background: rgba(42, 44, 36, 0.4);
     backdrop-filter: blur(1px);
 }
 .dialog__card {
@@ -522,9 +508,9 @@ onMounted(async () => {
 }
 .dialog__post {
     background: #faf8f5;
-    border-left: 2px solid #3a5a40; /* 标本绿边缘标记线 */
+    border-left: 2px solid #3a5a40;
     padding: $md-space-2 0 $md-space-2 $md-space-3;
-    border-bottom: 1px solid #efece4; /* 模拟手写本线格 */
+    border-bottom: 1px solid #efece4;
 }
 .dialog__post-meta {
     display: flex;
