@@ -30,11 +30,21 @@
             v-if="selectedImages.length < 9"
             class="image-grid__add"
             hover-class="image-grid__add--hover"
-            @click="chooseImage"
+            @click="chooseFromAlbum"
           >
             <text class="image-grid__add-icon">＋</text>
-            <text class="image-grid__add-text">添加照片</text>
+            <text class="image-grid__add-text">相册选择</text>
             <text class="image-grid__add-hint">可一次选多张</text>
+          </view>
+          <view
+            v-if="selectedImages.length < 9"
+            class="image-grid__add image-grid__add--camera"
+            hover-class="image-grid__add--hover"
+            @click="takePhoto"
+          >
+            <text class="image-grid__camera-icon">📷</text>
+            <text class="image-grid__add-text">拍照</text>
+            <text class="image-grid__add-hint">直接调起相机</text>
           </view>
         </view>
       </md-card>
@@ -115,7 +125,7 @@ const toggleStatus = (value: string) => {
   selectedStatus.value = selectedStatus.value === value ? '' : value
 }
 
-const chooseImage = () => {
+const chooseFromAlbum = () => {
   const remaining = 9 - selectedImages.value.length
   if (remaining <= 0) {
     uni.showToast({ title: '最多 9 张', icon: 'none' })
@@ -124,7 +134,22 @@ const chooseImage = () => {
   uni.chooseImage({
     count: remaining,
     sizeType: ['original', 'compressed'],
-    sourceType: ['album', 'camera'],
+    sourceType: ['album'],
+    success: (res) => {
+      selectedImages.value.push(...res.tempFilePaths)
+    },
+  })
+}
+
+const takePhoto = () => {
+  if (selectedImages.value.length >= 9) {
+    uni.showToast({ title: '最多 9 张', icon: 'none' })
+    return
+  }
+  uni.chooseImage({
+    count: 1,
+    sizeType: ['original', 'compressed'],
+    sourceType: ['camera'],
     success: (res) => {
       selectedImages.value.push(...res.tempFilePaths)
     },
@@ -279,6 +304,14 @@ onMounted(async () => {
 .image-grid__add-icon {
   font-size: 26px;
   color: $md-primary;
+}
+.image-grid__camera-icon {
+  font-size: 22px;
+  line-height: 1;
+}
+.image-grid__add--camera {
+  background: rgba(76, 175, 80, 0.08);
+  border-color: rgba(76, 175, 80, 0.3);
 }
 .image-grid__add-text {
   margin-top: $md-space-1;
