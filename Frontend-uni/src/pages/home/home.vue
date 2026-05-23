@@ -23,24 +23,27 @@
       <!-- 花卉推荐 -->
       <view class="section">
         <text class="section__title">花卉推荐</text>
-        <view class="recommend">
-          <md-card
-            v-for="item in recommendationList"
-            :key="item.id"
-            variant="filled"
-            clickable
-            @click="openMap(item)"
-          >
-            <view class="recommend__row">
+        <scroll-view class="recommend" scroll-x show-scrollbar="false">
+          <view class="recommend__list">
+            <view
+              v-for="item in recommendationList"
+              :key="item.id"
+              class="recommend__card"
+              hover-class="recommend__card--hover"
+              @click="openMap(item)"
+            >
               <image class="recommend__img" :src="item.cover_image" mode="aspectFill" />
-              <view class="recommend__info">
+              <view class="recommend__body">
+                <text class="recommend__species">{{ item.flower_species || '未知花种' }}</text>
                 <text class="recommend__name">{{ item.name }}</text>
-                <text class="recommend__species">{{ item.flower_species }}</text>
-                <md-chip class="recommend__status" :label="formatStatus(item.bloom_status)" />
+                <view class="recommend__status">
+                  <text class="recommend__status-dot"></text>
+                  <text class="recommend__status-text">{{ formatStatus(item.bloom_status) }}</text>
+                </view>
               </view>
             </view>
-          </md-card>
-        </view>
+          </view>
+        </scroll-view>
       </view>
 
       <!-- 花园帖子 -->
@@ -280,37 +283,70 @@ onMounted(async () => {
   margin-bottom: $md-space-3;
 }
 
-/* 花卉推荐 */
+/* 花卉推荐 - 横向滑动大图卡片 */
 .recommend {
-  display: flex;
-  flex-direction: column;
-  gap: $md-space-3;
+  margin: 0 -$md-space-4;
+  white-space: nowrap;
 }
-.recommend__row {
-  display: flex;
-  align-items: center;
-  gap: $md-space-4;
+.recommend__list {
+  display: inline-flex;
+  gap: $md-space-3;
+  padding: 4px $md-space-4 12px;
+}
+.recommend__card {
+  display: inline-flex;
+  flex-direction: column;
+  width: 200px;
+  background: $md-surface;
+  border-radius: $md-shape-md;
+  overflow: hidden;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.recommend__card--hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
 }
 .recommend__img {
-  width: 96px;
-  height: 96px;
-  border-radius: $md-shape-md;
-  flex-shrink: 0;
+  width: 100%;
+  height: 150px;
+  background: $md-surface-container;
 }
-.recommend__info {
-  flex: 1;
-  min-width: 0;
-}
-.recommend__name {
-  display: block;
-  @include md-type('title-small');
-  color: $md-on-surface;
+.recommend__body {
+  padding: $md-space-3 $md-space-4;
 }
 .recommend__species {
   display: block;
+  @include md-type('title-small');
+  color: $md-on-surface;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.recommend__name {
+  display: block;
   @include md-type('body-small');
   color: $md-on-surface-variant;
-  margin: $md-space-1 0 $md-space-2;
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.recommend__status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: $md-space-2;
+}
+.recommend__status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #4caf50;
+}
+.recommend__status-text {
+  @include md-type('label-small');
+  color: $md-primary;
 }
 
 /* 帖子 */
