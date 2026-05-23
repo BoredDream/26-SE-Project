@@ -109,7 +109,7 @@ const getImageStyle = (count: number, index: number) => {
 const viewCheckin = (id: number) => {
   const item = checkinStore.checkins.find(post => post.id === id)
   if (!item) return
-  uni.switchTab({ url: '/pages/home/home' })
+  uni.reLaunch({ url: '/pages/home/home' })
 }
 
 onLoad((options: any) => {

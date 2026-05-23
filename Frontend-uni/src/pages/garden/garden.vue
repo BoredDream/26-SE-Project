@@ -58,6 +58,8 @@
         </view>
       </view>
     </view>
+
+    <bottom-action-bar current="garden" />
   </view>
 </template>
 
@@ -125,6 +127,7 @@ onMounted(async () => {
 }
 .garden__body {
   padding: $md-space-4;
+  padding-bottom: 100px;
 }
 
 /* 进度卡 */

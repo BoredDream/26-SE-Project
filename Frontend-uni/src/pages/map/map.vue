@@ -41,12 +41,14 @@
       @markertap="onMarkerTap"
     ></map>
     <!-- #endif -->
+
+    <bottom-action-bar current="map" />
   </view>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { onLoad } from '@dcloudio/uni-app'
+import { onLoad, onShow } from '@dcloudio/uni-app'
 import { useLocationStore } from '@/stores/location'
 import { createMapAdapter } from '@/services/platform/map'
 import type { MapAdapter, Marker } from '@/services/platform/map'
@@ -75,8 +77,8 @@ const filteredLocations = computed(() => {
     const keyword = searchQuery.value.trim().toLowerCase()
     list = list.filter(
       item =>
-        item.name.toLowerCase().includes(keyword) ||
-        item.flower_species.toLowerCase().includes(keyword),
+        (item.name || '').toLowerCase().includes(keyword) ||
+        (item.flower_species || '').toLowerCase().includes(keyword),
     )
   }
   return list
@@ -88,6 +90,8 @@ const mpMarkers = computed(() =>
     latitude: Number(l.latitude),
     longitude: Number(l.longitude),
     title: l.name,
+    width: 32,
+    height: 32,
   })),
 )
 
@@ -125,6 +129,16 @@ const onMarkerTap = (e: any) => {
 onLoad((query: any) => {
   if (query?.flower) {
     selectedSpecies.value = query.flower
+  }
+})
+
+// tabbar 页面从其他页 switchTab 进入时，通过 storage 接收过滤参数
+onShow(() => {
+  const pending = uni.getStorageSync('pending_map_filter')
+  if (pending) {
+    selectedSpecies.value = pending
+    uni.removeStorageSync('pending_map_filter')
+    renderMarkers()
   }
 })
 

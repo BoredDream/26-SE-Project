@@ -59,6 +59,8 @@
         <view v-else class="empty">你还没有发布过帖子。</view>
       </view>
     </view>
+
+    <bottom-action-bar current="profile" />
   </view>
 </template>
 
@@ -103,7 +105,7 @@ const formatTime = (dateString: string) => {
 }
 
 const goToCheckins = () => {
-  uni.switchTab({ url: '/pages/home/home' })
+  uni.reLaunch({ url: '/pages/home/home' })
 }
 
 const openPost = (post: any) => {
@@ -129,6 +131,7 @@ onMounted(async () => {
 }
 .profile__body {
   padding: $md-space-4;
+  padding-bottom: 100px;
 }
 .profile__card {
   margin-bottom: $md-space-4;

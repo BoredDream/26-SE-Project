@@ -98,13 +98,14 @@
     </view>
 
     <md-button v-if="showBackToTop" class="to-top" variant="tonal" @click="scrollToTop">↑ 顶部</md-button>
-    <md-fab @click="goCheckin" />
 
     <comment-sheet
       :visible="commentSheetVisible"
       :checkin-id="activeCommentCheckinId"
       @close="commentSheetVisible = false"
     />
+
+    <bottom-action-bar current="home" />
   </view>
 </template>
 
@@ -175,7 +176,9 @@ const formatTime = (dateString: string) => {
 
 const openMap = (item: Location | Checkin) => {
   const flowerName = 'flower_species' in item ? item.flower_species : locationSpecies(item.location_id)
-  uni.navigateTo({ url: `/pages/map/map?flower=${encodeURIComponent(flowerName)}` })
+  // tabbar 页面只能用 switchTab，但它不支持 query 参数，借助 storage 中转过滤条件
+  if (flowerName) uni.setStorageSync('pending_map_filter', flowerName)
+  uni.reLaunch({ url: '/pages/map/map' })
 }
 
 const openUser = (id?: number) => {
@@ -227,6 +230,7 @@ onMounted(async () => {
 }
 .home__body {
   padding: $md-space-4;
+  padding-bottom: 100px;
 }
 
 /* 轮播 */

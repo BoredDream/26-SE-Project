@@ -161,7 +161,7 @@ const submitCheckin = async () => {
       images: imageUrls,
       bloom_report: selectedStatus.value || undefined,
     })
-    uni.switchTab({ url: '/pages/home/home' })
+    uni.reLaunch({ url: '/pages/home/home' })
   } catch (error) {
     console.error('发布失败', error)
     uni.showToast({ title: '发布失败', icon: 'none' })
