@@ -27,6 +27,26 @@
       </scroll-view>
     </view>
 
+    <!-- 外部搜索结果浮层（本地无结果时显示） -->
+    <view v-if="externalResults.length || isSearchingExternal" class="ext-results">
+      <view v-if="isSearchingExternal" class="ext-results__loading">
+        <text class="ext-results__hint">正在搜索附近地点...</text>
+      </view>
+      <view v-else>
+        <text class="ext-results__hint">附近地点（腾讯地图）</text>
+        <view
+          v-for="p in externalResults"
+          :key="p.id"
+          class="ext-results__item"
+          hover-class="ext-results__item--hover"
+          @click="onExternalTap(p)"
+        >
+          <text class="ext-results__title">{{ p.title }}</text>
+          <text class="ext-results__addr">{{ p.address }}</text>
+        </view>
+      </view>
+    </view>
+
     <!-- #ifdef H5 -->
     <view id="map-panel" class="map-panel"></view>
     <!-- #endif -->
@@ -47,17 +67,22 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { onLoad, onShow } from '@dcloudio/uni-app'
 import { useLocationStore } from '@/stores/location'
 import { createMapAdapter } from '@/services/platform/map'
 import type { MapAdapter, Marker } from '@/services/platform/map'
+import { searchPlaces, type TencentPlace } from '@/services/tencent-map-api'
 
 const locationStore = useLocationStore()
 const selectedSpecies = ref('')
 const searchQuery = ref('')
 const mapAdapter = ref<MapAdapter | null>(null)
 const mapCenter = ref({ lat: 30.4714, lng: 114.3645 })
+const externalResults = ref<TencentPlace[]>([])
+const isSearchingExternal = ref(false)
+
+let searchTimer: ReturnType<typeof setTimeout> | null = null
 
 const filteredSpecies = computed(() => {
   const names = Array.from(
@@ -84,14 +109,33 @@ const filteredLocations = computed(() => {
   return list
 })
 
+const SPECIES_ICON: Record<string, string> = {
+  '樱花': '/static/icon/marker-cherry.svg',
+  '向日葵': '/static/icon/marker-sunflower.svg',
+  '莲花': '/static/icon/marker-lotus.svg',
+}
+const getIconPath = (species?: string) =>
+  (species && SPECIES_ICON[species]) || '/static/icon/marker-default.svg'
+
 const mpMarkers = computed(() =>
   filteredLocations.value.map(l => ({
     id: l.id,
     latitude: Number(l.latitude),
     longitude: Number(l.longitude),
     title: l.name,
-    width: 32,
-    height: 32,
+    iconPath: getIconPath(l.flower_species),
+    width: 40,
+    height: 48,
+    anchor: { x: 0.5, y: 1 },
+    callout: {
+      content: l.name,
+      color: '#3a5a40',
+      fontSize: 12,
+      borderRadius: 6,
+      bgColor: '#faf8f5',
+      padding: 5,
+      display: 'BYCLICK',
+    },
   })),
 )
 
@@ -102,14 +146,31 @@ const renderMarkers = () => {
       latitude: Number(l.latitude),
       longitude: Number(l.longitude),
       title: l.name,
+      species: l.flower_species,
     }))
     mapAdapter.value.setMarkers(markers)
   }
 }
 
 const onSearchInput = () => {
-  if (!searchQuery.value.trim()) selectedSpecies.value = ''
+  const q = searchQuery.value.trim()
+  if (!q) {
+    selectedSpecies.value = ''
+    externalResults.value = []
+    if (searchTimer) clearTimeout(searchTimer)
+  }
   renderMarkers()
+  // 本地无结果时，防抖 600ms 后调腾讯地图搜索
+  if (searchTimer) clearTimeout(searchTimer)
+  searchTimer = setTimeout(async () => {
+    if (!q || filteredLocations.value.length > 0) {
+      externalResults.value = []
+      return
+    }
+    isSearchingExternal.value = true
+    externalResults.value = await searchPlaces(q).catch(() => [])
+    isSearchingExternal.value = false
+  }, 600)
 }
 
 const selectSpecies = (species: string) => {
@@ -124,6 +185,14 @@ const onMarkerTap = (e: any) => {
       url: `/pages/navigation/navigation?name=${encodeURIComponent(loc.name)}&lng=${loc.longitude}&lat=${loc.latitude}`,
     })
   }
+}
+
+const onExternalTap = (p: TencentPlace) => {
+  externalResults.value = []
+  searchQuery.value = ''
+  uni.navigateTo({
+    url: `/pages/navigation/navigation?name=${encodeURIComponent(p.title)}&lng=${p.lng}&lat=${p.lat}`,
+  })
 }
 
 onLoad((query: any) => {
@@ -152,6 +221,7 @@ onMounted(async () => {
   })
   renderMarkers()
   // #endif
+
 })
 
 onUnmounted(() => {
@@ -205,5 +275,47 @@ onUnmounted(() => {
   flex: 1;
   min-height: 420px;
   width: 100%;
+}
+
+/* 外部搜索结果浮层 */
+.ext-results {
+  position: absolute;
+  top: 120px; /* 搜索栏 + chips 高度 */
+  left: $md-space-4;
+  right: $md-space-4;
+  z-index: 10;
+  background: $md-surface;
+  border-radius: $md-shape-md;
+  border: 1px solid $md-outline-variant;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  overflow: hidden;
+  max-height: 280px;
+}
+.ext-results__loading,
+.ext-results__hint {
+  display: block;
+  padding: $md-space-2 $md-space-4;
+  font-size: 11px;
+  color: $md-on-surface-variant;
+  background: $md-surface-container;
+}
+.ext-results__item {
+  padding: $md-space-3 $md-space-4;
+  border-top: 1px solid $md-outline-variant;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.ext-results__item--hover {
+  background: $md-surface-container;
+}
+.ext-results__title {
+  font-size: 14px;
+  font-weight: 600;
+  color: $md-on-surface;
+}
+.ext-results__addr {
+  font-size: 11px;
+  color: $md-on-surface-variant;
 }
 </style>

@@ -13,29 +13,13 @@
                     class="bab__icon-box"
                     :class="{ 'bab__icon-box--active': current === tab.key }"
                 >
-                    <!-- 主页内联 SVG 线条图标 -->
-                    <svg
-                        v-if="tab.key === 'home'"
-                        viewBox="0 0 24 24"
-                        class="bab__svg"
-                    >
-                        <path
-                            d="M4 21V9l8-6 8 6v12H4zm2-2h12v-9l-6-4.5L6 10v9zm3-1h6v-6H9v6z"
-                            fill="currentColor"
-                        />
-                    </svg>
-                    <!-- 地图内联 SVG 线条罗盘图标 -->
-                    <svg
-                        v-if="tab.key === 'map'"
-                        viewBox="0 0 24 24"
-                        class="bab__svg"
-                    >
-                        <path
-                            d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm1-13l-4 4 1 5 5-3-2-6zm-.5 7.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5 0.67 1.5 1.5-.67 1.5-1.5 1.5z"
-                            fill="currentColor"
-                        />
-                    </svg>
+                    <image
+                        class="bab__icon"
+                        :src="iconSrc(tab.key, current === tab.key)"
+                        mode="aspectFit"
+                    />
                 </view>
+                <view class="bab__active-bar" v-if="current === tab.key" />
                 <text
                     class="bab__label"
                     :class="{ 'bab__label--active': current === tab.key }"
@@ -43,22 +27,17 @@
                 >
             </view>
 
-            <!-- 中间发布槽（重构为火漆印章视觉） -->
+            <!-- 中间发布槽（火漆印章 + 呼吸光晕） -->
             <view class="bab__publish-wrap" @click="goPublish">
+                <view class="bab__publish-halo" />
                 <view class="bab__publish" hover-class="bab__publish--hover">
-                    <!-- 内联羽毛笔线条 SVG 图标 -->
-                    <svg viewBox="0 0 24 24" class="bab__publish-svg">
-                        <path
-                            d="M2.5 19.5L16 6l2.5 2.5L5 22H2.5v-2.5zM17.5 4.5L19.5 2.5c.8-.8 2-.8 2.8 0s.8 2 0 2.8L20.3 7.3l-2.8-2.8z"
-                            fill="none"
-                            stroke="currentColor"
-                            stroke-width="2"
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                        />
-                    </svg>
+                    <image
+                        class="bab__publish-icon"
+                        src="/static/icon/nav-publish.svg"
+                        mode="aspectFit"
+                    />
                 </view>
-                <text class="bab__publish-label">采集</text>
+                <text class="bab__publish-label">打卡</text>
             </view>
 
             <!-- 右侧两个 Tab 槽 -->
@@ -73,29 +52,13 @@
                     class="bab__icon-box"
                     :class="{ 'bab__icon-box--active': current === tab.key }"
                 >
-                    <!-- 花园内联 SVG 线条标本框图标 -->
-                    <svg
-                        v-if="tab.key === 'garden'"
-                        viewBox="0 0 24 24"
-                        class="bab__svg"
-                    >
-                        <path
-                            d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zm-7-2l-3-4 1.4-1.4 1.6 2.1 3.6-4.7L17 11l-5 6z"
-                            fill="currentColor"
-                        />
-                    </svg>
-                    <!-- 我的内联 SVG 线条学者帽/用户图标 -->
-                    <svg
-                        v-if="tab.key === 'profile'"
-                        viewBox="0 0 24 24"
-                        class="bab__svg"
-                    >
-                        <path
-                            d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"
-                            fill="currentColor"
-                        />
-                    </svg>
+                    <image
+                        class="bab__icon"
+                        :src="iconSrc(tab.key, current === tab.key)"
+                        mode="aspectFit"
+                    />
                 </view>
+                <view class="bab__active-bar" v-if="current === tab.key" />
                 <text
                     class="bab__label"
                     :class="{ 'bab__label--active': current === tab.key }"
@@ -107,23 +70,28 @@
 </template>
 
 <script setup lang="ts">
+type TabKey = "home" | "map" | "garden" | "profile";
+
 interface TabItem {
-    key: "home" | "map" | "garden" | "profile";
+    key: TabKey;
     text: string;
     url: string;
 }
 
-defineProps<{ current: "home" | "map" | "garden" | "profile" }>();
+defineProps<{ current: TabKey }>();
 
 const leftTabs: TabItem[] = [
-    { key: "home", text: "手札", url: "/pages/home/home" },
-    { key: "map", text: "寻芳", url: "/pages/map/map" },
+    { key: "home", text: "首页", url: "/pages/home/home" },
+    { key: "map", text: "地图", url: "/pages/map/map" },
 ];
 
 const rightTabs: TabItem[] = [
-    { key: "garden", text: "百草园", url: "/pages/garden/garden" },
-    { key: "profile", text: "简牍", url: "/pages/profile/profile" },
+    { key: "garden", text: "花园", url: "/pages/garden/garden" },
+    { key: "profile", text: "我的", url: "/pages/profile/profile" },
 ];
+
+const iconSrc = (key: TabKey, active: boolean) =>
+    `/static/icon/nav-${key}${active ? "-active" : ""}.svg`;
 
 const goTab = (tab: TabItem) => {
     uni.reLaunch({ url: tab.url });
@@ -141,15 +109,23 @@ const goPublish = () => {
     right: 0;
     bottom: 0;
     z-index: 100;
-    background: #faf8f5; /* 沿用复古纸张亮白色 */
-    border-top: 1px solid #d8d3c5; /* 复古弱分隔线 */
+    background: #faf8f5;
+    border-top: 1rpx solid #d8d3c5;
+    box-shadow: 0 -4px 12px rgba(58, 42, 32, 0.04);
     padding-bottom: env(safe-area-inset-bottom);
+    animation: bab-slide-in 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) both;
 }
+@keyframes bab-slide-in {
+    from { transform: translateY(100%); }
+    to   { transform: translateY(0); }
+}
+
 .bab__row {
     display: flex;
     align-items: flex-end;
-    height: 62px;
+    height: 64px;
 }
+
 .bab__tab {
     flex: 1;
     display: flex;
@@ -157,33 +133,57 @@ const goPublish = () => {
     align-items: center;
     justify-content: center;
     height: 100%;
-    gap: 4px;
+    gap: 5px;
     padding-bottom: 6px;
+    transition: transform 0.2s ease;
+    position: relative;
 }
 .bab__tab--hover {
-    opacity: 0.7;
+    transform: translateY(-1px);
+    opacity: 0.78;
 }
+
 .bab__icon-box {
-    width: 24px;
-    height: 24px;
-    color: #6e7268; /* 标本灰 */
+    width: 26px;
+    height: 26px;
     display: flex;
     align-items: center;
     justify-content: center;
+    transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 .bab__icon-box--active {
-    color: #3a5a40; /* 激活换为标本深墨绿 */
+    transform: scale(1.08);
 }
-.bab__svg {
-    width: 22px;
-    height: 22px;
+.bab__icon {
+    width: 24px;
+    height: 24px;
 }
+
+/* 激活态短下划线（书签视觉） */
+.bab__active-bar {
+    position: absolute;
+    bottom: 1px;
+    left: 50%;
+    width: 14px;
+    height: 2px;
+    background: #3a5a40;
+    border-radius: 1px;
+    transform: translateX(-50%);
+    animation: bab-bar-grow 0.2s ease-out both;
+}
+@keyframes bab-bar-grow {
+    from { width: 0; opacity: 0; }
+    to   { width: 14px; opacity: 1; }
+}
+
 .bab__label {
-    font-family: "Georgia", sans-serif;
-    font-size: 11px;
+    font-family: "Georgia", "Songti SC", serif;
+    font-size: 10.5px;
     color: #6e7268;
     line-height: 1;
     font-weight: 500;
+    letter-spacing: 0.3px;
+    transition: color 0.2s ease;
 }
 .bab__label--active {
     color: #3a5a40;
@@ -202,33 +202,55 @@ const goPublish = () => {
 }
 .bab__publish {
     position: absolute;
-    top: -16px;
-    width: 52px;
-    height: 52px;
+    top: -20px;
+    width: 56px;
+    height: 56px;
     border-radius: 50%;
-    background: #bc4749; /* 火漆红 */
+    background: #bc4749;
     display: flex;
     align-items: center;
     justify-content: center;
     box-shadow:
-        0 4px 10px rgba(188, 71, 73, 0.35),
-        inset 0 -3px 0px rgba(0, 0, 0, 0.15); /* 内外双向立体感阴影 */
+        0 6px 14px rgba(188, 71, 73, 0.38),
+        inset 0 -3px 0 rgba(0, 0, 0, 0.16),
+        inset 0 1px 0 rgba(255, 255, 255, 0.25);
     border: 1px solid rgba(255, 255, 255, 0.2);
-    color: #faf8f5;
-    transition: transform 0.2s cubic-bezier(0.2, 0, 0, 1);
+    transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+    z-index: 2;
 }
 .bab__publish--hover {
-    transform: scale(0.92) rotate(-10deg); /* 模拟印章按下并轻微转动 */
-    opacity: 0.95;
+    transform: scale(0.88) rotate(-8deg);
 }
-.bab__publish-svg {
-    width: 20px;
-    height: 20px;
+.bab__publish-icon {
+    width: 26px;
+    height: 26px;
 }
+
+.bab__publish-halo {
+    position: absolute;
+    top: -22px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: rgba(188, 71, 73, 0.18);
+    z-index: 1;
+    pointer-events: none;
+    animation: bab-breathe 4s ease-in-out infinite;
+}
+@keyframes bab-breathe {
+    0%, 100% { opacity: 0.35; transform: translateX(-50%) scale(0.92); }
+    50%      { opacity: 0.75; transform: translateX(-50%) scale(1.12); }
+}
+
 .bab__publish-label {
-    font-size: 11px;
+    font-family: "Georgia", "Songti SC", serif;
+    font-size: 10.5px;
     color: #bc4749;
     margin-bottom: 6px;
     font-weight: 600;
+    letter-spacing: 0.3px;
+    z-index: 2;
 }
 </style>

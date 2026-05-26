@@ -64,6 +64,48 @@
                 </view>
             </md-card>
 
+            <!-- AI 识别状态条 -->
+            <view v-if="isIdentifying || identifyAttempted" class="ai-bar">
+                <!-- 识别中 -->
+                <view v-if="isIdentifying" class="ai-bar__row">
+                    <text class="ai-bar__icon">🔍</text>
+                    <text class="ai-bar__text">正在识别花卉...</text>
+                </view>
+                <!-- 识别成功 + 有匹配地点 -->
+                <view
+                    v-else-if="recognizedSpecies && matchedLocationName"
+                    class="ai-bar__row ai-bar__row--ok"
+                >
+                    <text class="ai-bar__icon">✅</text>
+                    <text class="ai-bar__text"
+                        >已识别为「<text class="ai-bar__species">{{
+                            recognizedSpecies
+                        }}</text
+                        >」· 已匹配「{{ matchedLocationName }}」</text
+                    >
+                </view>
+                <!-- 识别成功 + 无匹配地点 -->
+                <view
+                    v-else-if="recognizedSpecies && !matchedLocationName"
+                    class="ai-bar__row ai-bar__row--warn"
+                >
+                    <text class="ai-bar__icon">🌸</text>
+                    <text class="ai-bar__text"
+                        >已识别为「<text class="ai-bar__species">{{
+                            recognizedSpecies
+                        }}</text
+                        >」，暂无对应地点记录，请手动选择</text
+                    >
+                </view>
+                <!-- 识别失败 -->
+                <view v-else class="ai-bar__row ai-bar__row--fail">
+                    <text class="ai-bar__icon">❓</text>
+                    <text class="ai-bar__text"
+                        >未能识别花种，请手动选择地点</text
+                    >
+                </view>
+            </view>
+
             <md-card class="checkin__card">
                 <text class="checkin__label">打卡信息</text>
                 <view class="field">
@@ -89,7 +131,7 @@
                     </picker>
                 </view>
                 <view class="field">
-                    <text class="field__name">花期状态（可选）</text>
+                    <text class="field__name">花期状态</text>
                     <view class="status-chips">
                         <md-chip
                             v-for="s in statusOptions"
@@ -119,6 +161,7 @@ import { ref, computed, onMounted } from "vue";
 import { useLocationStore } from "@/stores/location";
 import { useCheckinStore } from "@/stores/checkin";
 import { api } from "@/services/api";
+import { identifyFlower } from "@/services/flowerAI";
 
 const locationStore = useLocationStore();
 const checkinStore = useCheckinStore();
@@ -128,6 +171,10 @@ const selectedImages = ref<string[]>([]);
 const locationIndex = ref(-1);
 const selectedStatus = ref("");
 const isSubmitting = ref(false);
+const isIdentifying = ref(false);
+const identifyAttempted = ref(false);
+const recognizedSpecies = ref<string | null>(null);
+const matchedLocationName = ref<string | null>(null);
 
 const statusOptions = [
     { label: "含苞待放", value: "budding" },
@@ -168,7 +215,11 @@ const chooseFromAlbum = () => {
         sizeType: ["original", "compressed"],
         sourceType: ["album"],
         success: (res) => {
+            const before = selectedImages.value.length;
             selectedImages.value.push(...res.tempFilePaths);
+            if (before === 0 && res.tempFilePaths.length > 0) {
+                runIdentify(res.tempFilePaths[0]);
+            }
         },
     });
 };
@@ -183,13 +234,50 @@ const takePhoto = () => {
         sizeType: ["original", "compressed"],
         sourceType: ["camera"],
         success: (res) => {
+            const before = selectedImages.value.length;
             selectedImages.value.push(...res.tempFilePaths);
+            if (before === 0 && res.tempFilePaths.length > 0) {
+                runIdentify(res.tempFilePaths[0]);
+            }
         },
     });
 };
 
 const removeImage = (index: number) => {
     selectedImages.value.splice(index, 1);
+    if (selectedImages.value.length === 0) {
+        recognizedSpecies.value = null;
+        matchedLocationName.value = null;
+        identifyAttempted.value = false;
+    }
+};
+
+/** 识别第一张图片并自动匹配地点 */
+const runIdentify = async (firstPath: string) => {
+    isIdentifying.value = true;
+    recognizedSpecies.value = null;
+    matchedLocationName.value = null;
+    try {
+        const species = await identifyFlower(firstPath);
+        recognizedSpecies.value = species;
+        if (species) {
+            const idx = locationStore.locations.findIndex(
+                (l) => l.flower_species === species,
+            );
+            if (idx >= 0) {
+                // 有匹配地点：自动选中，但用户仍可通过 picker 手动修改
+                locationIndex.value = idx;
+                matchedLocationName.value = locationStore.locations[idx].name;
+            }
+            // 无匹配地点时保持 locationIndex 不变，提示用户手动选择
+        }
+    } catch (err) {
+        console.error("[花卉识别] 失败:", err);
+        uni.showToast({ title: "识别失败，请稍后重试", icon: "none" });
+    } finally {
+        isIdentifying.value = false;
+        identifyAttempted.value = true;
+    }
 };
 
 const previewSelected = (index: number) => {
@@ -396,5 +484,39 @@ onMounted(async () => {
     text-align: center;
     @include md-type("body-small");
     color: $md-on-surface-variant;
+}
+
+/* AI 识别状态条 */
+.ai-bar {
+    background: #f0f7f0;
+    border: 1px solid #c8dfc8;
+    border-radius: $md-shape-md;
+    padding: $md-space-3 $md-space-4;
+}
+.ai-bar__row {
+    display: flex;
+    align-items: center;
+    gap: $md-space-2;
+}
+.ai-bar__row--ok {
+    color: #3a5a40;
+}
+.ai-bar__row--warn {
+    color: #7a6a40;
+}
+.ai-bar__row--fail {
+    color: #7a6a40;
+}
+.ai-bar__icon {
+    font-size: 16px;
+    flex-shrink: 0;
+}
+.ai-bar__text {
+    font-size: 13px;
+    line-height: 1.4;
+}
+.ai-bar__species {
+    font-weight: 700;
+    color: #2b5130;
 }
 </style>

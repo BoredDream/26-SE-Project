@@ -1,0 +1,44 @@
+sk-029f1b2923fd41a899f3e4ba355d02a1
+根据官方文档，以下是 Qwen API 的完整申请和调用流程：
+
+一、申请流程（获取 API Key）
+第一步：注册账号
+前往 阿里云官网 注册账号，如需实名认证，先完成个人实名认证。 Alibaba Cloud
+第二步：开通百炼服务
+使用阿里云主账号前往阿里云百炼大模型服务平台，阅读并同意协议后自动开通，如果未弹出服务协议，则表示已经开通。 Alibaba Cloud
+第三步：获取 API Key
+前往密钥管理页面，点击"创建 API Key"，即可通过 API Key 调用大模型。 Alibaba Cloud
+
+二、调用方式
+百炼提供多种接口调用方式：OpenAI 兼容（迁移成本最低）、DashScope 原生接口（功能最完整）、以及兼容 Anthropic Messages API 的接口。 Alibaba Cloud
+Python 示例（OpenAI 兼容方式）
+pythonimport os
+from openai import OpenAI
+
+client = OpenAI(
+    api_key=os.getenv("DASHSCOPE_API_KEY"),
+    base_url="https://dashscope.aliyuncs.com/compatible-mode/v1",
+)
+
+completion = client.chat.completions.create(
+    model="qwen-plus",
+    messages=[
+        {'role': 'system', 'content': 'You are a helpful assistant.'},
+        {'role': 'user', 'content': '你好'}
+    ]
+)
+print(completion.choices[0].message.content)
+识图（Vision）模型
+支持识图的模型包括 qwen3-vl-plus、qwen3-vl-flash、qwen-vl-max、qwen-vl-plus、qwen2.5-vl-72b-instruct 等系列。 Alibaba Cloud
+识图调用时，messages 中的 content 改为数组格式：
+pythonmessages=[{
+    "role": "user",
+    "content": [
+        {"type": "image_url", "image_url": {"url": "https://...图片URL"}},
+        {"type": "text", "text": "这张图里有什么？"}
+    ]
+}]
+
+三、关键信息汇总
+项目内容API 地址（国内）https://dashscope.aliyuncs.com/compatible-mode/v1识图模型推荐qwen-vl-plus / qwen-vl-max / qwen3-vl-plus免费额度新用户有免费 Token 额度SDK 安装pip install openai 或 pip install dashscope
+需要我帮你写一个完整的识图调用示例代码吗？

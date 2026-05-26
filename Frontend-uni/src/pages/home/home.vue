@@ -3,110 +3,145 @@
         <md-app-bar title="狮山草木札" />
 
         <view class="home__body">
-            <!-- ── Hero Banner：重构为“草木纪事卷卷首语” ── -->
-            <view class="hero">
-                <view class="hero__inner-border">
-                    <view class="hero__wrapper">
-                        <view class="hero__left">
-                            <text class="hero__title-en">HERBARIUM</text>
-                            <text class="hero__title-zh">狮山见花纪</text>
-                            <text class="hero__motto"
-                                >“审度韶华，存录纸砚。记录校园草木的每一次呼吸。”</text
-                            >
-                        </view>
-                        <view class="hero__right">
-                            <!-- 精巧的古典镜框视窗，承载原本的图片轮播逻辑 -->
-                            <view class="hero__lens">
-                                <swiper
-                                    class="hero__carousel"
-                                    :indicator-dots="false"
-                                    :autoplay="true"
-                                    :interval="4500"
-                                    :duration="500"
-                                >
-                                    <swiper-item
-                                        v-for="(photo, i) in carouselPhotos"
-                                        :key="i"
+            <view class="gallery-block">
+                <view class="gallery-block__inner">
+                    <swiper
+                        class="gallery-swiper"
+                        :indicator-dots="true"
+                        :autoplay="true"
+                        :interval="5000"
+                        :duration="600"
+                        indicator-color="rgba(139, 134, 122, 0.3)"
+                        indicator-active-color="#3A5A40"
+                    >
+                        <swiper-item
+                            v-for="(item, i) in galleryPhotos"
+                            :key="i"
+                            @click="previewGallery(i)"
+                        >
+                            <view class="gallery-card">
+                                <image
+                                    class="gallery-card__img"
+                                    :src="item.url"
+                                    mode="aspectFill"
+                                />
+                                <view class="gallery-card__label">
+                                    <text class="gallery-card__author"
+                                        >摘录自 @{{
+                                            item.author
+                                        }}
+                                        的采风手札</text
                                     >
-                                        <image
-                                            class="hero__slide"
-                                            :src="photo"
-                                            mode="aspectFill"
-                                        />
-                                    </swiper-item>
-                                </swiper>
-                                <!-- 遮罩框，营造陈旧手稿铜板画质感 -->
-                                <view class="hero__lens-overlay"></view>
+                                </view>
                             </view>
-                        </view>
-                    </view>
+                        </swiper-item>
+                    </swiper>
                 </view>
             </view>
 
-            <!-- ── 花卉推荐：Bento Box 精致边框网格 ── -->
             <view class="section">
                 <view class="section__header">
                     <view class="section__line"></view>
-                    <text class="section__title">时令寻芳推荐</text>
+                    <text class="section__title">花期物候预测</text>
                     <view class="section__line"></view>
                 </view>
 
-                <scroll-view class="recommend" scroll-x show-scrollbar="false">
-                    <view class="recommend__list">
-                        <view
-                            v-for="item in recommendationList"
-                            :key="item.id"
-                            class="recommend__card"
-                            hover-class="recommend__card--hover"
-                            @click="openMap(item)"
+                <view class="prediction-grid">
+                    <view
+                        v-if="predictList.bloom"
+                        class="pred-card pred-card--large"
+                        hover-class="pred-card--hover"
+                        @click="openMap(predictList.bloom)"
+                    >
+                        <image
+                            class="pred-card__img"
+                            :src="predictList.bloom.cover_image"
+                            mode="aspectFill"
+                        />
+                        <view class="pred-card__badge pred-card__badge--bloom"
+                            >繁花正盛</view
                         >
-                            <view class="recommend__img-wrap">
-                                <image
-                                    class="recommend__img"
-                                    :src="item.cover_image"
-                                    mode="aspectFill"
-                                />
-                                <!-- 根据状态派发不同阶段色徽章 -->
-                                <view
-                                    :class="[
-                                        'recommend__badge',
-                                        'recommend__badge--' +
-                                            (item.bloom_status || 'default'),
-                                    ]"
+                        <view class="pred-card__mask">
+                            <text class="pred-card__species">{{
+                                predictList.bloom.flower_species
+                            }}</text>
+                            <text class="pred-card__loc"
+                                >📍 {{ predictList.bloom.name }}</text
+                            >
+                            <view class="pred-card__countdown">
+                                <text class="pred-card__countdown-txt"
+                                    >最佳观赏期倒计时</text
                                 >
-                                    {{ formatStatus(item.bloom_status) }}
-                                </view>
-                            </view>
-                            <view class="recommend__body">
-                                <text class="recommend__species">{{
-                                    item.flower_species || "未知品类"
-                                }}</text>
-                                <view class="recommend__meta">
-                                    <svg
-                                        viewBox="0 0 24 24"
-                                        class="recommend__meta-svg"
-                                    >
-                                        <path
-                                            d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"
-                                            fill="currentColor"
-                                        />
-                                    </svg>
-                                    <text class="recommend__name">{{
-                                        item.name
-                                    }}</text>
-                                </view>
+                                <view class="pred-card__progress-bar"
+                                    ><view
+                                        class="pred-card__progress-fill"
+                                        style="width: 75%"
+                                    ></view
+                                ></view>
                             </view>
                         </view>
                     </view>
-                </scroll-view>
+
+                    <view class="prediction-grid__right">
+                        <view
+                            v-if="predictList.bud"
+                            class="pred-card pred-card--small"
+                            hover-class="pred-card--hover"
+                            @click="openMap(predictList.bud)"
+                        >
+                            <image
+                                class="pred-card__img"
+                                :src="predictList.bud.cover_image"
+                                mode="aspectFill"
+                            />
+                            <view class="pred-card__badge pred-card__badge--bud"
+                                >预计{{
+                                    predictList.bud.days || 3
+                                }}天后绽萼</view
+                            >
+                            <view class="pred-card__mask-small">
+                                <text class="pred-card__species-sm">{{
+                                    predictList.bud.flower_species
+                                }}</text>
+                                <text class="pred-card__loc-sm">{{
+                                    predictList.bud.name
+                                }}</text>
+                            </view>
+                        </view>
+
+                        <view
+                            v-if="predictList.wither"
+                            class="pred-card pred-card--small"
+                            hover-class="pred-card--hover"
+                            @click="openMap(predictList.wither)"
+                        >
+                            <image
+                                class="pred-card__img"
+                                :src="predictList.wither.cover_image"
+                                mode="aspectFill"
+                            />
+                            <view
+                                class="pred-card__badge pred-card__badge--wither"
+                                >惜花提示 · 韶华将尽</view
+                            >
+                            <view class="pred-card__mask-small">
+                                <text class="pred-card__species-sm">{{
+                                    predictList.wither.flower_species
+                                }}</text>
+                                <text class="pred-card__loc-sm">{{
+                                    predictList.wither.name
+                                }}</text>
+                            </view>
+                        </view>
+                    </view>
+                </view>
             </view>
 
-            <!-- ── 花园帖子：重塑为学者学术辩难手札流 ── -->
             <view class="section">
                 <view class="posts__head">
                     <view class="posts__head-left">
                         <view class="section__line-short"></view>
-                        <text class="section__title">考察采风手札</text>
+                        <text class="section__title">校园采风手札流</text>
                     </view>
                     <view class="posts__sort">
                         <md-chip
@@ -130,7 +165,6 @@
                         :padding="false"
                     >
                         <view class="post__wrapper">
-                            <!-- 作者区块：重构为金石印章及学者档案卡 -->
                             <view
                                 class="post__author"
                                 @click="openUser(post.user?.id)"
@@ -142,9 +176,23 @@
                                     <view class="post__avatar-seal-box"></view>
                                 </view>
                                 <view class="post__author-meta">
-                                    <text class="post__author-name">{{
-                                        post.user?.nickname || "佚名学者"
-                                    }}</text>
+                                    <view class="post__name-row">
+                                        <text class="post__author-name">{{
+                                            post.user?.nickname || "佚名学者"
+                                        }}</text>
+                                        <view
+                                            class="post__title-tag"
+                                            :style="{
+                                                background: postTitle(post.user?.total_checkins).bg,
+                                                borderColor: postTitle(post.user?.total_checkins).border,
+                                                color: postTitle(post.user?.total_checkins).color,
+                                            }"
+                                        >
+                                            <text class="post__title-tag-txt">{{
+                                                postTitle(post.user?.total_checkins).label
+                                            }}</text>
+                                        </view>
+                                    </view>
                                     <text class="post__time"
                                         >于
                                         {{
@@ -159,7 +207,6 @@
                                 post.content
                             }}</text>
 
-                            <!-- 图片网格：保持原 1-9 张切分架构，完美嵌入标本夹画框 -->
                             <view
                                 v-if="post.images?.length"
                                 :class="[
@@ -193,18 +240,13 @@
                                 </view>
                             </view>
 
-                            <!-- 底部操作：Emoji 剥离，全面改为线条 SVG 图表 -->
                             <view class="post__footer">
                                 <view class="post__tag" @click="openMap(post)">
-                                    <svg
-                                        viewBox="0 0 24 24"
+                                    <image
                                         class="post__tag-svg"
-                                    >
-                                        <path
-                                            d="M17 3H7c-1.1 0-1.99.9-1.99 2L5 21l7-3 7 3V5c0-1.1-.9-2-2-2zm0 15l-5-2.18L7 18V5h10v13z"
-                                            fill="currentColor"
-                                        />
-                                    </svg>
+                                        src="/static/icon/post-bookmark.svg"
+                                        mode="aspectFit"
+                                    />
                                     <text class="post__tag-text"
                                         >品类 ·
                                         {{
@@ -214,7 +256,6 @@
                                 </view>
 
                                 <view class="post__actions">
-                                    <!-- 点赞：改用纤细线条爱心 SVG -->
                                     <view
                                         class="post__action-btn"
                                         :class="{
@@ -224,43 +265,30 @@
                                         hover-class="post__action-btn--hover"
                                         @click="likePost(post.id)"
                                     >
-                                        <svg
-                                            viewBox="0 0 24 24"
+                                        <image
                                             class="post__action-svg"
-                                        >
-                                            <path
-                                                d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.5 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"
-                                                :fill="
-                                                    post.liked
-                                                        ? 'currentColor'
-                                                        : 'none'
-                                                "
-                                                stroke="currentColor"
-                                                stroke-width="2"
-                                            />
-                                        </svg>
+                                            :src="
+                                                post.liked
+                                                    ? '/static/icon/post-like-active.svg'
+                                                    : '/static/icon/post-like.svg'
+                                            "
+                                            mode="aspectFit"
+                                        />
                                         <text class="post__action-count">{{
                                             post.likes_count
                                         }}</text>
                                     </view>
 
-                                    <!-- 评论：改用学者羊皮纸信笺 SVG -->
                                     <view
                                         class="post__action-btn"
                                         hover-class="post__action-btn--hover"
                                         @click="openComments(post.id)"
                                     >
-                                        <svg
-                                            viewBox="0 0 24 24"
+                                        <image
                                             class="post__action-svg"
-                                        >
-                                            <path
-                                                d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H5.17L4 17.17V4h16v12z"
-                                                fill="none"
-                                                stroke="currentColor"
-                                                stroke-width="2"
-                                            />
-                                        </svg>
+                                            src="/static/icon/post-comment.svg"
+                                            mode="aspectFit"
+                                        />
                                         <text class="post__action-count">{{
                                             post.comments_count || 0
                                         }}</text>
@@ -271,7 +299,6 @@
                     </md-card>
                 </view>
 
-                <!-- 加载更多提示 -->
                 <view v-if="visiblePosts.length" class="posts__footer-status">
                     <text v-if="canLoadMore" class="posts__footer-text"
                         >上拉翻阅更多手札...</text
@@ -284,37 +311,20 @@
                         <view class="posts__footer-line"></view>
                     </view>
                 </view>
-
-                <!-- 空状态 -->
-                <view v-if="!visiblePosts.length" class="empty">
-                    <view class="empty__box">
-                        <svg viewBox="0 0 24 24" class="empty__svg">
-                            <path
-                                d="M13 14h-2v-2h2v2zm0-4h-2V6h2v4zm1 10H6V4h7v5h5v4.1l2 2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2v-4.1l-2 2V20z"
-                                fill="currentColor"
-                            />
-                        </svg>
-                        <text class="empty__text"
-                            >此书卷尚为空白，正待阁下秉笔手札。</text
-                        >
-                    </view>
-                </view>
             </view>
         </view>
 
-        <!-- 回到顶部按钮：重构为复古羽毛笔回执箭簇 -->
         <view
             v-if="showBackToTop"
             class="to-top"
             hover-class="to-top--hover"
             @click="scrollToTop"
         >
-            <svg viewBox="0 0 24 24" class="to-top__svg">
-                <path
-                    d="M4 12l1.41 1.41L11 7.83V20h2V7.83l5.58 5.59L20 12l-8-8-8 8z"
-                    fill="currentColor"
-                />
-            </svg>
+            <image
+                class="to-top__svg"
+                src="/static/icon/scroll-top.svg"
+                mode="aspectFit"
+            />
         </view>
 
         <comment-sheet
@@ -322,7 +332,6 @@
             :checkin-id="activeCommentCheckinId"
             @close="commentSheetVisible = false"
         />
-
         <bottom-action-bar current="home" />
     </view>
 </template>
@@ -333,6 +342,7 @@ import { onPageScroll, onReachBottom } from "@dcloudio/uni-app";
 import { useLocationStore } from "@/stores/location";
 import { useCheckinStore } from "@/stores/checkin";
 import type { Location, Checkin } from "@/services/api";
+import { getTitleInfo } from "@/utils/title";
 
 const locationStore = useLocationStore();
 const checkinStore = useCheckinStore();
@@ -342,14 +352,42 @@ const showBackToTop = ref(false);
 const commentSheetVisible = ref(false);
 const activeCommentCheckinId = ref(0);
 
-const carouselPhotos = [
-    "/static/carousel/1.jpg",
-    "/static/carousel/2.jpg",
-    "/static/carousel/3.jpg",
+// ① 顶部轮播精选图卷数据（带摄影者姓名）
+const galleryPhotos = [
+    { url: "/static/carousel/1.png", author: "林间观察员" },
+    { url: "/static/carousel/2.jpg", author: "樱花径学长" },
+    { url: "/static/carousel/3.jpg", author: "拾遗少女" },
 ];
 
-const recommendationList = computed(() => locationStore.locations.slice(0, 3));
+// ② 中间物候预测数据清洗分类（分别摘取盛开、含苞、凋零各1条，喂给Bento Box）
+const predictList = computed(() => {
+    const locs = locationStore.locations;
+    return {
+        bloom:
+            locs.find(
+                (l) =>
+                    l.bloom_status?.includes("盛开") ||
+                    l.bloom_status?.includes("正盛"),
+            ) || locs[0],
+        bud:
+            locs.find(
+                (l) =>
+                    l.bloom_status?.includes("含苞") ||
+                    l.bloom_status?.includes("绽萼") ||
+                    l.bloom_status?.includes("预计"),
+            ) || locs[1],
+        wither:
+            locs.find(
+                (l) =>
+                    l.bloom_status?.includes("凋") ||
+                    l.bloom_status?.includes("落") ||
+                    l.bloom_status?.includes("韶华") ||
+                    l.bloom_status?.includes("休眠"),
+            ) || locs[2],
+    };
+});
 
+// ③ 帖子流逻辑保持不变
 const sortedPosts = computed<Checkin[]>(() => {
     const list = [...checkinStore.checkins];
     if (sortOption.value === "hot") {
@@ -373,38 +411,23 @@ const canLoadMore = computed(
     () => visibleCount.value < sortedPosts.value.length,
 );
 
-const formatStatus = (status?: string) => {
-    if (!status) return "考察中";
-    if (status.includes("含苞")) return "含苞绽萼";
-    if (status.includes("盛开")) return "繁花正盛";
-    if (status.includes("凋")) return "落红委地";
-    return status;
-};
+const formatStatus = (status?: string) => status || "考察中";
 
 const locationSpecies = (locationId?: number) => {
     const item = locationStore.locations.find((l) => l.id === locationId);
     return item?.flower_species || "未知";
 };
 
-const loadMore = () => {
-    if (canLoadMore.value) visibleCount.value += 10;
+const previewGallery = (index: number) => {
+    uni.previewImage({
+        urls: galleryPhotos.map((p) => p.url),
+        current: galleryPhotos[index].url,
+    });
 };
 
-const scrollToTop = () => {
-    uni.pageScrollTo({ scrollTop: 0, duration: 300 });
-};
-
-const authorNameInitial = (name?: string) => (name ? name[0] : "访");
-
-const formatTime = (dateString: string) => {
-    const date = new Date(dateString);
-    const diff = Date.now() - date.getTime();
-    const minutes = Math.floor(diff / 60000);
-    const hours = Math.floor(diff / 3600000);
-    const days = Math.floor(diff / 86400000);
-    if (minutes < 60) return `${minutes}分钟前`;
-    if (hours < 24) return `${hours}小时前`;
-    return `${days}天前`;
+const previewImages = (urls: string[], index: number) => {
+    if (!urls?.length) return;
+    uni.previewImage({ urls, current: urls[index] });
 };
 
 const openMap = (item: Location | Checkin) => {
@@ -425,21 +448,13 @@ const likePost = async (id: number) => {
     try {
         await checkinStore.likeCheckin(id);
     } catch (err) {
-        console.error("点赞失败", err);
+        console.error(err);
     }
 };
 
 const openComments = (id: number) => {
     activeCommentCheckinId.value = id;
     commentSheetVisible.value = true;
-};
-
-const previewImages = (urls: string[], index: number) => {
-    if (!urls?.length) return;
-    uni.previewImage({
-        urls,
-        current: urls[index],
-    });
 };
 
 const getImageGridClass = (count: number) => {
@@ -449,14 +464,28 @@ const getImageGridClass = (count: number) => {
     return "many-images";
 };
 
+const authorNameInitial = (name?: string) => (name ? name[0] : "访");
+
+const postTitle = (checkins?: number) => getTitleInfo(checkins);
+
+const formatTime = (dateString: string) => {
+    const diff = Date.now() - new Date(dateString).getTime();
+    const hours = Math.floor(diff / 3600000);
+    const days = Math.floor(diff / 86400000);
+    if (hours < 24) return `${hours}小时前`;
+    return `${days}天前`;
+};
+
+const scrollToTop = () => {
+    uni.pageScrollTo({ scrollTop: 0, duration: 300 });
+};
+
 onPageScroll((e) => {
     showBackToTop.value = e.scrollTop > 360;
 });
-
 onReachBottom(() => {
-    loadMore();
+    if (canLoadMore.value) visibleCount.value += 10;
 });
-
 onMounted(async () => {
     await Promise.all([
         locationStore.loadLocations(),
@@ -474,88 +503,50 @@ onMounted(async () => {
     padding: $md-space-4 $md-space-4 100px;
 }
 
-/* ── Hero Banner（博物卷轴版面） ── */
-.hero {
+/* ── ① 顶部精选图卷轮播（科学精装书相框视觉） ── */
+.gallery-block {
     background: #faf8f5;
-    border-radius: $md-shape-lg;
     border: 1px solid #8b867a;
+    border-radius: $md-shape-lg;
     padding: $md-space-2;
     margin-bottom: $md-space-5;
-    box-shadow: 0 4px 12px rgba(58, 42, 32, 0.05);
+    box-shadow: 0 4px 12px rgba(58, 42, 32, 0.04);
 }
-.hero__inner-border {
+.gallery-block__inner {
     border: 1px solid #d8d3c5;
-    padding: $md-space-4;
     border-radius: $md-shape-md;
-}
-.hero__wrapper {
-    display: flex;
-    align-items: center;
-    gap: $md-space-3;
-}
-.hero__left {
-    flex: 1.3;
-    display: flex;
-    flex-direction: column;
-}
-.hero__title-en {
-    font-family: "Georgia", serif;
-    font-size: 11px;
-    color: #a3704c;
-    font-weight: 700;
-    letter-spacing: 2px;
-    line-height: 1;
-    margin-bottom: 2px;
-}
-.hero__title-zh {
-    font-size: 24px;
-    font-weight: 700;
-    color: #3a5a40;
-    letter-spacing: 1px;
-    line-height: 1.2;
-}
-.hero__motto {
-    font-size: 11px;
-    color: #6e7268;
-    line-height: 1.5;
-    margin-top: $md-space-3;
-    font-style: italic;
-}
-.hero__right {
-    flex: 1;
-    display: flex;
-    justify-content: flex-end;
-}
-.hero__lens {
-    position: relative;
-    width: 105px;
-    height: 105px;
-    border-radius: 50%;
-    border: 1px solid #8b867a;
-    padding: 4px;
-    background: #faf8f5;
-    box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.05);
-}
-.hero__carousel {
-    width: 100%;
-    height: 100%;
-    border-radius: 50%;
     overflow: hidden;
 }
-.hero__slide {
+.gallery-swiper {
+    height: 210px; /* 略微拉高，突出美图视觉 */
+}
+.gallery-card {
+    position: relative;
     width: 100%;
     height: 100%;
-    border-radius: 50%;
 }
-.hero__lens-overlay {
+.gallery-card__img {
+    width: 100%;
+    height: 100%;
+}
+.gallery-card__label {
     position: absolute;
-    inset: 4px;
-    border-radius: 50%;
-    box-shadow: inset 0 4px 8px rgba(58, 42, 32, 0.2);
-    pointer-events: none;
+    bottom: 12px;
+    left: 12px;
+    background: rgba(42, 44, 36, 0.75); /* 宣纸质感黑遮罩 */
+    backdrop-filter: blur(2px);
+    padding: 4px 10px;
+    border-radius: $md-shape-sm;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+}
+.gallery-card__author {
+    font-size: 11px;
+    color: #faf8f5;
+    font-weight: 500;
+    letter-spacing: 0.5px;
 }
 
-/* ── 通用区块划分线 ── */
+/* ── 区块标题线 ── */
 .section {
     margin-bottom: $md-space-5;
 }
@@ -580,100 +571,145 @@ onMounted(async () => {
 .section__title {
     @include md-type("title-medium");
     color: #3a5a40;
-    letter-spacing: 0.5px;
+    font-weight: 700;
 }
 
-/* ── 时令寻芳卡片（横滑 Bento Box） ── */
-.recommend {
-    margin: 0 -$md-space-4;
-    white-space: nowrap;
+/* ── ② 中间物候预测：Bento Box 网格重构 ── */
+.prediction-grid {
+    display: flex;
+    gap: $md-space-3;
+    height: 170px; /* 固定整体大网格高度，实现完美对齐 */
 }
-.recommend__list {
-    display: inline-flex;
-    gap: $md-space-4;
-    padding: 4px $md-space-4 $md-space-3;
-}
-.recommend__card {
-    display: inline-flex;
+.prediction-grid__right {
+    flex: 1;
+    display: flex;
     flex-direction: column;
-    width: 180px;
-    background: #faf8f5;
-    border-radius: $md-shape-lg;
-    overflow: hidden;
-    border: 1px solid #d8d3c5;
-    box-shadow: 0 2px 6px rgba(58, 42, 32, 0.04);
-    transition:
-        transform 0.2s $md-easing-standard,
-        box-shadow 0.2s $md-easing-standard;
+    gap: $md-space-3;
 }
-.recommend__card--hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 16px rgba(58, 42, 32, 0.08);
-}
-.recommend__img-wrap {
+
+/* 便当盒卡片基底 */
+.pred-card {
     position: relative;
-    width: 100%;
-    height: 120px;
-    background: #efece4;
-    border-bottom: 1px solid #d8d3c5;
+    background: #faf8f5;
+    border: 1px solid #d8d3c5;
+    border-radius: 4px; /* 采用标本夹微方圆角 */
+    overflow: hidden;
+    box-shadow: 0 2px 6px rgba(58, 42, 32, 0.03);
+    transition: transform 0.2s $md-easing-standard;
+
+    &--large {
+        flex: 1.1;
+    }
+    &--small {
+        flex: 1;
+    }
 }
-.recommend__img {
+.pred-card--hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(58, 42, 32, 0.08);
+}
+.pred-card__img {
     width: 100%;
     height: 100%;
 }
-.recommend__badge {
+
+/* 状态徽章标签 */
+.pred-card__badge {
     position: absolute;
     top: 8px;
     left: 8px;
-    font-size: 10px;
-    font-weight: 600;
-    padding: 2px 6px;
-    border-radius: $md-shape-xs;
+    font-size: 9px;
+    font-weight: 700;
+    padding: 1px 5px;
+    border-radius: 2px;
     color: #faf8f5;
+    z-index: 2;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 
-    &--default,
-    &--dormant {
-        background: #6e7268;
-    }
-    &--budding {
-        background: $md-tertiary;
-    }
-    &--blooming {
+    &--bloom {
         background: $md-primary;
     }
-    &--withering {
+    &--bud {
+        background: $md-tertiary;
+    }
+    &--wither {
         background: $md-secondary;
     }
 }
-.recommend__body {
-    padding: $md-space-2 $md-space-3;
+
+/* 大格子暗字面（信息沉浸） */
+.pred-card__mask {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+        to top,
+        rgba(42, 44, 36, 0.85) 0%,
+        rgba(0, 0, 0, 0) 70%
+    );
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    padding: $md-space-3;
+    color: #faf8f5;
 }
-.recommend__species {
-    display: block;
-    font-size: 14px;
+.pred-card__species {
+    font-size: 16px;
+    font-weight: 700;
+    line-height: 1.2;
+}
+.pred-card__loc {
+    font-size: 10px;
+    opacity: 0.85;
+    margin-top: 2px;
+}
+/* 物候沙漏进度 */
+.pred-card__countdown {
+    margin-top: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+.pred-card__countdown-txt {
+    font-size: 8px;
+    opacity: 0.65;
+}
+.pred-card__progress-bar {
+    height: 3px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: $md-shape-full;
+    overflow: hidden;
+}
+.pred-card__progress-fill {
+    height: 100%;
+    background: #faf8f5;
+}
+
+/* 小格子底部遮罩纸（优雅留白） */
+.pred-card__mask-small {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(250, 248, 245, 0.9); /* 象牙白半透纸张，承托小字 */
+    border-top: 1px solid #d8d3c5;
+    padding: 4px 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.pred-card__species-sm {
+    font-size: 12px;
     font-weight: 700;
     color: $md-on-surface;
-    @include md-ellipsis(1);
 }
-.recommend__meta {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    margin-top: 2px;
+.pred-card__loc-sm {
+    font-size: 9px;
     color: #6e7268;
-}
-.recommend__meta-svg {
-    width: 11px;
-    height: 11px;
-    flex-shrink: 0;
-}
-.recommend__name {
-    font-size: 11px;
+    max-width: 55%;
     @include md-ellipsis(1);
 }
 
-/* ── 考察采风手札流 ── */
+/* ── ③ 底部采风手札流（线装书纸张质感） ── */
 .posts__head {
     display: flex;
     align-items: center;
@@ -739,12 +775,28 @@ onMounted(async () => {
     font-size: 13px;
     font-weight: 600;
     color: $md-on-surface;
-    line-height: 1.3;
 }
 .post__time {
     font-size: 11px;
     color: #6e7268;
     margin-top: 1px;
+}
+.post__name-row {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+.post__title-tag {
+    padding: 1px 5px;
+    border-radius: 2px;
+    border: 1px solid;
+    flex-shrink: 0;
+}
+.post__title-tag-txt {
+    font-size: 9px;
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: 0.2px;
 }
 .post__content {
     display: block;
@@ -752,10 +804,9 @@ onMounted(async () => {
     line-height: 1.52;
     color: $md-on-surface;
     margin-bottom: $md-space-3;
-    text-align: justify;
 }
 
-/* ── 帖子内嵌标本夹网格 ── */
+/* 标本夹图片网格 */
 .post__images {
     display: grid;
     gap: 6px;
@@ -794,13 +845,6 @@ onMounted(async () => {
     border-radius: $md-shape-sm;
     border: 1px solid #d8d3c5;
     background: #efece4;
-    transition:
-        opacity 0.2s,
-        transform 0.2s;
-}
-.post__image--hover {
-    opacity: 0.9;
-    transform: scale(0.98);
 }
 .post__image image {
     width: 100%;
@@ -819,14 +863,12 @@ onMounted(async () => {
     font-weight: 600;
 }
 
-/* ── 线条化页脚操作 ── */
 .post__footer {
     display: flex;
     align-items: center;
     justify-content: space-between;
     border-top: 1px dashed #efece4;
     padding-top: $md-space-3;
-    margin-top: $md-space-2;
 }
 .post__tag {
     display: inline-flex;
@@ -854,23 +896,26 @@ onMounted(async () => {
     display: flex;
     align-items: center;
     gap: 4px;
-    padding: 2px 6px;
     color: #6e7268;
-    border-radius: $md-shape-sm;
-    transition:
-        color 0.15s,
-        background 0.15s;
-
-    &--hover {
-        background: #efece4;
-    }
 }
 .post__action-svg {
     width: 14px;
     height: 14px;
 }
 .post__action-btn--liked {
-    color: #bc4749; /* 激活换为火漆红 */
+    color: #bc4749;
+}
+.post__action-btn--liked .post__action-svg {
+    animation: like-pop 0.35s ease-out;
+}
+@keyframes like-pop {
+    0%   { transform: scale(1); }
+    40%  { transform: scale(1.55); }
+    70%  { transform: scale(0.88); }
+    100% { transform: scale(1); }
+}
+.post__action-btn--hover {
+    opacity: 0.65;
 }
 .post__action-count {
     font-family: "Georgia", serif;
@@ -878,13 +923,11 @@ onMounted(async () => {
     font-weight: 600;
 }
 
-/* ── 底部加载态与空状态 ── */
 .posts__footer-status {
     display: flex;
     align-items: center;
     justify-content: center;
     margin-top: $md-space-4;
-    padding: $md-space-2 0;
 }
 .posts__footer-end {
     display: flex;
@@ -899,29 +942,9 @@ onMounted(async () => {
 .posts__footer-text {
     font-size: 11px;
     color: #6e7268;
-    letter-spacing: 0.5px;
-}
-.empty {
-    display: flex;
-    justify-content: center;
-    padding: $md-space-8 $md-space-4;
-}
-.empty__box {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: $md-space-2;
-    color: #8b867a;
-}
-.empty__svg {
-    width: 32px;
-    height: 32px;
-}
-.empty__text {
-    font-size: 12px;
 }
 
-/* ── 回到顶部箭簇 ── */
+/* 回到顶部 */
 .to-top {
     position: fixed;
     right: $md-space-4;
@@ -937,11 +960,6 @@ onMounted(async () => {
     align-items: center;
     justify-content: center;
     color: #3a5a40;
-    transition: transform 0.2s;
-}
-.to-top--hover {
-    transform: scale(0.92) translateY(-2px);
-    background: #e6eddf;
 }
 .to-top__svg {
     width: 18px;

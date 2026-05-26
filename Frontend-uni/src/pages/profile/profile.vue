@@ -17,10 +17,18 @@
                             <text class="user-card__name">{{
                                 profileData.nickname || "佚名学者"
                             }}</text>
-                            <view class="user-card__badge-label">
-                                <text class="user-card__badge-text">{{
-                                    currentTitle
-                                }}</text>
+                            <view
+                                class="user-card__badge-label"
+                                :style="{
+                                    background: currentTitleInfo.bg,
+                                    borderColor: currentTitleInfo.border,
+                                }"
+                            >
+                                <text
+                                    class="user-card__badge-text"
+                                    :style="{ color: currentTitleInfo.color }"
+                                    >{{ currentTitleInfo.label }}</text
+                                >
                             </view>
                         </view>
                     </view>
@@ -141,6 +149,7 @@
 import { ref, computed, onMounted } from "vue";
 import { useCheckinStore } from "@/stores/checkin";
 import { useLocationStore } from "@/stores/location";
+import { getTitleInfo } from "@/utils/title";
 
 const checkinStore = useCheckinStore();
 const locationStore = useLocationStore();
@@ -165,14 +174,9 @@ const currentLevel = computed(
 );
 const expPercent = computed(() => profileData.value.exp % 100);
 
-const currentTitle = computed(() => {
-    const count = unlockedBadgesCount.value;
-    if (count >= 10) return "🦁 狮山大花匠";
-    if (count >= 6) return "📜 标本局主事";
-    if (count >= 3) return "🍁 花间拾遗人";
-    if (count >= 1) return "🔍 植物观察员";
-    return "林间探芳客";
-});
+const currentTitleInfo = computed(() =>
+    getTitleInfo(unlockedBadgesCount.value),
+);
 
 const myVisiblePosts = computed(() => {
     // 仅筛选展示当前用户的前3条进行精简预览
@@ -268,18 +272,17 @@ onMounted(async () => {
     font-weight: 700;
     color: $md-on-surface;
 }
-/* 称号配饰：复古学者标签 */
+/* 称号配饰：彩色等级标签 */
 .user-card__badge-label {
     display: inline-flex;
-    border: 1px solid #a3704c;
-    background: #f0e5dc;
-    padding: 1px 6px;
+    border: 1px solid;
+    padding: 1px 7px;
     border-radius: $md-shape-sm;
 }
 .user-card__badge-text {
     font-size: 11px;
-    font-weight: 600;
-    color: #3d2513;
+    font-weight: 700;
+    letter-spacing: 0.3px;
 }
 /* 修正点：博古架栅格编排 */
 .user-card__stats {

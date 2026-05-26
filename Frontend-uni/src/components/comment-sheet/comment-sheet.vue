@@ -187,7 +187,8 @@ const formatTime = (dateString: string) => {
 }
 .comment-sheet__list {
   flex: 1;
-  min-height: 160px;
+  min-height: 0;
+  overflow: hidden;
   padding: $md-space-2 $md-space-4;
 }
 .comment-sheet__empty {

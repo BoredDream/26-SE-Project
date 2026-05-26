@@ -34,3 +34,7 @@ Thumbs.db
 
 # Misc
 *.bak
+
+# Env secrets
+.env.local
+.env.*.local

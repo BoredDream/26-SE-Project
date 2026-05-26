@@ -177,7 +177,7 @@ const FLOWER_LIST = [
     "蔷薇花",
     "紫藤花",
     "杜鹃花",
-    "夹桃",
+    "夹竹桃",
 ];
 
 interface FlowerEntry {
@@ -333,7 +333,7 @@ onMounted(async () => {
     position: relative;
     width: 100%;
     height: 0;
-    padding-bottom: 133.33%; /* 严格锁定 3:4 比例控制线 (4/3 = 1.3333) */
+    padding-bottom: 75%; /* 4:3 横版，适配手机拍摄比例 */
     background: #efece4;
     overflow: hidden;
 }
@@ -475,7 +475,7 @@ onMounted(async () => {
     padding-bottom: $md-space-3;
 }
 .dialog__thumb {
-    width: 72px;
+    width: 96px;
     height: 72px;
     border-radius: $md-shape-sm;
     flex-shrink: 0;

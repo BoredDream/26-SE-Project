@@ -3,6 +3,7 @@ export interface Marker {
   latitude: number
   longitude: number
   title: string
+  species?: string
 }
 
 export interface MapAdapter {

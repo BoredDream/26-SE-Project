@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+  <!-- 圆角对话框 + 左下角小尾 -->
+  <path d="M5 4 L 19 4 C 20.1 4 21 4.9 21 6 L 21 15 C 21 16.1 20.1 17 19 17 L 11 17 L 6.5 20.5 L 7 17 L 5 17 C 3.9 17 3 16.1 3 15 L 3 6 C 3 4.9 3.9 4 5 4 Z"
+        fill="none" stroke="#6E7268" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/>
+  <line x1="7" y1="9.5" x2="15" y2="9.5" stroke="#6E7268" stroke-width="1.4" stroke-linecap="round" opacity="0.55"/>
+  <line x1="7" y1="12.5" x2="12.5" y2="12.5" stroke="#6E7268" stroke-width="1.4" stroke-linecap="round" opacity="0.55"/>
+</svg>
