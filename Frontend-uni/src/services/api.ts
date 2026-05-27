@@ -26,6 +26,7 @@ export interface User {
   total_checkins: number
   created_at: string
   updated_at: string
+  current_title?: Title | null
 }
 
 export interface Location {
@@ -34,6 +35,7 @@ export interface Location {
   description: string
   latitude: string
   longitude: string
+  flower_id?: number | null
   flower_species: string
   bloom_status: string
   historical_bloom_start: string | null
@@ -66,7 +68,7 @@ export interface Comment {
   user_id: number
   content: string
   created_at: string
-  user?: Pick<User, 'id' | 'nickname' | 'avatar_url'>
+  user?: Pick<User, 'id' | 'nickname' | 'avatar_url' | 'current_title'>
 }
 
 export interface Achievement {
@@ -83,6 +85,29 @@ export interface Title {
   name: string
   description: string
   requirement: number
+}
+
+export interface Subscription {
+  flower_id: number
+  species: string
+  cover_image: string
+  bloom_status: string | null
+  subscribed_at: string | null
+}
+
+export interface NotificationItem {
+  id: number
+  flower_id: number | null
+  type: string
+  title: string
+  body: string
+  is_read: boolean
+  created_at: string | null
+}
+
+export interface NotificationPayload {
+  unread_count: number
+  items: NotificationItem[]
 }
 
 class ApiClient {
@@ -232,6 +257,19 @@ export const api = {
 
   titles: {
     getList: () => apiClient.get<Title[]>('/v1/users/me/titles'),
+  },
+
+  subscriptions: {
+    getList: () => apiClient.get<Subscription[]>('/v1/users/me/subscriptions'),
+    subscribe: (flowerId: number) => apiClient.post<{ subscribed: boolean }>(`/v1/flowers/${flowerId}/subscribe`, {}),
+    unsubscribe: (flowerId: number) => apiClient.delete<{ subscribed: boolean }>(`/v1/flowers/${flowerId}/subscribe`),
+  },
+
+  notifications: {
+    getList: (unread?: boolean) =>
+      apiClient.get<NotificationPayload>(`/v1/users/me/notifications${unread ? '?unread=1' : ''}`),
+    markRead: (id: number) => apiClient.put<{ id: number; is_read: boolean }>(`/v1/notifications/${id}/read`, {}),
+    markAllRead: () => apiClient.put<{ all_read: boolean }>('/v1/notifications/read-all', {}),
   },
 
   upload: (filePath: string) => apiClient.uploadFile('/v1/upload', filePath),

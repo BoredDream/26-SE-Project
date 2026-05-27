@@ -10,12 +10,13 @@ export const useLocationStore = defineStore('location', () => {
   const isLoading = ref(false)
   const error = ref<string | null>(null)
 
+  const MIN_LOCATIONS = 5
   const loadLocations = async () => {
     isLoading.value = true
     error.value = null
     try {
       const response = await api.locations.getList()
-      locations.value = response.data?.length ? response.data : mockLocations
+      locations.value = response.data?.length >= MIN_LOCATIONS ? response.data : mockLocations
     } catch (err) {
       locations.value = mockLocations
       error.value = err instanceof Error ? err.message : '加载位置失败'

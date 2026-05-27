@@ -9,7 +9,17 @@
           <view class="profile-card__ident">
             <view class="profile-card__name-row">
               <text class="profile-card__name">{{ userName }}</text>
-              <md-chip :label="`Lv.${userLevel}`" selected />
+              <view
+                v-if="userTitleInfo"
+                class="profile-card__title-badge"
+                :style="{
+                  background: userTitleInfo.bg,
+                  borderColor: userTitleInfo.border,
+                  color: userTitleInfo.color,
+                }"
+              >
+                <text class="profile-card__title-text" :style="{ color: userTitleInfo.color }">{{ userTitleInfo.label }}</text>
+              </view>
             </view>
             <text class="profile-card__summary">
               已完成 {{ totalCheckins }} 次打卡，解锁 {{ unlockedBadges }} 个徽章
@@ -64,6 +74,8 @@ import { useCheckinStore } from '@/stores/checkin'
 import { useLocationStore } from '@/stores/location'
 import { useAchievementStore } from '@/stores/achievement'
 import { useAuthStore } from '@/stores/auth'
+import { getTitleByName, type TitleInfo } from '@/utils/title'
+import type { Title } from '@/services/api'
 
 const checkinStore = useCheckinStore()
 const locationStore = useLocationStore()
@@ -72,10 +84,14 @@ const authStore = useAuthStore()
 
 const userId = ref(1)
 const userName = ref('花园探索者')
-const userLevel = ref(1)
+const userTitle = ref<Title | null>(null)
 const userExp = ref(0)
 const totalCheckins = ref(0)
 const unlockedBadges = ref(0)
+
+const userTitleInfo = computed<TitleInfo | null>(() =>
+  userTitle.value ? getTitleByName(userTitle.value) : null,
+)
 
 const userPosts = computed(() =>
   checkinStore.checkins.filter(post => post.user?.id === userId.value),
@@ -125,11 +141,11 @@ onMounted(async () => {
   const author = checkinStore.checkins.find(post => post.user?.id === userId.value)?.user
   if (author) {
     userName.value = author.nickname
-    userLevel.value = author.level
-    totalCheckins.value = author.total_checkins
+    userTitle.value = author.current_title ?? null
+    totalCheckins.value = author.total_checkins ?? 0
   } else if (authStore.user?.id === userId.value) {
     userName.value = authStore.user.nickname
-    userLevel.value = authStore.user.level
+    userTitle.value = authStore.user.current_title ?? null
     userExp.value = authStore.user.exp
     totalCheckins.value = authStore.user.total_checkins
   }
@@ -174,6 +190,20 @@ onMounted(async () => {
 .profile-card__name {
   @include md-type('title-large');
   color: $md-on-surface;
+}
+.profile-card__title-badge {
+  display: inline-block;
+  border: 1px solid;
+  padding: 0 10px;
+  border-radius: $md-shape-full;
+  height: 20px;
+  line-height: 20px;
+  text-align: center;
+}
+.profile-card__title-text {
+  font-size: 11px;
+  font-weight: 700;
+  vertical-align: middle;
 }
 .profile-card__summary {
   display: block;

@@ -149,10 +149,13 @@
 import { ref, computed, onMounted } from "vue";
 import { useCheckinStore } from "@/stores/checkin";
 import { useLocationStore } from "@/stores/location";
-import { getTitleInfo } from "@/utils/title";
+import { useAchievementStore } from "@/stores/achievement";
+import { getCurrentTitle, getTitleByName } from "@/utils/title";
+import { mockTitles } from "@/services/mockData";
 
 const checkinStore = useCheckinStore();
 const locationStore = useLocationStore();
+const achievementStore = useAchievementStore();
 
 // 模拟或后续从真实Pinia读取的用户核心数据
 const profileData = ref({
@@ -174,9 +177,16 @@ const currentLevel = computed(
 );
 const expPercent = computed(() => profileData.value.exp % 100);
 
-const currentTitleInfo = computed(() =>
-    getTitleInfo(unlockedBadgesCount.value),
-);
+// 优先用后端颁发的称号；后端不可用时基于本地不同花种数推算
+const currentTitleInfo = computed(() => {
+    if (achievementStore.titles.length > 0) {
+        return getCurrentTitle(achievementStore.titles);
+    }
+    const localBest = mockTitles
+        .filter((t) => t.requirement <= unlockedBadgesCount.value)
+        .sort((a, b) => b.requirement - a.requirement)[0];
+    return getTitleByName(localBest);
+});
 
 const myVisiblePosts = computed(() => {
     // 仅筛选展示当前用户的前3条进行精简预览
@@ -207,6 +217,7 @@ onMounted(async () => {
     await Promise.all([
         locationStore.loadLocations(),
         checkinStore.loadCheckins(),
+        achievementStore.loadTitles(),
     ]);
 });
 </script>
@@ -274,15 +285,18 @@ onMounted(async () => {
 }
 /* 称号配饰：彩色等级标签 */
 .user-card__badge-label {
-    display: inline-flex;
+    display: inline-block;
     border: 1px solid;
-    padding: 1px 7px;
-    border-radius: $md-shape-sm;
+    padding: 0 10px;
+    border-radius: $md-shape-full;
+    height: 20px;
+    line-height: 20px;
+    text-align: center;
 }
 .user-card__badge-text {
     font-size: 11px;
     font-weight: 700;
-    letter-spacing: 0.3px;
+    vertical-align: middle;
 }
 /* 修正点：博古架栅格编排 */
 .user-card__stats {

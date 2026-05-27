@@ -1,6 +1,7 @@
 // 校园花卉点位坐标转换 + 反向地址验证脚本
 // 1) 解析 localtion.txt 收录的 12 行 DMS（度°分′秒″）坐标 → 十进制
-// 2) 假定原坐标是 GCJ-02（来自中国地图录入），转换为 WGS-84 后调 Nominatim 反向地址解析
+// 2) 原坐标是 WGS-84（手机 GPS 采集），可直接传给 Nominatim 反向地址解析
+//    地图渲染所需的 GCJ-02 值由 scripts/convert-to-gcj02.mjs 生成
 // 3) 输出对照表，人眼核对实际地址是否与 localtion.txt 文字描述吻合
 // 用法：node scripts/check-coords.mjs
 
@@ -59,14 +60,13 @@ const locations = [
 
 const sleep = (ms) => new Promise(r => setTimeout(r, ms))
 
-console.log('id | 花种·描述                   | GCJ-02 (lat, lng)      | WGS-84 (lat, lng)      | Nominatim 解析地址')
-console.log('---|----------------------------|------------------------|------------------------|----------------------------')
+console.log('id | 花种·描述                   | WGS-84 (lat, lng)      | Nominatim 解析地址')
+console.log('---|----------------------------|------------------------|----------------------------')
 
 for (const loc of locations) {
   const lat = dmsToDecimal(...loc.lat)
   const lng = dmsToDecimal(...loc.lng)
-  const wgs = gcj02ToWgs84(lat, lng)
-  const url = `${BASE}?lat=${wgs.lat}&lon=${wgs.lng}&format=json&accept-language=zh`
+  const url = `${BASE}?lat=${lat}&lon=${lng}&format=json&accept-language=zh`
   let addr = '解析失败'
   try {
     const res = await fetch(url, { headers: { 'User-Agent': 'flower-map-dev/1.0' } })
@@ -76,8 +76,7 @@ for (const loc of locations) {
     addr = `请求失败: ${e.message}`
   }
   const head = `${String(loc.id).padStart(2)} | ${loc.species}·${loc.desc}`.padEnd(32)
-  const gcj = `(${lat}, ${lng})`.padEnd(24)
-  const w84 = `(${wgs.lat.toFixed(6)}, ${wgs.lng.toFixed(6)})`.padEnd(24)
-  console.log(`${head} | ${gcj} | ${w84} | ${addr}`)
+  const w84 = `(${lat}, ${lng})`.padEnd(24)
+  console.log(`${head} | ${w84} | ${addr}`)
   await sleep(1100) // Nominatim 限速：≤1 req/s
 }

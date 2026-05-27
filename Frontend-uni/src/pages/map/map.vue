@@ -56,7 +56,7 @@
       class="map-panel"
       :latitude="mapCenter.lat"
       :longitude="mapCenter.lng"
-      :scale="15"
+      :scale="14"
       :markers="mpMarkers"
       @markertap="onMarkerTap"
     ></map>
@@ -78,7 +78,7 @@ const locationStore = useLocationStore()
 const selectedSpecies = ref('')
 const searchQuery = ref('')
 const mapAdapter = ref<MapAdapter | null>(null)
-const mapCenter = ref({ lat: 30.4714, lng: 114.3645 })
+const mapCenter = ref({ lat: 30.4685, lng: 114.3545 })
 const externalResults = ref<TencentPlace[]>([])
 const isSearchingExternal = ref(false)
 

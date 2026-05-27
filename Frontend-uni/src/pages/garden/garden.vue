@@ -165,19 +165,21 @@ import type { Checkin } from "@/services/api";
 const locationStore = useLocationStore();
 const checkinStore = useCheckinStore();
 
-const FLOWER_LIST = [
-    "樱花",
-    "梨花",
-    "梅花",
-    "桃花",
-    "玉兰花",
-    "油菜花",
-    "格桑花",
-    "大金鸡菊",
-    "蔷薇花",
-    "紫藤花",
-    "杜鹃花",
-    "夹竹桃",
+// species 用于匹配 location.flower_species；image 是实际图片路径
+// 顺序：9 种校园实际花卉在前 + 3 种占位
+const FLOWER_LIST: { species: string; image: string }[] = [
+    { species: "樱花",     image: "/static/flowers/樱花.png" },
+    { species: "蔷薇",     image: "/static/flowers/蔷薇花.png" },
+    { species: "夹竹桃",   image: "/static/flowers/夹竹桃.png" },
+    { species: "油菜花",   image: "/static/flowers/油菜花.png" },
+    { species: "莲花",     image: "/static/flowers/桃花.png" },
+    { species: "梨花",     image: "/static/flowers/梨花.png" },
+    { species: "玉兰",     image: "/static/flowers/玉兰花.png" },
+    { species: "大金鸡菊", image: "/static/flowers/大金鸡菊.png" },
+    { species: "格桑花",   image: "/static/flowers/格桑花.png" },
+    { species: "桃花",     image: "/static/flowers/桃花.png" },
+    { species: "紫藤",     image: "/static/flowers/紫藤花.png" },
+    { species: "杜鹃",     image: "/static/flowers/杜鹃花.png" },
 ];
 
 interface FlowerEntry {
@@ -189,21 +191,37 @@ interface FlowerEntry {
 }
 
 const flowerCollection = computed<FlowerEntry[]>(() => {
-    return FLOWER_LIST.map((name) => {
+    const entries = FLOWER_LIST.map(({ species, image }, originalIndex) => {
         const relatedCheckins = checkinStore.checkins.filter((c) => {
             const loc = locationStore.locations.find(
                 (l) => l.id === c.location_id,
             );
-            return loc?.flower_species === name;
+            return loc?.flower_species === species;
         });
+        // 最早一次打卡的时间戳（升序），用作排序键
+        const firstUnlockTs = relatedCheckins.length
+            ? Math.min(
+                  ...relatedCheckins.map((c) => new Date(c.created_at).getTime()),
+              )
+            : Number.POSITIVE_INFINITY;
         return {
-            name,
-            image: `/static/flowers/${name}.png`,
+            name: species,
+            image,
             unlocked: relatedCheckins.length > 0,
             checkinCount: relatedCheckins.length,
             checkins: relatedCheckins,
+            _firstUnlockTs: firstUnlockTs,
+            _originalIndex: originalIndex,
         };
     });
+    // 已解锁按最早打卡时间升序；未解锁的（Infinity）按 FLOWER_LIST 原顺序排后面
+    entries.sort((a, b) => {
+        if (a._firstUnlockTs !== b._firstUnlockTs) {
+            return a._firstUnlockTs - b._firstUnlockTs;
+        }
+        return a._originalIndex - b._originalIndex;
+    });
+    return entries.map(({ _firstUnlockTs, _originalIndex, ...rest }) => rest);
 });
 
 const totalCount = computed(() => FLOWER_LIST.length);

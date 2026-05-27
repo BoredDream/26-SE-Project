@@ -101,7 +101,9 @@ class Achievement(db.Model):
 class Title(db.Model):
     __tablename__ = 'titles'
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    name = db.Column(db.String(64), nullable=False, unique=True)
     description = db.Column(db.Text, nullable=False)
+    requirement = db.Column(db.Integer, nullable=False, default=0)
 
 achievements_users = db.Table('achievements_users',
     db.Column('id', db.Integer, primary_key=True, autoincrement=True),
@@ -114,3 +116,22 @@ titles_users = db.Table('titles_users',
     db.Column('titles_id', db.Integer, db.ForeignKey('titles.id'), nullable=False),
     db.Column('user_id', db.Integer, db.ForeignKey('users.id'), nullable=False)
 )
+
+class Subscription(db.Model):
+    __tablename__ = 'subscriptions'
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    flower_id = db.Column(db.Integer, db.ForeignKey('flowers.id'), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    __table_args__ = (db.UniqueConstraint('user_id', 'flower_id', name='uq_subscription_user_flower'),)
+
+class Notification(db.Model):
+    __tablename__ = 'notifications'
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    flower_id = db.Column(db.Integer, db.ForeignKey('flowers.id'), nullable=True)
+    type = db.Column(db.String(32), nullable=False)  # bloom_start / bud_start
+    title = db.Column(db.String(128), nullable=False)
+    body = db.Column(db.Text)
+    is_read = db.Column(db.Boolean, default=False, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)

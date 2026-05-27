@@ -1,11 +1,13 @@
 import os
 from extensions import api, db, jwt
 from flask_restful import Resource, reqparse
-from models import User, Flower, Place, FlowerPlace, Checkin, Comment, Like, Achievement, Title, BloomStatus
+from models import User, Flower, Place, FlowerPlace, Checkin, Comment, Like, Achievement, Title, BloomStatus, Subscription, Notification
 from flask import request, url_for
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
 from werkzeug.utils import secure_filename
 from datetime import datetime
+from services.title_service import check_and_grant_titles, get_current_title
+from services.notification_service import notify_subscribers_on_bloom_change
 
 # 通用响应包装
 def success(data=None, message='ok', code=200):
@@ -13,6 +15,26 @@ def success(data=None, message='ok', code=200):
 
 def error(message, code=400):
     return {'code': code, 'message': message, 'data': None}, code
+
+def _serialize_title(t):
+    return {
+        'id': t.id,
+        'name': t.name,
+        'description': t.description,
+        'requirement': t.requirement,
+    }
+
+def _user_brief(user):
+    """帖子/评论里嵌套的 user 简版，附带当前称号。"""
+    if user is None:
+        return None
+    current = get_current_title(user)
+    return {
+        'id': user.id,
+        'nickname': user.nickname,
+        'avatar_url': user.avatar_url,
+        'current_title': _serialize_title(current) if current else None,
+    }
 
 # 用户相关API
 class AuthRegister(Resource):
@@ -144,6 +166,7 @@ class UserMe(Resource):
         user = User.query.get(current_user_id)
         if not user:
             return error('User not found', 404)
+        current = get_current_title(user)
         return success({
             'id': user.id,
             'nickname': user.nickname,
@@ -153,7 +176,8 @@ class UserMe(Resource):
             'exp': 0,
             'total_checkins': len(user.checkins),
             'achievements': [a.description for a in user.achievements],
-            'titles': [t.description for t in user.titles]
+            'titles': [_serialize_title(t) for t in user.titles],
+            'current_title': _serialize_title(current) if current else None,
         })
 
     @jwt_required()
@@ -228,6 +252,29 @@ class FlowerBloomStatus(Resource):
             'historical_bloom_end': flower.historical_bloom_end
         })
 
+    @jwt_required()
+    def put(self, id):
+        """更新花卉花期；若进入 blooming / budding，给所有订阅者发站内通知。"""
+        flower = Flower.query.get(id)
+        if not flower:
+            return error('Flower not found', 404)
+        parser = reqparse.RequestParser()
+        parser.add_argument('bloom_status', required=True)
+        args = parser.parse_args()
+        try:
+            new_status = BloomStatus(args['bloom_status'])
+        except ValueError:
+            return error('Invalid bloom_status', 400)
+        old_status = flower.bloom_status
+        flower.bloom_status = new_status
+        db.session.commit()
+        notified = notify_subscribers_on_bloom_change(flower, old_status, new_status)
+        return success({
+            'id': flower.id,
+            'bloom_status': new_status.value,
+            'notified_subscribers': notified,
+        })
+
 # 地点与地图相关API（术语统一为 location，但内部仍用 Place）
 class LocationList(Resource):
     def get(self):
@@ -242,7 +289,10 @@ class LocationList(Resource):
 
         result = []
         for p in places:
-            flower = p.flowers[0] if p.flowers else None
+            # 优先选 species 匹配 place.name 前缀的 flower（处理同一 place 被多次 upsert 导致的多关联）
+            name_prefix = (p.name or '').split('·')[0]
+            flower = next((f for f in p.flowers if f.species == name_prefix), None) \
+                or (p.flowers[0] if p.flowers else None)
             fps = FlowerPlace.query.filter_by(place_id=p.id).all()
             checkin_count = sum(len(fp.checkins) for fp in fps)
             result.append({
@@ -251,6 +301,7 @@ class LocationList(Resource):
                 'description': p.description,
                 'latitude': float(p.latitude),
                 'longitude': float(p.longitude),
+                'flower_id': flower.id if flower else None,
                 'flower_species': flower.species if flower else '',
                 'bloom_status': flower.bloom_status.value if flower and flower.bloom_status else '',
                 'historical_bloom_start': flower.historical_bloom_start if flower else None,
@@ -355,6 +406,9 @@ class CheckinList(Resource):
         )
         db.session.add(checkin)
         db.session.commit()
+
+        newly_granted = check_and_grant_titles(User.query.get(user_id))
+
         return success({
             'id': checkin.id,
             'user_id': checkin.user_id,
@@ -366,7 +420,8 @@ class CheckinList(Resource):
             'likes_count': checkin.likes_count,
             'comments_count': 0,
             'liked': False,
-            'created_at': checkin.created_at.isoformat()
+            'created_at': checkin.created_at.isoformat(),
+            'newly_granted_titles': [_serialize_title(t) for t in newly_granted],
         }, 'Checkin created successfully', 201)
 
     @jwt_required(optional=True)
@@ -399,11 +454,7 @@ class CheckinList(Resource):
             result.append({
                 'id': c.id,
                 'user_id': c.user_id,
-                'user': {
-                    'id': author.id,
-                    'nickname': author.nickname,
-                    'avatar_url': author.avatar_url
-                } if author else None,
+                'user': _user_brief(author),
                 'flower_place_id': c.flower_place_id,
                 'location_id': fp.place_id if fp else None,
                 'place_name': place.name if place else None,
@@ -430,11 +481,7 @@ class CheckinDetail(Resource):
         place = Place.query.get(flower_place.place_id) if flower_place else None
         return success({
             'id': checkin.id,
-            'user': {
-                'id': user.id,
-                'nickname': user.nickname,
-                'avatar_url': user.avatar_url
-            },
+            'user': _user_brief(user),
             'flower': {
                 'id': flower.id,
                 'species': flower.species
@@ -488,11 +535,7 @@ class CheckinComments(Resource):
                 'user_id': c.user_id,
                 'content': c.content,
                 'created_at': c.created_at.isoformat(),
-                'user': {
-                    'id': author.id,
-                    'nickname': author.nickname,
-                    'avatar_url': author.avatar_url
-                } if author else None
+                'user': _user_brief(author),
             })
         return success(result)
 
@@ -518,11 +561,7 @@ class CheckinComments(Resource):
             'user_id': comment.user_id,
             'content': comment.content,
             'created_at': comment.created_at.isoformat(),
-            'user': {
-                'id': author.id,
-                'nickname': author.nickname,
-                'avatar_url': author.avatar_url
-            } if author else None
+            'user': _user_brief(author),
         }, 'Comment created successfully', 201)
 
 class CommentDetail(Resource):
@@ -606,10 +645,93 @@ class UserTitles(Resource):
         user = User.query.get(current_user_id)
         if not user:
             return error('User not found', 404)
-        return success([{
-            'id': t.id,
-            'description': t.description
-        } for t in user.titles])
+        return success([_serialize_title(t) for t in user.titles])
+
+# 订阅与通知相关API
+class FlowerSubscription(Resource):
+    @jwt_required()
+    def post(self, id):
+        user_id = int(get_jwt_identity())
+        flower = Flower.query.get(id)
+        if not flower:
+            return error('Flower not found', 404)
+        existing = Subscription.query.filter_by(user_id=user_id, flower_id=id).first()
+        if existing:
+            return success({'subscribed': True}, 'Already subscribed')
+        db.session.add(Subscription(user_id=user_id, flower_id=id))
+        db.session.commit()
+        return success({'subscribed': True}, 'Subscribed', 201)
+
+    @jwt_required()
+    def delete(self, id):
+        user_id = int(get_jwt_identity())
+        sub = Subscription.query.filter_by(user_id=user_id, flower_id=id).first()
+        if not sub:
+            return success({'subscribed': False}, 'Not subscribed')
+        db.session.delete(sub)
+        db.session.commit()
+        return success({'subscribed': False}, 'Unsubscribed')
+
+class UserSubscriptions(Resource):
+    @jwt_required()
+    def get(self):
+        user_id = int(get_jwt_identity())
+        subs = Subscription.query.filter_by(user_id=user_id).all()
+        result = []
+        for s in subs:
+            f = Flower.query.get(s.flower_id)
+            if not f:
+                continue
+            result.append({
+                'flower_id': f.id,
+                'species': f.species,
+                'cover_image': f.cover_image,
+                'bloom_status': f.bloom_status.value if f.bloom_status else None,
+                'subscribed_at': s.created_at.isoformat() if s.created_at else None,
+            })
+        return success(result)
+
+class UserNotifications(Resource):
+    @jwt_required()
+    def get(self):
+        user_id = int(get_jwt_identity())
+        unread_only = request.args.get('unread') == '1'
+        query = Notification.query.filter_by(user_id=user_id)
+        if unread_only:
+            query = query.filter_by(is_read=False)
+        notes = query.order_by(Notification.created_at.desc()).all()
+        unread_count = Notification.query.filter_by(user_id=user_id, is_read=False).count()
+        return success({
+            'unread_count': unread_count,
+            'items': [{
+                'id': n.id,
+                'flower_id': n.flower_id,
+                'type': n.type,
+                'title': n.title,
+                'body': n.body,
+                'is_read': n.is_read,
+                'created_at': n.created_at.isoformat() if n.created_at else None,
+            } for n in notes],
+        })
+
+class NotificationRead(Resource):
+    @jwt_required()
+    def put(self, id):
+        user_id = int(get_jwt_identity())
+        note = Notification.query.filter_by(id=id, user_id=user_id).first()
+        if not note:
+            return error('Notification not found', 404)
+        note.is_read = True
+        db.session.commit()
+        return success({'id': id, 'is_read': True})
+
+class NotificationsReadAll(Resource):
+    @jwt_required()
+    def put(self):
+        user_id = int(get_jwt_identity())
+        Notification.query.filter_by(user_id=user_id, is_read=False).update({'is_read': True})
+        db.session.commit()
+        return success({'all_read': True})
 
 # 文件上传
 class UploadResource(Resource):

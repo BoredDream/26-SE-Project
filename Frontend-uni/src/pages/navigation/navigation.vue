@@ -58,7 +58,7 @@ let driving: any = null
 const goBack = () => uni.navigateBack()
 
 onLoad((query: any) => {
-  targetName.value = query?.name || '目标位置'
+  targetName.value = decodeURIComponent(query?.name || '目标位置')
   targetLng.value = parseFloat(query?.lng) || 0
   targetLat.value = parseFloat(query?.lat) || 0
   if (query?.userLng && query?.userLat) {

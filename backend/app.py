@@ -5,7 +5,7 @@ from config import Config
 from extensions import db, api, jwt
 
 # 导入模型和路由
-from models import User, Flower, Place, FlowerPlace, Checkin, Comment, Like, Achievement, Title
+from models import User, Flower, Place, FlowerPlace, Checkin, Comment, Like, Achievement, Title, Subscription, Notification
 from routes import (
     AuthRegister, AuthLogin, UserMe,
     FlowerList, FlowerDetail, FlowerBloomStatus,
@@ -13,6 +13,8 @@ from routes import (
     CheckinList, CheckinDetail, CheckinLike, CheckinComments, CommentDetail,
     FlowerCheckins, LocationCheckins,
     AchievementList, UserAchievements, UserTitles,
+    FlowerSubscription, UserSubscriptions,
+    UserNotifications, NotificationRead, NotificationsReadAll,
     UploadResource
 )
 
@@ -47,6 +49,11 @@ api.add_resource(LocationCheckins, '/v1/locations/<int:id>/checkins')
 api.add_resource(AchievementList, '/v1/achievements')
 api.add_resource(UserAchievements, '/v1/users/me/achievements')
 api.add_resource(UserTitles, '/v1/users/me/titles')
+api.add_resource(FlowerSubscription, '/v1/flowers/<int:id>/subscribe')
+api.add_resource(UserSubscriptions, '/v1/users/me/subscriptions')
+api.add_resource(UserNotifications, '/v1/users/me/notifications')
+api.add_resource(NotificationRead, '/v1/notifications/<int:id>/read')
+api.add_resource(NotificationsReadAll, '/v1/notifications/read-all')
 api.add_resource(UploadResource, '/v1/upload')
 
 # 初始化API

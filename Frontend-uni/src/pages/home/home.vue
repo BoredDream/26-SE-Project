@@ -183,13 +183,13 @@
                                         <view
                                             class="post__title-tag"
                                             :style="{
-                                                background: postTitle(post.user?.total_checkins).bg,
-                                                borderColor: postTitle(post.user?.total_checkins).border,
-                                                color: postTitle(post.user?.total_checkins).color,
+                                                background: postTitle(post.user?.current_title).bg,
+                                                borderColor: postTitle(post.user?.current_title).border,
+                                                color: postTitle(post.user?.current_title).color,
                                             }"
                                         >
                                             <text class="post__title-tag-txt">{{
-                                                postTitle(post.user?.total_checkins).label
+                                                postTitle(post.user?.current_title).label
                                             }}</text>
                                         </view>
                                     </view>
@@ -342,7 +342,8 @@ import { onPageScroll, onReachBottom } from "@dcloudio/uni-app";
 import { useLocationStore } from "@/stores/location";
 import { useCheckinStore } from "@/stores/checkin";
 import type { Location, Checkin } from "@/services/api";
-import { getTitleInfo } from "@/utils/title";
+import { getTitleByName } from "@/utils/title";
+import type { Title } from "@/services/api";
 
 const locationStore = useLocationStore();
 const checkinStore = useCheckinStore();
@@ -466,7 +467,7 @@ const getImageGridClass = (count: number) => {
 
 const authorNameInitial = (name?: string) => (name ? name[0] : "访");
 
-const postTitle = (checkins?: number) => getTitleInfo(checkins);
+const postTitle = (title?: Title | null) => getTitleByName(title);
 
 const formatTime = (dateString: string) => {
     const diff = Date.now() - new Date(dateString).getTime();
@@ -787,16 +788,19 @@ onMounted(async () => {
     gap: 5px;
 }
 .post__title-tag {
-    padding: 1px 5px;
-    border-radius: 2px;
+    display: inline-block;
+    padding: 0 8px;
+    border-radius: $md-shape-full;
     border: 1px solid;
     flex-shrink: 0;
+    height: 18px;
+    line-height: 18px;
+    text-align: center;
 }
 .post__title-tag-txt {
-    font-size: 9px;
+    font-size: 10px;
     font-weight: 700;
-    line-height: 1;
-    letter-spacing: 0.2px;
+    vertical-align: middle;
 }
 .post__content {
     display: block;

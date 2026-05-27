@@ -57,7 +57,7 @@ export interface TencentPlace {
 export async function searchPlaces(keyword: string): Promise<TencentPlace[]> {
   const d = await get('/place/v1/search', {
     keyword,
-    boundary: 'nearby(30.4714,114.3645,5000,1)',
+    boundary: 'nearby(30.4685,114.3545,5000,1)',
   })
   return ((d.data as any[]) || []).map((p) => ({
     id: p.id,

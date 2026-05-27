@@ -1,4 +1,4 @@
-import type { Achievement, Checkin, Location, User } from '@/services/api'
+import type { Achievement, Checkin, Location, Title, User } from '@/services/api'
 
 export const mockUser: User = {
   id: 1,
@@ -10,10 +10,11 @@ export const mockUser: User = {
   total_checkins: 47,
   created_at: new Date().toISOString(),
   updated_at: new Date().toISOString(),
+  current_title: { id: 5, name: '满园春色', description: '阅尽狮山九种花，俯仰皆春', requirement: 9 },
 }
 
-// 数据来源：localtion.txt（华农狮山校区 12 个真实花卉点位）
-// 坐标系：GCJ-02（DMS → 十进制，已通过 scripts/check-coords.mjs 核对反向地址）
+// 数据来源：localtion.txt（华农狮山校区 12 个真实花卉点位，手机 GPS 采集 = WGS-84）
+// 已通过 scripts/convert-to-gcj02.mjs 转为 GCJ-02（微信/腾讯/高德地图坐标系，可直接渲染）
 // 花期与状态以 2026-05-26（暮春初夏）为基准时间推断
 const NOW = new Date().toISOString()
 
@@ -22,8 +23,8 @@ export const mockLocations: Location[] = [
     id: 1,
     name: '樱花·樱花路',
     description: '春日樱花路，粉樱列植夹道，是校园最经典的打卡花径。',
-    latitude: '30.473611',
-    longitude: '114.359444',
+    latitude: '30.471260',
+    longitude: '114.364961',
     flower_species: '樱花',
     bloom_status: '休眠中',
     historical_bloom_start: '03月20日',
@@ -38,8 +39,8 @@ export const mockLocations: Location[] = [
     id: 2,
     name: '蔷薇·机电中心旁',
     description: '机电工程训练中心外墙的攀援蔷薇，初夏正是花势最盛之时。',
-    latitude: '30.469444',
-    longitude: '114.357500',
+    latitude: '30.467089',
+    longitude: '114.363014',
     flower_species: '蔷薇',
     bloom_status: '盛开中',
     historical_bloom_start: '05月01日',
@@ -54,8 +55,8 @@ export const mockLocations: Location[] = [
     id: 3,
     name: '蔷薇·三运球场南',
     description: '三运篮球场南侧花丛，红粉相间，黄昏来访最佳。',
-    latitude: '30.473333',
-    longitude: '114.359722',
+    latitude: '30.470983',
+    longitude: '114.365239',
     flower_species: '蔷薇',
     bloom_status: '盛开中',
     historical_bloom_start: '05月01日',
@@ -70,8 +71,8 @@ export const mockLocations: Location[] = [
     id: 4,
     name: '夹竹桃·水产学院旁',
     description: '水产学院教学实习基地旁列植夹竹桃，叶秀花繁。',
-    latitude: '30.466389',
-    longitude: '114.357778',
+    latitude: '30.464034',
+    longitude: '114.363292',
     flower_species: '夹竹桃',
     bloom_status: '预计 6 天后绽萼',
     historical_bloom_start: '06月01日',
@@ -86,8 +87,8 @@ export const mockLocations: Location[] = [
     id: 5,
     name: '夹竹桃·水杉林西',
     description: '水杉林西侧约 100 米，夹竹桃与杉影相映成趣。',
-    latitude: '30.467500',
-    longitude: '114.352778',
+    latitude: '30.465137',
+    longitude: '114.358285',
     flower_species: '夹竹桃',
     bloom_status: '预计 6 天后绽萼',
     historical_bloom_start: '06月01日',
@@ -102,8 +103,8 @@ export const mockLocations: Location[] = [
     id: 6,
     name: '油菜花·实验田',
     description: '水杉林周边的油菜花实验田，每到春末已结荚收尾。',
-    latitude: '30.468889',
-    longitude: '114.356389',
+    latitude: '30.466532',
+    longitude: '114.361901',
     flower_species: '油菜花',
     bloom_status: '休眠中',
     historical_bloom_start: '03月01日',
@@ -118,8 +119,8 @@ export const mockLocations: Location[] = [
     id: 7,
     name: '莲花·水杉林池塘',
     description: '水杉林西侧约 300 米的小池塘，夏初莲叶田田，含苞待放。',
-    latitude: '30.468889',
-    longitude: '114.341389',
+    latitude: '30.466506',
+    longitude: '114.346879',
     flower_species: '莲花',
     bloom_status: '预计 20 天后绽萼',
     historical_bloom_start: '06月15日',
@@ -134,8 +135,8 @@ export const mockLocations: Location[] = [
     id: 8,
     name: '莲花·蕙芷园南池',
     description: '蕙芷园南面池塘，盛夏荷风送香，是校内赏荷首选。',
-    latitude: '30.471111',
-    longitude: '114.338333',
+    latitude: '30.468723',
+    longitude: '114.343819',
     flower_species: '莲花',
     bloom_status: '预计 20 天后绽萼',
     historical_bloom_start: '06月15日',
@@ -150,8 +151,8 @@ export const mockLocations: Location[] = [
     id: 9,
     name: '梨花·三教A座前',
     description: '三教 A 座教学楼前的梨树，早春雪白成阵。',
-    latitude: '30.474444',
-    longitude: '114.353611',
+    latitude: '30.472085',
+    longitude: '114.359120',
     flower_species: '梨花',
     bloom_status: '休眠中',
     historical_bloom_start: '03月15日',
@@ -166,8 +167,8 @@ export const mockLocations: Location[] = [
     id: 10,
     name: '玉兰·图书馆前',
     description: '图书馆门前的白玉兰，每年开学第一周已完成花事。',
-    latitude: '30.473611',
-    longitude: '114.351944',
+    latitude: '30.471248',
+    longitude: '114.357451',
     flower_species: '玉兰',
     bloom_status: '惜花·韶华已尽',
     historical_bloom_start: '03月01日',
@@ -182,8 +183,8 @@ export const mockLocations: Location[] = [
     id: 11,
     name: '大金鸡菊·狮子山广场南',
     description: '狮子山广场南面的金鸡菊带，初夏一片明亮金黄。',
-    latitude: '30.475278',
-    longitude: '114.352222',
+    latitude: '30.472916',
+    longitude: '114.357730',
     flower_species: '大金鸡菊',
     bloom_status: '盛开中',
     historical_bloom_start: '05月10日',
@@ -198,8 +199,8 @@ export const mockLocations: Location[] = [
     id: 12,
     name: '格桑花·蕙芷园北',
     description: '蕙芷园北面的格桑花海，盛花期一直延续到深秋。',
-    latitude: '30.473611',
-    longitude: '114.339444',
+    latitude: '30.471226',
+    longitude: '114.344932',
     flower_species: '格桑花',
     bloom_status: '盛开中',
     historical_bloom_start: '05月15日',
@@ -245,6 +246,7 @@ export const mockCheckins: Checkin[] = [
       total_checkins: 18,
       created_at: NOW,
       updated_at: NOW,
+      current_title: { id: 4, name: '半园识翠', description: '园中近半花种已识，目力渐熟', requirement: 6 },
     },
   },
   {
@@ -267,6 +269,7 @@ export const mockCheckins: Checkin[] = [
       total_checkins: 14,
       created_at: NOW,
       updated_at: NOW,
+      current_title: { id: 3, name: '三两芳信', description: '收集到三种以上花讯，渐入佳境', requirement: 3 },
     },
   },
   {
@@ -293,6 +296,7 @@ export const mockCheckins: Checkin[] = [
       total_checkins: 24,
       created_at: NOW,
       updated_at: NOW,
+      current_title: { id: 4, name: '半园识翠', description: '园中近半花种已识，目力渐熟', requirement: 6 },
     },
   },
   {
@@ -314,4 +318,13 @@ export const mockAchievements: Achievement[] = [
   { id: 2, name: '花园探索者', description: '完成5次打卡', icon: '二', requirement: 5, reward_exp: 40 },
   { id: 3, name: '内容创作者', description: '发布3条帖子', icon: '三', requirement: 3, reward_exp: 60 },
   { id: 4, name: '打卡达人', description: '完成20次打卡', icon: '四', requirement: 20, reward_exp: 120 },
+]
+
+// 与后端 backend/seed_demo_data.py 的 SEED_TITLES 保持一致
+export const mockTitles: Title[] = [
+  { id: 1, name: '初问春色', description: '初次踏入花径，还未识得校园群芳',     requirement: 0 },
+  { id: 2, name: '一径花踪', description: '已识一种花卉，开始留心枝头的春信',   requirement: 1 },
+  { id: 3, name: '三两芳信', description: '收集到三种以上花讯，渐入佳境',       requirement: 3 },
+  { id: 4, name: '半园识翠', description: '园中近半花种已识，目力渐熟',         requirement: 6 },
+  { id: 5, name: '满园春色', description: '阅尽狮山九种花，俯仰皆春',           requirement: 9 },
 ]
