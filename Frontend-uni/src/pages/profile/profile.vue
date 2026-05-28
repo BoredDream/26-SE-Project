@@ -6,16 +6,22 @@
             <md-card class="user-card" :padding="false">
                 <view class="user-card__inner">
                     <view class="user-card__header">
-                        <view class="user-card__avatar">
-                            <view class="user-card__avatar-seal">
+                        <view class="user-card__avatar" @click="openEditSheet">
+                            <image
+                                v-if="authStore.user?.avatar_url"
+                                class="user-card__avatar-img"
+                                :src="authStore.user.avatar_url"
+                                mode="aspectFill"
+                            />
+                            <view v-else class="user-card__avatar-seal">
                                 <text class="user-card__avatar-char">{{
-                                    authorNameInitial(profileData.nickname)
+                                    authorNameInitial(authStore.user?.nickname)
                                 }}</text>
                             </view>
                         </view>
                         <view class="user-card__meta">
                             <text class="user-card__name">{{
-                                profileData.nickname || "佚名学者"
+                                authStore.user?.nickname || "佚名学者"
                             }}</text>
                             <view
                                 class="user-card__badge-label"
@@ -31,12 +37,15 @@
                                 >
                             </view>
                         </view>
+                        <view class="user-card__edit-btn" hover-class="is-hover" @click="openEditSheet">
+                            <text class="user-card__edit-txt">编辑</text>
+                        </view>
                     </view>
 
                     <view class="user-card__stats">
                         <view class="user-card__stat-item">
                             <text class="user-card__stat-num">{{
-                                profileData.exp || 0
+                                authStore.user?.exp || 0
                             }}</text>
                             <text class="user-card__stat-label">考察经验</text>
                         </view>
@@ -57,6 +66,60 @@
                     </view>
                 </view>
             </md-card>
+
+            <!-- 编辑资料底部弹窗 -->
+            <view class="edit-sheet" :class="{ 'edit-sheet--visible': editSheetVisible }">
+                <view class="edit-sheet__mask" @click="closeEditSheet" />
+                <view class="edit-sheet__panel" @click.stop>
+                    <view class="edit-sheet__head">
+                        <text class="edit-sheet__title">编辑资料</text>
+                        <view class="edit-sheet__close" hover-class="is-hover" @click="closeEditSheet">
+                            <text>✕</text>
+                        </view>
+                    </view>
+
+                    <!-- 头像区 -->
+                    <view class="edit-sheet__avatar-wrap" @click="chooseAvatar">
+                        <image
+                            v-if="editAvatarUrl"
+                            class="edit-sheet__avatar-img"
+                            :src="editAvatarUrl"
+                            mode="aspectFill"
+                        />
+                        <view v-else class="edit-sheet__avatar-placeholder">
+                            <text class="edit-sheet__avatar-char">{{
+                                authorNameInitial(authStore.user?.nickname)
+                            }}</text>
+                        </view>
+                        <view class="edit-sheet__avatar-hint">
+                            <text>更换头像</text>
+                        </view>
+                    </view>
+
+                    <!-- 昵称输入 -->
+                    <view class="edit-sheet__field">
+                        <text class="edit-sheet__label">昵称</text>
+                        <input
+                            class="edit-sheet__input"
+                            :value="editNickname"
+                            placeholder="输入新昵称"
+                            :maxlength="20"
+                            @input="(e: any) => editNickname = e.detail.value"
+                        />
+                    </view>
+
+                    <view class="edit-sheet__actions">
+                        <view
+                            class="edit-sheet__save"
+                            :class="{ 'is-disabled': isSaving }"
+                            hover-class="is-hover"
+                            @click="saveProfile"
+                        >
+                            <text>{{ isSaving ? '保存中...' : '保存' }}</text>
+                        </view>
+                    </view>
+                </view>
+            </view>
 
             <md-card class="growth-card" :padding="false">
                 <view class="growth-card__inner">
@@ -150,18 +213,64 @@ import { ref, computed, onMounted } from "vue";
 import { useCheckinStore } from "@/stores/checkin";
 import { useLocationStore } from "@/stores/location";
 import { useAchievementStore } from "@/stores/achievement";
+import { useAuthStore } from "@/stores/auth";
 import { getCurrentTitle, getTitleByName } from "@/utils/title";
 import { mockTitles } from "@/services/mockData";
+import { api } from "@/services/api";
 
 const checkinStore = useCheckinStore();
 const locationStore = useLocationStore();
 const achievementStore = useAchievementStore();
+const authStore = useAuthStore();
 
-// 模拟或后续从真实Pinia读取的用户核心数据
-const profileData = ref({
-    nickname: "花园探索者",
-    exp: 140, // 经验值
-});
+// 编辑资料底部弹窗状态
+const editSheetVisible = ref(false);
+const editNickname = ref('');
+const editAvatarUrl = ref('');
+const isSaving = ref(false);
+
+const openEditSheet = () => {
+    editNickname.value = authStore.user?.nickname || '';
+    editAvatarUrl.value = authStore.user?.avatar_url || '';
+    editSheetVisible.value = true;
+};
+
+const closeEditSheet = () => {
+    editSheetVisible.value = false;
+};
+
+const chooseAvatar = () => {
+    uni.chooseImage({
+        count: 1,
+        sizeType: ['compressed'],
+        sourceType: ['album', 'camera'],
+        success: async (res) => {
+            const filePath = res.tempFilePaths[0];
+            try {
+                const uploadRes = await api.users.uploadAvatar(filePath);
+                editAvatarUrl.value = uploadRes.data?.url || filePath;
+            } catch {
+                editAvatarUrl.value = filePath;
+            }
+        },
+    });
+};
+
+const saveProfile = async () => {
+    if (isSaving.value) return;
+    isSaving.value = true;
+    try {
+        await authStore.updateProfile({
+            nickname: editNickname.value || undefined,
+            avatar_url: editAvatarUrl.value || undefined,
+        });
+        uni.showToast({ title: '保存成功', icon: 'success', duration: 1500 });
+        closeEditSheet();
+        checkinStore.loadCheckins();
+    } finally {
+        isSaving.value = false;
+    }
+};
 
 // 动态计算成就与进化称号系统
 const unlockedBadgesCount = computed(() => {
@@ -172,10 +281,9 @@ const unlockedBadgesCount = computed(() => {
     return uniqueSpecies.size;
 });
 
-const currentLevel = computed(
-    () => Math.floor(profileData.value.exp / 100) + 1,
-);
-const expPercent = computed(() => profileData.value.exp % 100);
+const exp = computed(() => (authStore.user as any)?.exp ?? 0);
+const currentLevel = computed(() => Math.floor(exp.value / 100) + 1);
+const expPercent = computed(() => exp.value % 100);
 
 // 优先用后端颁发的称号；后端不可用时基于本地不同花种数推算
 const currentTitleInfo = computed(() => {
@@ -189,7 +297,6 @@ const currentTitleInfo = computed(() => {
 });
 
 const myVisiblePosts = computed(() => {
-    // 仅筛选展示当前用户的前3条进行精简预览
     return checkinStore.checkins.slice(0, 3);
 });
 
@@ -467,5 +574,160 @@ onMounted(async () => {
 .empty-holder__text {
     font-size: 12px;
     color: #6e7268;
+}
+
+/* ── 头像图片（自定义头像时替换字符占位） ── */
+.user-card__avatar-img {
+    width: 100%;
+    height: 100%;
+    border-radius: 2px;
+}
+
+/* ── 编辑按钮 ── */
+.user-card__edit-btn {
+    margin-left: auto;
+    padding: 4px 10px;
+    border-radius: $md-shape-full;
+    border: 1px solid #d8d3c5;
+    background: #faf8f5;
+}
+.user-card__edit-txt {
+    font-size: 11px;
+    font-weight: 600;
+    color: #6e7268;
+}
+
+/* ── 编辑资料底部弹窗（与 comment-sheet 同结构） ── */
+.edit-sheet {
+    position: fixed;
+    left: 0; right: 0; top: 0; bottom: 0;
+    z-index: 200;
+    pointer-events: none;
+}
+.edit-sheet--visible {
+    pointer-events: auto;
+}
+.edit-sheet__mask {
+    position: absolute;
+    left: 0; right: 0; top: 0; bottom: 0;
+    background: rgba(0, 0, 0, 0.4);
+    opacity: 0;
+    transition: opacity $md-duration-medium $md-easing-standard;
+}
+.edit-sheet--visible .edit-sheet__mask {
+    opacity: 1;
+}
+.edit-sheet__panel {
+    position: absolute;
+    left: 0; right: 0; bottom: 0;
+    display: flex;
+    flex-direction: column;
+    background: $md-surface;
+    border-radius: $md-shape-lg $md-shape-lg 0 0;
+    padding-bottom: env(safe-area-inset-bottom);
+    transform: translateY(100%);
+    transition: transform $md-duration-medium $md-easing-standard;
+}
+.edit-sheet--visible .edit-sheet__panel {
+    transform: translateY(0);
+}
+.edit-sheet__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: $md-space-4;
+    border-bottom: 1px solid $md-outline-variant;
+}
+.edit-sheet__title {
+    @include md-type('title-medium');
+    color: $md-on-surface;
+}
+.edit-sheet__close {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: $md-shape-full;
+    color: $md-on-surface-variant;
+}
+
+/* 头像区 */
+.edit-sheet__avatar-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: $md-space-2;
+    padding: $md-space-5 0 $md-space-4;
+}
+.edit-sheet__avatar-img {
+    width: 72px;
+    height: 72px;
+    border-radius: 4px;
+    border: 1px solid #bc4749;
+}
+.edit-sheet__avatar-placeholder {
+    width: 72px;
+    height: 72px;
+    border-radius: 4px;
+    border: 1px solid #bc4749;
+    background: #fadad6;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.edit-sheet__avatar-char {
+    font-size: 28px;
+    font-weight: 700;
+    color: #bc4749;
+}
+.edit-sheet__avatar-hint {
+    font-size: 12px;
+    color: #6e7268;
+}
+
+/* 昵称输入区 */
+.edit-sheet__field {
+    padding: $md-space-3 $md-space-4;
+    border-top: 1px solid $md-outline-variant;
+}
+.edit-sheet__label {
+    display: block;
+    font-size: 11px;
+    font-weight: 600;
+    color: $md-on-surface-variant;
+    margin-bottom: $md-space-2;
+    letter-spacing: 0.3px;
+}
+.edit-sheet__input {
+    width: 100%;
+    height: 44px;
+    padding: 0 $md-space-4;
+    background: $md-surface-container;
+    border-radius: $md-shape-sm;
+    @include md-type('body-medium');
+    color: $md-on-surface;
+    box-sizing: border-box;
+}
+
+/* 操作按钮区 */
+.edit-sheet__actions {
+    padding: $md-space-4;
+}
+.edit-sheet__save {
+    height: 44px;
+    border-radius: $md-shape-full;
+    background: $md-primary;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    @include md-type('label-large');
+    color: $md-on-primary;
+}
+.edit-sheet__save.is-disabled {
+    opacity: 0.5;
+}
+.is-hover {
+    opacity: 0.7;
 }
 </style>

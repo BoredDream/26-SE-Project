@@ -189,7 +189,9 @@ const formatTime = (dateString: string) => {
   flex: 1;
   min-height: 0;
   overflow: hidden;
+  overflow-x: hidden;
   padding: $md-space-2 $md-space-4;
+  box-sizing: border-box;
 }
 .comment-sheet__empty {
   text-align: center;
@@ -201,6 +203,8 @@ const formatTime = (dateString: string) => {
   display: flex;
   gap: $md-space-3;
   padding: $md-space-3 0;
+  width: 100%;
+  box-sizing: border-box;
 }
 .comment-item__avatar {
   width: 36px;
@@ -221,13 +225,18 @@ const formatTime = (dateString: string) => {
 .comment-item__name {
   display: block;
   @include md-type('label-large');
-  color: $md-on-surface;
+  color: $md-primary;
+  font-family: "Georgia", "Songti SC", serif;
+  font-weight: 700;
+  letter-spacing: 0.3px;
 }
 .comment-item__text {
   display: block;
   margin: $md-space-1 0;
   @include md-type('body-medium');
-  color: $md-on-surface;
+  color: #4A4C44;
+  font-family: "PingFang SC", "Helvetica Neue", sans-serif;
+  line-height: 1.5;
 }
 .comment-item__time {
   display: block;
@@ -236,6 +245,7 @@ const formatTime = (dateString: string) => {
 }
 .comment-item__delete {
   align-self: flex-start;
+  flex-shrink: 0;
   padding: $md-space-1 $md-space-2;
   @include md-type('body-small');
   color: $md-error;

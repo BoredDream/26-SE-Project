@@ -123,7 +123,7 @@ const goPublish = () => {
 .bab__row {
     display: flex;
     align-items: flex-end;
-    height: 64px;
+    height: 50px;
 }
 
 .bab__tab {
@@ -131,10 +131,10 @@ const goPublish = () => {
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-end;
     height: 100%;
-    gap: 5px;
-    padding-bottom: 6px;
+    gap: 2px;
+    padding-bottom: 4px;
     transition: transform 0.2s ease;
     position: relative;
 }
@@ -144,8 +144,8 @@ const goPublish = () => {
 }
 
 .bab__icon-box {
-    width: 26px;
-    height: 26px;
+    width: 22px;
+    height: 22px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -155,8 +155,8 @@ const goPublish = () => {
     transform: scale(1.08);
 }
 .bab__icon {
-    width: 24px;
-    height: 24px;
+    width: 20px;
+    height: 20px;
 }
 
 /* 激活态短下划线（书签视觉） */
@@ -178,7 +178,7 @@ const goPublish = () => {
 
 .bab__label {
     font-family: "Georgia", "Songti SC", serif;
-    font-size: 10.5px;
+    font-size: 10px;
     color: #6e7268;
     line-height: 1;
     font-weight: 500;
@@ -202,9 +202,9 @@ const goPublish = () => {
 }
 .bab__publish {
     position: absolute;
-    top: -20px;
-    width: 56px;
-    height: 56px;
+    top: -15px;
+    width: 48px;
+    height: 48px;
     border-radius: 50%;
     background: #bc4749;
     display: flex;
@@ -222,17 +222,17 @@ const goPublish = () => {
     transform: scale(0.88) rotate(-8deg);
 }
 .bab__publish-icon {
-    width: 26px;
-    height: 26px;
+    width: 22px;
+    height: 22px;
 }
 
 .bab__publish-halo {
     position: absolute;
-    top: -22px;
+    top: -17px;
     left: 50%;
     transform: translateX(-50%);
-    width: 60px;
-    height: 60px;
+    width: 52px;
+    height: 52px;
     border-radius: 50%;
     background: rgba(188, 71, 73, 0.18);
     z-index: 1;
@@ -245,12 +245,14 @@ const goPublish = () => {
 }
 
 .bab__publish-label {
+    position: relative;
     font-family: "Georgia", "Songti SC", serif;
-    font-size: 10.5px;
+    font-size: 10px;
+    line-height: 1;
     color: #bc4749;
-    margin-bottom: 6px;
+    margin-bottom: 4px;
     font-weight: 600;
     letter-spacing: 0.3px;
-    z-index: 2;
+    z-index: 3;
 }
 </style>

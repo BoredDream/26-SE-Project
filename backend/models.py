@@ -96,7 +96,9 @@ class Like(db.Model):
 class Achievement(db.Model):
     __tablename__ = 'achievements'
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    name = db.Column(db.String(64), nullable=True)
     description = db.Column(db.Text, nullable=False)
+    requirement = db.Column(db.Integer, nullable=False, default=0)
 
 class Title(db.Model):
     __tablename__ = 'titles'

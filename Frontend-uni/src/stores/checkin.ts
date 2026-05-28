@@ -47,6 +47,17 @@ export const useCheckinStore = defineStore('checkin', () => {
         bloom_report: data.bloom_report,
       })
       checkins.value.unshift(response.data)
+      const res = response.data as any
+      const newTitles: any[] = res.newly_granted_titles || []
+      const newAchievements: any[] = res.newly_granted_achievements || []
+      for (const t of newTitles) {
+        uni.showToast({ title: `🎖️ 解锁称号：${t.name}`, icon: 'none', duration: 2500 })
+        await new Promise(r => setTimeout(r, 500))
+      }
+      for (const a of newAchievements) {
+        uni.showToast({ title: `🏅 解锁成就：${a.name || a.description}`, icon: 'none', duration: 2500 })
+        await new Promise(r => setTimeout(r, 500))
+      }
       return response.data
     } catch (err) {
       checkins.value.unshift(payload)

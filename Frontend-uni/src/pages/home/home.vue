@@ -3,6 +3,7 @@
         <md-app-bar title="狮山草木札" />
 
         <view class="home__body">
+            <!-- ── ① 顶部区块：精选寻芳图卷（宽幅科学精装书相框轮播） ── -->
             <view class="gallery-block">
                 <view class="gallery-block__inner">
                     <swiper
@@ -39,6 +40,7 @@
                 </view>
             </view>
 
+            <!-- ── ② 中间区块：花期物候预测（重塑为圆形星环物候横列） ── -->
             <view class="section">
                 <view class="section__header">
                     <view class="section__line"></view>
@@ -46,97 +48,56 @@
                     <view class="section__line"></view>
                 </view>
 
-                <view class="prediction-grid">
-                    <view
-                        v-if="predictList.bloom"
-                        class="pred-card pred-card--large"
-                        hover-class="pred-card--hover"
-                        @click="openMap(predictList.bloom)"
-                    >
-                        <image
-                            class="pred-card__img"
-                            :src="predictList.bloom.cover_image"
-                            mode="aspectFill"
-                        />
-                        <view class="pred-card__badge pred-card__badge--bloom"
-                            >繁花正盛</view
-                        >
-                        <view class="pred-card__mask">
-                            <text class="pred-card__species">{{
-                                predictList.bloom.flower_species
-                            }}</text>
-                            <text class="pred-card__loc"
-                                >📍 {{ predictList.bloom.name }}</text
-                            >
-                            <view class="pred-card__countdown">
-                                <text class="pred-card__countdown-txt"
-                                    >最佳观赏期倒计时</text
-                                >
-                                <view class="pred-card__progress-bar"
-                                    ><view
-                                        class="pred-card__progress-fill"
-                                        style="width: 75%"
-                                    ></view
-                                ></view>
-                            </view>
-                        </view>
-                    </view>
-
-                    <view class="prediction-grid__right">
+                <!-- 橫向滚动的物候印章星环流 -->
+                <scroll-view
+                    class="predict-scroll"
+                    scroll-x
+                    show-scrollbar="false"
+                >
+                    <view class="predict-list">
                         <view
-                            v-if="predictList.bud"
-                            class="pred-card pred-card--small"
-                            hover-class="pred-card--hover"
-                            @click="openMap(predictList.bud)"
+                            v-for="item in sortedPredictionList"
+                            :key="item.id"
+                            class="predict-item"
+                            hover-class="predict-item--hover"
+                            @click="openMap(item)"
                         >
-                            <image
-                                class="pred-card__img"
-                                :src="predictList.bud.cover_image"
-                                mode="aspectFill"
-                            />
-                            <view class="pred-card__badge pred-card__badge--bud"
-                                >预计{{
-                                    predictList.bud.days || 3
-                                }}天后绽萼</view
-                            >
-                            <view class="pred-card__mask-small">
-                                <text class="pred-card__species-sm">{{
-                                    predictList.bud.flower_species
-                                }}</text>
-                                <text class="pred-card__loc-sm">{{
-                                    predictList.bud.name
-                                }}</text>
-                            </view>
-                        </view>
-
-                        <view
-                            v-if="predictList.wither"
-                            class="pred-card pred-card--small"
-                            hover-class="pred-card--hover"
-                            @click="openMap(predictList.wither)"
-                        >
-                            <image
-                                class="pred-card__img"
-                                :src="predictList.wither.cover_image"
-                                mode="aspectFill"
-                            />
+                            <!-- 进度环容器 (使用 WXSS 完美支持的 conic-gradient 动态计算角度) -->
                             <view
-                                class="pred-card__badge pred-card__badge--wither"
-                                >惜花提示 · 韶华将尽</view
+                                class="predict-ring-container"
+                                :style="{
+                                    background: `conic-gradient(${getProgressColor(item.bloom_status)} ${getProgressValue(item.bloom_status) * 360}deg, #E8E2D3 0deg)`,
+                                }"
                             >
-                            <view class="pred-card__mask-small">
-                                <text class="pred-card__species-sm">{{
-                                    predictList.wither.flower_species
-                                }}</text>
-                                <text class="pred-card__loc-sm">{{
-                                    predictList.wither.name
-                                }}</text>
+                                <!-- 空心遮罩层，其底色与卡片背景 #FAF8F5 保持一致 -->
+                                <view class="predict-ring-inner">
+                                    <!-- 中心花卉高颜值微缩图 -->
+                                    <image
+                                        class="predict-avatar"
+                                        :src="item.cover_image"
+                                        mode="aspectFill"
+                                    />
+                                </view>
                             </view>
+
+                            <!-- 下属两行清爽小字 -->
+                            <text class="predict-name">{{
+                                item.flower_species
+                            }}</text>
+                            <text
+                                class="predict-status-txt"
+                                :style="{
+                                    color: getProgressColor(item.bloom_status),
+                                }"
+                            >
+                                {{ getStatusText(item.bloom_status) }}
+                            </text>
                         </view>
                     </view>
-                </view>
+                </scroll-view>
             </view>
 
+            <!-- ── ③ 底部区块：考察采风手札流 ── -->
             <view class="section">
                 <view class="posts__head">
                     <view class="posts__head-left">
@@ -183,23 +144,24 @@
                                         <view
                                             class="post__title-tag"
                                             :style="{
-                                                background: postTitle(post.user?.current_title).bg,
-                                                borderColor: postTitle(post.user?.current_title).border,
-                                                color: postTitle(post.user?.current_title).color,
+                                                background: postTitle(
+                                                    post.user?.current_title,
+                                                ).bg,
+                                                borderColor: postTitle(
+                                                    post.user?.current_title,
+                                                ).border,
+                                                color: postTitle(
+                                                    post.user?.current_title,
+                                                ).color,
                                             }"
                                         >
                                             <text class="post__title-tag-txt">{{
-                                                postTitle(post.user?.current_title).label
+                                                postTitle(
+                                                    post.user?.current_title,
+                                                ).label
                                             }}</text>
                                         </view>
                                     </view>
-                                    <text class="post__time"
-                                        >于
-                                        {{
-                                            formatTime(post.created_at)
-                                        }}
-                                        编纂</text
-                                    >
                                 </view>
                             </view>
 
@@ -241,6 +203,7 @@
                             </view>
 
                             <view class="post__footer">
+                                <text class="post__time">{{ formatTime(post.created_at) }}</text>
                                 <view class="post__tag" @click="openMap(post)">
                                     <image
                                         class="post__tag-svg"
@@ -353,39 +316,68 @@ const showBackToTop = ref(false);
 const commentSheetVisible = ref(false);
 const activeCommentCheckinId = ref(0);
 
-// ① 顶部轮播精选图卷数据（带摄影者姓名）
+// ① 顶部轮播精选图卷数据（优化为宽幅相框，长宽比大约在16:10左右）
 const galleryPhotos = [
     { url: "/static/carousel/1.png", author: "林间观察员" },
     { url: "/static/carousel/2.jpg", author: "樱花径学长" },
     { url: "/static/carousel/3.jpg", author: "拾遗少女" },
 ];
 
-// ② 中间物候预测数据清洗分类（分别摘取盛开、含苞、凋零各1条，喂给Bento Box）
-const predictList = computed(() => {
-    const locs = locationStore.locations;
-    return {
-        bloom:
-            locs.find(
-                (l) =>
-                    l.bloom_status?.includes("盛开") ||
-                    l.bloom_status?.includes("正盛"),
-            ) || locs[0],
-        bud:
-            locs.find(
-                (l) =>
-                    l.bloom_status?.includes("含苞") ||
-                    l.bloom_status?.includes("绽萼") ||
-                    l.bloom_status?.includes("预计"),
-            ) || locs[1],
-        wither:
-            locs.find(
-                (l) =>
-                    l.bloom_status?.includes("凋") ||
-                    l.bloom_status?.includes("落") ||
-                    l.bloom_status?.includes("韶华") ||
-                    l.bloom_status?.includes("休眠"),
-            ) || locs[2],
-    };
+// 🎨 辅助函数：根据状态动态换算外围进度圈百分比
+const getProgressValue = (status?: string) => {
+    if (!status) return 0.15;
+    const s = status.toLowerCase();
+    if (s.includes("盛开") || s.includes("正盛") || s.includes("繁花"))
+        return 1.0; // 满弧
+    if (s.includes("绽萼") || s.includes("绽放")) return 0.85;
+    if (s.includes("含苞")) return 0.6;
+    if (s.includes("预计") || s.includes("天后")) {
+        const match = status.match(/\d+/);
+        if (match) {
+            const days = parseInt(match[0]);
+            // 距离盛开时间越短，光圈进度越饱满
+            return Math.max(0.3, Math.min(0.9, 1 - days / 10));
+        }
+    }
+    if (s.includes("凋") || s.includes("落") || s.includes("休眠")) return 0.15;
+    return 0.5;
+};
+
+// 🎨 辅助函数：为不同进度圆环派发生命周期演色
+const getProgressColor = (status?: string) => {
+    if (!status) return "#6E7268"; // 默认标本灰
+    const s = status.toLowerCase();
+    if (s.includes("盛开") || s.includes("正盛") || s.includes("繁花"))
+        return "#3A5A40"; // 标本深绿
+    if (s.includes("含苞") || s.includes("绽") || s.includes("预计"))
+        return "#BC4749"; // 花苞玫红
+    if (s.includes("凋") || s.includes("落") || s.includes("休眠"))
+        return "#A3704C"; // 胡桃枯褐
+    return "#6E7268";
+};
+
+// 🎨 辅助函数：格式化输出極简的两行文字注释底栏
+const getStatusText = (status?: string) => {
+    if (!status) return "考察中";
+    const s = status.toLowerCase();
+    if (s.includes("盛开") || s.includes("正盛")) return "繁花正盛";
+    if (s.includes("含苞")) return "含苞待放";
+    if (s.includes("凋") || s.includes("落")) return "落红委地";
+    if (s.includes("预计") || s.includes("天")) {
+        const match = status.match(/\d+/);
+        return match ? `距盛开 ${match[0]} 天` : status;
+    }
+    return status;
+};
+
+// ② 关键排序逻辑：根据花朵当前开放进度（离盛开越近，排得越靠前）进行横向降序排序
+const sortedPredictionList = computed(() => {
+    const list = [...locationStore.locations];
+    return list.sort((a, b) => {
+        const progressA = getProgressValue(a.bloom_status);
+        const progressB = getProgressValue(b.bloom_status);
+        return progressB - progressA; // 降序：100% ➔ 80% ➔ 10%
+    });
 });
 
 // ③ 帖子流逻辑保持不变
@@ -411,8 +403,6 @@ const visiblePosts = computed(() =>
 const canLoadMore = computed(
     () => visibleCount.value < sortedPosts.value.length,
 );
-
-const formatStatus = (status?: string) => status || "考察中";
 
 const locationSpecies = (locationId?: number) => {
     const item = locationStore.locations.find((l) => l.id === locationId);
@@ -501,10 +491,10 @@ onMounted(async () => {
     background: $md-background;
 }
 .home__body {
-    padding: $md-space-4 $md-space-4 100px;
+    padding: $md-space-4 $md-space-4 88px;
 }
 
-/* ── ① 顶部精选图卷轮播（科学精装书相框视觉） ── */
+/* ── ① 顶部精选图卷轮播（微调为 16:10 左右的宽幅横幅，与下方圆环拉开反差） ── */
 .gallery-block {
     background: #faf8f5;
     border: 1px solid #8b867a;
@@ -519,7 +509,7 @@ onMounted(async () => {
     overflow: hidden;
 }
 .gallery-swiper {
-    height: 210px; /* 略微拉高，突出美图视觉 */
+    height: 160px; /* 略微收窄高度，形成宽幅横长画幅 */
 }
 .gallery-card {
     position: relative;
@@ -534,7 +524,7 @@ onMounted(async () => {
     position: absolute;
     bottom: 12px;
     left: 12px;
-    background: rgba(42, 44, 36, 0.75); /* 宣纸质感黑遮罩 */
+    background: rgba(42, 44, 36, 0.75);
     backdrop-filter: blur(2px);
     padding: 4px 10px;
     border-radius: $md-shape-sm;
@@ -547,7 +537,7 @@ onMounted(async () => {
     letter-spacing: 0.5px;
 }
 
-/* ── 区块标题线 ── */
+/* ── 区块标题 ── */
 .section {
     margin-bottom: $md-space-5;
 }
@@ -575,142 +565,80 @@ onMounted(async () => {
     font-weight: 700;
 }
 
-/* ── ② 中间物候预测：Bento Box 网格重构 ── */
-.prediction-grid {
-    display: flex;
-    gap: $md-space-3;
-    height: 170px; /* 固定整体大网格高度，实现完美对齐 */
-}
-.prediction-grid__right {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    gap: $md-space-3;
-}
-
-/* 便当盒卡片基底 */
-.pred-card {
-    position: relative;
-    background: #faf8f5;
-    border: 1px solid #d8d3c5;
-    border-radius: 4px; /* 采用标本夹微方圆角 */
-    overflow: hidden;
-    box-shadow: 0 2px 6px rgba(58, 42, 32, 0.03);
-    transition: transform 0.2s $md-easing-standard;
-
-    &--large {
-        flex: 1.1;
-    }
-    &--small {
-        flex: 1;
-    }
-}
-.pred-card--hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(58, 42, 32, 0.08);
-}
-.pred-card__img {
+/* ── ② 中间物候预测：重塑为极致清爽的横向进度星环流（CSS3 锥形渐变实现） ── */
+.predict-scroll {
     width: 100%;
-    height: 100%;
+    white-space: nowrap;
+    padding: $md-space-1 0;
 }
-
-/* 状态徽章标签 */
-.pred-card__badge {
-    position: absolute;
-    top: 8px;
-    left: 8px;
-    font-size: 9px;
-    font-weight: 700;
-    padding: 1px 5px;
-    border-radius: 2px;
-    color: #faf8f5;
-    z-index: 2;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-
-    &--bloom {
-        background: $md-primary;
-    }
-    &--bud {
-        background: $md-tertiary;
-    }
-    &--wither {
-        background: $md-secondary;
-    }
+.predict-list {
+    display: inline-flex;
+    gap: $md-space-4; /* 拉开间距 */
+    padding: 4px $md-space-4;
 }
-
-/* 大格子暗字面（信息沉浸） */
-.pred-card__mask {
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(
-        to top,
-        rgba(42, 44, 36, 0.85) 0%,
-        rgba(0, 0, 0, 0) 70%
-    );
-    display: flex;
+.predict-item {
+    display: inline-flex;
     flex-direction: column;
-    justify-content: flex-end;
-    padding: $md-space-3;
-    color: #faf8f5;
-}
-.pred-card__species {
-    font-size: 16px;
-    font-weight: 700;
-    line-height: 1.2;
-}
-.pred-card__loc {
-    font-size: 10px;
-    opacity: 0.85;
-    margin-top: 2px;
-}
-/* 物候沙漏进度 */
-.pred-card__countdown {
-    margin-top: 6px;
-    display: flex;
-    flex-direction: column;
-    gap: 3px;
-}
-.pred-card__countdown-txt {
-    font-size: 8px;
-    opacity: 0.65;
-}
-.pred-card__progress-bar {
-    height: 3px;
-    background: rgba(255, 255, 255, 0.2);
-    border-radius: $md-shape-full;
-    overflow: hidden;
-}
-.pred-card__progress-fill {
-    height: 100%;
-    background: #faf8f5;
-}
-
-/* 小格子底部遮罩纸（优雅留白） */
-.pred-card__mask-small {
-    position: absolute;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(250, 248, 245, 0.9); /* 象牙白半透纸张，承托小字 */
-    border-top: 1px solid #d8d3c5;
-    padding: 4px 8px;
-    display: flex;
-    justify-content: space-between;
     align-items: center;
+    width: 64px;
+    transition: opacity 0.2s;
 }
-.pred-card__species-sm {
+.predict-item--hover {
+    opacity: 0.75;
+}
+
+/* 进度环容器：使用 conic-gradient 绘制超细进度色圈（约 1.5px stroke） */
+.predict-ring-container {
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 6px rgba(58, 42, 32, 0.04);
+}
+
+/* 内缩空心遮罩：仅留 ~1.5px 可见环线 */
+.predict-ring-inner {
+    width: 49px;
+    height: 49px;
+    border-radius: 50%;
+    background: #faf8f5;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* 核心花卉头像（占据圆盘大部分面积） */
+.predict-avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: #efece4;
+}
+
+/* 两行极简注释样式 */
+.predict-name {
     font-size: 12px;
     font-weight: 700;
     color: $md-on-surface;
+    margin-top: 6px;
+    line-height: 1.2;
+    width: 100%;
+    text-align: center;
+    @include md-ellipsis(1);
 }
-.pred-card__loc-sm {
-    font-size: 9px;
-    color: #6e7268;
-    max-width: 55%;
+.predict-status-txt {
+    font-size: 10px;
+    font-weight: 600;
+    margin-top: 2px;
+    line-height: 1.1;
+    width: 100%;
+    text-align: center;
     @include md-ellipsis(1);
 }
 
-/* ── ③ 底部采风手札流（线装书纸张质感） ── */
+/* ── ③ 底部采风手札流 ── */
 .posts__head {
     display: flex;
     align-items: center;
@@ -780,7 +708,8 @@ onMounted(async () => {
 .post__time {
     font-size: 11px;
     color: #6e7268;
-    margin-top: 1px;
+    flex-shrink: 0;
+    white-space: nowrap;
 }
 .post__name-row {
     display: flex;
@@ -870,9 +799,12 @@ onMounted(async () => {
 .post__footer {
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    gap: $md-space-3;
     border-top: 1px dashed #efece4;
     padding-top: $md-space-3;
+}
+.post__footer .post__tag {
+    flex: 1;
 }
 .post__tag {
     display: inline-flex;
@@ -913,10 +845,18 @@ onMounted(async () => {
     animation: like-pop 0.35s ease-out;
 }
 @keyframes like-pop {
-    0%   { transform: scale(1); }
-    40%  { transform: scale(1.55); }
-    70%  { transform: scale(0.88); }
-    100% { transform: scale(1); }
+    0% {
+        transform: scale(1);
+    }
+    40% {
+        transform: scale(1.55);
+    }
+    70% {
+        transform: scale(0.88);
+    }
+    100% {
+        transform: scale(1);
+    }
 }
 .post__action-btn--hover {
     opacity: 0.65;

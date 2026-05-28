@@ -3,6 +3,7 @@ import { ref, computed } from 'vue'
 import type { User } from '@/services/api'
 import { api } from '@/services/api'
 import { getToken, setToken, clearToken } from '@/services/storage'
+import { useCheckinStore } from '@/stores/checkin'
 
 export const useAuthStore = defineStore('auth', () => {
   const user = ref<User | null>(null)
@@ -50,6 +51,29 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  const updateProfile = async (data: { nickname?: string; avatar_url?: string }) => {
+    try {
+      await api.users.updateProfile(data)
+    } catch {
+      // backend unreachable — apply locally so UI stays consistent
+    }
+    if (user.value) {
+      if (data.nickname) user.value = { ...user.value, nickname: data.nickname }
+      if (data.avatar_url !== undefined) user.value = { ...user.value, avatar_url: data.avatar_url }
+    }
+    // Optimistically sync the user's nickname/avatar onto any cached checkin author snapshots
+    const checkinStore = useCheckinStore()
+    const uid = user.value?.id
+    if (uid != null) {
+      checkinStore.checkins.forEach((c: any) => {
+        if (c.user_id === uid && c.user) {
+          if (data.nickname) c.user.nickname = data.nickname
+          if (data.avatar_url !== undefined) c.user.avatar_url = data.avatar_url
+        }
+      })
+    }
+  }
+
   const logout = () => {
     user.value = null
     token.value = null
@@ -85,5 +109,6 @@ export const useAuthStore = defineStore('auth', () => {
     register,
     logout,
     loadUser,
+    updateProfile,
   }
 })

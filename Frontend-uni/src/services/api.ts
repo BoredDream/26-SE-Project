@@ -232,6 +232,10 @@ export const api = {
   users: {
     getById: (id: number) => apiClient.get<User>(`/v1/users/${id}`),
     getCurrent: () => apiClient.get<User>('/v1/users/me'),
+    updateProfile: (data: { nickname?: string; avatar_url?: string }) =>
+      apiClient.put<User>('/v1/users/me', data),
+    uploadAvatar: (filePath: string) =>
+      apiClient.uploadFile('/v1/uploads', filePath),
   },
 
   locations: {

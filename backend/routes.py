@@ -7,6 +7,7 @@ from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identi
 from werkzeug.utils import secure_filename
 from datetime import datetime
 from services.title_service import check_and_grant_titles, get_current_title
+from services.achievement_service import check_and_grant_achievements
 from services.notification_service import notify_subscribers_on_bloom_change
 
 # 通用响应包装
@@ -407,7 +408,9 @@ class CheckinList(Resource):
         db.session.add(checkin)
         db.session.commit()
 
-        newly_granted = check_and_grant_titles(User.query.get(user_id))
+        user = User.query.get(user_id)
+        newly_granted_titles = check_and_grant_titles(user)
+        newly_granted_achievements = check_and_grant_achievements(user)
 
         return success({
             'id': checkin.id,
@@ -421,7 +424,11 @@ class CheckinList(Resource):
             'comments_count': 0,
             'liked': False,
             'created_at': checkin.created_at.isoformat(),
-            'newly_granted_titles': [_serialize_title(t) for t in newly_granted],
+            'newly_granted_titles': [_serialize_title(t) for t in newly_granted_titles],
+            'newly_granted_achievements': [
+                {'id': a.id, 'name': a.name, 'description': a.description}
+                for a in newly_granted_achievements
+            ],
         }, 'Checkin created successfully', 201)
 
     @jwt_required(optional=True)
