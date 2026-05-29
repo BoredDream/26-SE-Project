@@ -110,5 +110,6 @@ export async function walkingRoute(
   for (let i = 0; i < raw.length; i += 2) {
     points.push({ latitude: raw[i], longitude: raw[i + 1] })
   }
-  return { points, distance: route.distance, duration: route.duration }
+  // 腾讯地图 duration 单位是分钟，转为秒以符合本接口契约
+  return { points, distance: route.distance, duration: route.duration * 60 }
 }

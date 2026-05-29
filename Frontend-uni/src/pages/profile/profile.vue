@@ -392,18 +392,18 @@ onMounted(async () => {
 }
 /* 称号配饰：彩色等级标签 */
 .user-card__badge-label {
-    display: inline-block;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     border: 1px solid;
     padding: 0 10px;
     border-radius: $md-shape-full;
     height: 20px;
-    line-height: 20px;
-    text-align: center;
+    flex-shrink: 0;
 }
 .user-card__badge-text {
     font-size: 11px;
     font-weight: 700;
-    vertical-align: middle;
 }
 /* 修正点：博古架栅格编排 */
 .user-card__stats {

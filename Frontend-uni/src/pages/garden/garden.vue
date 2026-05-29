@@ -6,7 +6,7 @@
             <view class="hero">
                 <view class="hero__inner-border">
                     <view class="hero__content">
-                        <text class="hero__title">狮山草木志</text>
+                        <text class="hero__title">花飞花</text>
                         <text class="hero__sub"
                             >格物穷理 · 用手札封存每一次花开的律动</text
                         >
@@ -168,18 +168,18 @@ const checkinStore = useCheckinStore();
 // species 用于匹配 location.flower_species；image 是实际图片路径
 // 顺序：9 种校园实际花卉在前 + 3 种占位
 const FLOWER_LIST: { species: string; image: string }[] = [
-    { species: "樱花",     image: "/static/flowers/樱花.png" },
-    { species: "蔷薇",     image: "/static/flowers/蔷薇花.png" },
-    { species: "夹竹桃",   image: "/static/flowers/夹竹桃.png" },
-    { species: "油菜花",   image: "/static/flowers/油菜花.png" },
-    { species: "莲花",     image: "/static/flowers/桃花.png" },
-    { species: "梨花",     image: "/static/flowers/梨花.png" },
-    { species: "玉兰",     image: "/static/flowers/玉兰花.png" },
+    { species: "樱花", image: "/static/flowers/樱花.png" },
+    { species: "蔷薇", image: "/static/flowers/蔷薇花.png" },
+    { species: "夹竹桃", image: "/static/flowers/夹竹桃.png" },
+    { species: "油菜花", image: "/static/flowers/油菜花.png" },
+    { species: "莲花", image: "/static/flowers/桃花.png" },
+    { species: "梨花", image: "/static/flowers/梨花.png" },
+    { species: "玉兰", image: "/static/flowers/玉兰花.png" },
     { species: "大金鸡菊", image: "/static/flowers/大金鸡菊.png" },
-    { species: "格桑花",   image: "/static/flowers/格桑花.png" },
-    { species: "桃花",     image: "/static/flowers/桃花.png" },
-    { species: "紫藤",     image: "/static/flowers/紫藤花.png" },
-    { species: "杜鹃",     image: "/static/flowers/杜鹃花.png" },
+    { species: "格桑花", image: "/static/flowers/格桑花.png" },
+    { species: "桃花", image: "/static/flowers/桃花.png" },
+    { species: "紫藤", image: "/static/flowers/紫藤花.png" },
+    { species: "杜鹃", image: "/static/flowers/杜鹃花.png" },
 ];
 
 interface FlowerEntry {
@@ -201,7 +201,9 @@ const flowerCollection = computed<FlowerEntry[]>(() => {
         // 最早一次打卡的时间戳（升序），用作排序键
         const firstUnlockTs = relatedCheckins.length
             ? Math.min(
-                  ...relatedCheckins.map((c) => new Date(c.created_at).getTime()),
+                  ...relatedCheckins.map((c) =>
+                      new Date(c.created_at).getTime(),
+                  ),
               )
             : Number.POSITIVE_INFINITY;
         return {

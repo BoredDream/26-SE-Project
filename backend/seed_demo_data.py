@@ -30,17 +30,17 @@ SEED_TITLES = [
     {'name': '满园春色', 'requirement': 9, 'description': '阅尽狮山九种花，俯仰皆春'},
 ]
 
-# species → 图片路径（处理 species 名与图片文件名带"花"后缀的差异）
+# species → 图片路径（繁花将至板块头像优先用 /static/headphoto 高清方图，缺图的沿用 /static/flowers）
 SPECIES_TO_IMAGE = {
-    '樱花':     '/static/flowers/樱花.png',
-    '蔷薇':     '/static/flowers/蔷薇花.png',
-    '夹竹桃':   '/static/flowers/夹竹桃.png',
-    '油菜花':   '/static/flowers/油菜花.png',
-    '莲花':     '/static/flowers/桃花.png',  # static 目录暂无莲花图，沿用 mockData 的折中
-    '梨花':     '/static/flowers/梨花.png',
-    '玉兰':     '/static/flowers/玉兰花.png',
-    '大金鸡菊': '/static/flowers/大金鸡菊.png',
-    '格桑花':   '/static/flowers/格桑花.png',
+    '樱花':     '/static/headphoto/樱花.png',
+    '蔷薇':     '/static/headphoto/蔷薇.png',
+    '夹竹桃':   '/static/headphoto/夹竹桃.png',
+    '油菜花':   '/static/headphoto/油菜花.png',
+    '莲花':     '/static/headphoto/桃花.png',  # 暂无莲花图，沿用 mockData 的桃花折中
+    '梨花':     '/static/headphoto/梨花.png',
+    '玉兰':     '/static/flowers/玉兰花.png',   # headphoto 未提供，保留原图
+    '大金鸡菊': '/static/headphoto/大金鸡菊.png',
+    '格桑花':   '/static/flowers/格桑花.png',   # headphoto 未提供，保留原图
 }
 
 # 与 Frontend-uni/src/services/mockData.ts 的 mockLocations 完全对齐（id、坐标已转为 GCJ-02）

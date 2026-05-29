@@ -44,16 +44,7 @@
               <md-button variant="text" @click="viewCheckin(post.id)">查看</md-button>
             </view>
             <text class="post__text">{{ post.content }}</text>
-            <view v-if="post.images?.length" class="post__images">
-              <view
-                v-for="(image, idx) in post.images"
-                :key="idx"
-                class="post__image"
-                :style="getImageStyle(post.images.length, idx)"
-              >
-                <image :src="image" mode="aspectFill" />
-              </view>
-            </view>
+            <post-images v-if="post.images?.length" :images="post.images" />
             <view class="post__info">
               <text>花种 · {{ locationSpecies(post.location_id) }}</text>
               <text>点赞 {{ post.likes_count }}</text>
@@ -114,13 +105,6 @@ const formatTime = (dateString: string) => {
 
 const locationSpecies = (locationId?: number) =>
   locationStore.locations.find(item => item.id === locationId)?.flower_species || '未知'
-
-const getImageStyle = (count: number, index: number) => {
-  if (count === 1) return { gridColumn: 'span 2', height: '220px' }
-  if (count === 2) return { height: '140px' }
-  if (count === 3) return index === 0 ? { gridRow: 'span 2', height: '100%' } : { height: '100px' }
-  return { height: '112px' }
-}
 
 const viewCheckin = (id: number) => {
   const item = checkinStore.checkins.find(post => post.id === id)
@@ -192,18 +176,18 @@ onMounted(async () => {
   color: $md-on-surface;
 }
 .profile-card__title-badge {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   border: 1px solid;
   padding: 0 10px;
   border-radius: $md-shape-full;
   height: 20px;
-  line-height: 20px;
-  text-align: center;
+  flex-shrink: 0;
 }
 .profile-card__title-text {
   font-size: 11px;
   font-weight: 700;
-  vertical-align: middle;
 }
 .profile-card__summary {
   display: block;
@@ -262,21 +246,6 @@ onMounted(async () => {
   margin-bottom: $md-space-3;
   @include md-type('body-medium');
   color: $md-on-surface-variant;
-}
-.post__images {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: $md-space-2;
-  margin-bottom: $md-space-3;
-}
-.post__image {
-  border-radius: $md-shape-md;
-  overflow: hidden;
-  min-height: 100px;
-}
-.post__image image {
-  width: 100%;
-  height: 100%;
 }
 .post__info {
   display: flex;

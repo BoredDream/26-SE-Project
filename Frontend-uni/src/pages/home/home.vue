@@ -1,6 +1,6 @@
 <template>
     <view class="home">
-        <md-app-bar title="狮山草木札" />
+        <md-app-bar title="狮山花园" />
 
         <view class="home__body">
             <!-- ── ① 顶部区块：精选寻芳图卷（宽幅科学精装书相框轮播） ── -->
@@ -44,7 +44,7 @@
             <view class="section">
                 <view class="section__header">
                     <view class="section__line"></view>
-                    <text class="section__title">花期物候预测</text>
+                    <text class="section__title">繁花将至</text>
                     <view class="section__line"></view>
                 </view>
 
@@ -65,8 +65,13 @@
                             <!-- 进度环容器 (使用 WXSS 完美支持的 conic-gradient 动态计算角度) -->
                             <view
                                 class="predict-ring-container"
+                                :class="{
+                                    'predict-ring-container--glow': isSoon(
+                                        item.bloom_status,
+                                    ),
+                                }"
                                 :style="{
-                                    background: `conic-gradient(${getProgressColor(item.bloom_status)} ${getProgressValue(item.bloom_status) * 360}deg, #E8E2D3 0deg)`,
+                                    background: `conic-gradient(${getProgressColor(item.bloom_status)} ${getProgressValue(item.bloom_status) * 360}deg, #ECE7DB 0deg)`,
                                 }"
                             >
                                 <!-- 空心遮罩层，其底色与卡片背景 #FAF8F5 保持一致 -->
@@ -80,17 +85,23 @@
                                 </view>
                             </view>
 
-                            <!-- 下属两行清爽小字 -->
+                            <!-- 下属注释：花名 + 物候短语 + 预计天数小药丸 -->
                             <text class="predict-name">{{
                                 item.flower_species
                             }}</text>
                             <text
-                                class="predict-status-txt"
+                                class="predict-phase"
                                 :style="{
                                     color: getProgressColor(item.bloom_status),
                                 }"
                             >
                                 {{ getStatusText(item.bloom_status) }}
+                            </text>
+                            <text
+                                v-if="predictDays(item.bloom_status)"
+                                class="predict-eta-pill"
+                            >
+                                {{ predictDays(item.bloom_status) }}天
                             </text>
                         </view>
                     </view>
@@ -102,7 +113,7 @@
                 <view class="posts__head">
                     <view class="posts__head-left">
                         <view class="section__line-short"></view>
-                        <text class="section__title">校园采风手札流</text>
+                        <text class="section__title">同学の语</text>
                     </view>
                     <view class="posts__sort">
                         <md-chip
@@ -169,41 +180,15 @@
                                 post.content
                             }}</text>
 
-                            <view
+                            <post-images
                                 v-if="post.images?.length"
-                                :class="[
-                                    'post__images',
-                                    getImageGridClass(post.images.length),
-                                ]"
-                            >
-                                <view
-                                    v-for="(img, idx) in post.images"
-                                    :key="idx"
-                                    class="post__image"
-                                    hover-class="post__image--hover"
-                                    @click.stop="
-                                        previewImages(post.images, idx)
-                                    "
-                                >
-                                    <image :src="img" mode="aspectFill" />
-                                    <view
-                                        v-if="
-                                            post.images.length > 9 && idx === 8
-                                        "
-                                        class="post__image-more"
-                                    >
-                                        <text
-                                            >+{{
-                                                post.images.length - 9
-                                            }}
-                                            卷</text
-                                        >
-                                    </view>
-                                </view>
-                            </view>
+                                :images="post.images"
+                            />
 
                             <view class="post__footer">
-                                <text class="post__time">{{ formatTime(post.created_at) }}</text>
+                                <text class="post__time">{{
+                                    formatTime(post.created_at)
+                                }}</text>
                                 <view class="post__tag" @click="openMap(post)">
                                     <image
                                         class="post__tag-svg"
@@ -356,19 +341,48 @@ const getProgressColor = (status?: string) => {
     return "#6E7268";
 };
 
-// 🎨 辅助函数：格式化输出極简的两行文字注释底栏
+// 🎨 辅助函数：物候短语（天数另由药丸展示）
 const getStatusText = (status?: string) => {
     if (!status) return "考察中";
-    const s = status.toLowerCase();
-    if (s.includes("盛开") || s.includes("正盛")) return "繁花正盛";
-    if (s.includes("含苞")) return "含苞待放";
-    if (s.includes("凋") || s.includes("落")) return "落红委地";
-    if (s.includes("预计") || s.includes("天")) {
-        const match = status.match(/\d+/);
-        return match ? `距盛开 ${match[0]} 天` : status;
-    }
+    if (
+        status.includes("盛开") ||
+        status.includes("正盛") ||
+        status.includes("繁花")
+    )
+        return "繁花正盛";
+    if (
+        status.includes("凋") ||
+        status.includes("落") ||
+        status.includes("惜花") ||
+        status.includes("韶华")
+    )
+        return "花期已过";
+    if (status.includes("休眠")) return "静待花期";
+    if (
+        status.includes("含苞") ||
+        status.includes("绽") ||
+        status.includes("预计") ||
+        status.includes("天")
+    )
+        return "含苞待放";
     return status;
 };
+
+// 距盛开天数（仅"预计 X 天后…"类有值）
+const predictDays = (status?: string) => {
+    if (status && /预计|天后|天/.test(status)) {
+        const match = status.match(/\d+/);
+        return match ? parseInt(match[0]) : 0;
+    }
+    return 0;
+};
+
+// 是否"即将开放"（含苞/绽/预计组）→ 加呼吸光晕
+const isSoon = (status?: string) =>
+    !!status &&
+    (status.includes("含苞") ||
+        status.includes("绽") ||
+        status.includes("预计"));
 
 // ② 关键排序逻辑：根据花朵当前开放进度（离盛开越近，排得越靠前）进行横向降序排序
 const sortedPredictionList = computed(() => {
@@ -416,11 +430,6 @@ const previewGallery = (index: number) => {
     });
 };
 
-const previewImages = (urls: string[], index: number) => {
-    if (!urls?.length) return;
-    uni.previewImage({ urls, current: urls[index] });
-};
-
 const openMap = (item: Location | Checkin) => {
     const flowerName =
         "flower_species" in item
@@ -446,13 +455,6 @@ const likePost = async (id: number) => {
 const openComments = (id: number) => {
     activeCommentCheckinId.value = id;
     commentSheetVisible.value = true;
-};
-
-const getImageGridClass = (count: number) => {
-    if (count === 1) return "one-image";
-    if (count === 2) return "two-images";
-    if (count === 3) return "three-images";
-    return "many-images";
 };
 
 const authorNameInitial = (name?: string) => (name ? name[0] : "访");
@@ -580,28 +582,47 @@ onMounted(async () => {
     display: inline-flex;
     flex-direction: column;
     align-items: center;
-    width: 64px;
+    /* 让一屏正好均分为 3 列（减去 body 16*2 + list 16*2 + 2 个间距 16），三个圆环居中铺满 */
+    width: calc((100vw - 96px) / 3);
     transition: opacity 0.2s;
 }
 .predict-item--hover {
     opacity: 0.75;
 }
 
-/* 进度环容器：使用 conic-gradient 绘制超细进度色圈（约 1.5px stroke） */
+/* 进度环容器：conic-gradient 绘制双层环（浅色轨道 + 饱和进度弧，约 4px stroke） */
 .predict-ring-container {
-    width: 52px;
-    height: 52px;
+    width: 74px;
+    height: 74px;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 2px 6px rgba(58, 42, 32, 0.04);
+    box-shadow: 0 2px 6px rgba(58, 42, 32, 0.06);
 }
 
-/* 内缩空心遮罩：仅留 ~1.5px 可见环线 */
+/* 即将开放的花：缓慢呼吸光晕，吸引视线 */
+@keyframes predict-breathe {
+    0%,
+    100% {
+        box-shadow:
+            0 0 0 0 rgba(188, 71, 73, 0),
+            0 2px 6px rgba(58, 42, 32, 0.06);
+    }
+    50% {
+        box-shadow:
+            0 0 9px 2px rgba(188, 71, 73, 0.35),
+            0 2px 6px rgba(58, 42, 32, 0.06);
+    }
+}
+.predict-ring-container--glow {
+    animation: predict-breathe 2.4s ease-in-out infinite;
+}
+
+/* 内缩空心遮罩：留 ~4px 可见环线 */
 .predict-ring-inner {
-    width: 49px;
-    height: 49px;
+    width: 64px;
+    height: 64px;
     border-radius: 50%;
     background: #faf8f5;
     display: flex;
@@ -611,8 +632,8 @@ onMounted(async () => {
 
 /* 核心花卉头像（占据圆盘大部分面积） */
 .predict-avatar {
-    width: 44px;
-    height: 44px;
+    width: 60px;
+    height: 60px;
     border-radius: 50%;
     background: #efece4;
 }
@@ -628,7 +649,7 @@ onMounted(async () => {
     text-align: center;
     @include md-ellipsis(1);
 }
-.predict-status-txt {
+.predict-phase {
     font-size: 10px;
     font-weight: 600;
     margin-top: 2px;
@@ -636,6 +657,18 @@ onMounted(async () => {
     width: 100%;
     text-align: center;
     @include md-ellipsis(1);
+}
+.predict-eta-pill {
+    margin-top: 3px;
+    align-self: center;
+    padding: 0 6px;
+    height: 15px;
+    line-height: 15px;
+    font-size: 9px;
+    font-weight: 700;
+    color: #bc4749;
+    background: rgba(188, 71, 73, 0.12);
+    border-radius: 999px;
 }
 
 /* ── ③ 底部采风手札流 ── */
@@ -717,19 +750,18 @@ onMounted(async () => {
     gap: 5px;
 }
 .post__title-tag {
-    display: inline-block;
-    padding: 0 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 3px 8px;
     border-radius: $md-shape-full;
     border: 1px solid;
     flex-shrink: 0;
-    height: 18px;
-    line-height: 18px;
-    text-align: center;
 }
 .post__title-tag-txt {
     font-size: 10px;
     font-weight: 700;
-    vertical-align: middle;
+    line-height: 1;
 }
 .post__content {
     display: block;
@@ -739,72 +771,12 @@ onMounted(async () => {
     margin-bottom: $md-space-3;
 }
 
-/* 标本夹图片网格 */
-.post__images {
-    display: grid;
-    gap: 6px;
-    margin-bottom: $md-space-3;
-}
-.post__images.one-image {
-    grid-template-columns: 1fr;
-}
-.post__images.one-image .post__image {
-    aspect-ratio: 4 / 3;
-    max-height: 180px;
-}
-.post__images.two-images {
-    grid-template-columns: repeat(2, 1fr);
-}
-.post__images.two-images .post__image {
-    aspect-ratio: 1 / 1;
-}
-.post__images.three-images {
-    grid-template-columns: 1.4fr 1fr;
-    grid-template-rows: repeat(2, 85px);
-}
-.post__images.three-images .post__image:first-child {
-    grid-row: span 2;
-}
-.post__images.many-images {
-    grid-template-columns: repeat(3, 1fr);
-}
-.post__images.many-images .post__image {
-    aspect-ratio: 1 / 1;
-}
-
-.post__image {
-    position: relative;
-    overflow: hidden;
-    border-radius: $md-shape-sm;
-    border: 1px solid #d8d3c5;
-    background: #efece4;
-}
-.post__image image {
-    width: 100%;
-    height: 100%;
-}
-.post__image-more {
-    position: absolute;
-    inset: 0;
-    background: rgba(42, 44, 36, 0.5);
-    color: #faf8f5;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-family: "Georgia", serif;
-    font-size: 14px;
-    font-weight: 600;
-}
-
 .post__footer {
     display: flex;
     align-items: center;
     gap: $md-space-3;
     border-top: 1px dashed #efece4;
     padding-top: $md-space-3;
-}
-.post__footer .post__tag {
-    flex: 1;
 }
 .post__tag {
     display: inline-flex;
@@ -827,6 +799,7 @@ onMounted(async () => {
     display: flex;
     align-items: center;
     gap: $md-space-4;
+    margin-left: auto;
 }
 .post__action-btn {
     display: flex;

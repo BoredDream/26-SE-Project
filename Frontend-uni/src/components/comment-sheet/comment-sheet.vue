@@ -1,15 +1,15 @@
 <template>
   <view class="comment-sheet" :class="{ 'comment-sheet--visible': visible }">
-    <view class="comment-sheet__mask" @click="$emit('close')" />
+    <view class="comment-sheet__mask" @click="$emit('close')" @touchmove.stop.prevent />
     <view class="comment-sheet__panel" @click.stop>
-      <view class="comment-sheet__head">
+      <view class="comment-sheet__head" @touchmove.stop.prevent>
         <text class="comment-sheet__title">评论 {{ comments.length }}</text>
         <view class="comment-sheet__close" hover-class="is-hover" @click="$emit('close')">
           <text>✕</text>
         </view>
       </view>
 
-      <scroll-view scroll-y class="comment-sheet__list">
+      <scroll-view scroll-y class="comment-sheet__list" :style="{ height: listHeight + 'px' }">
         <view v-if="!comments.length" class="comment-sheet__empty">
           <text>还没有评论，来抢沙发吧。</text>
         </view>
@@ -31,7 +31,7 @@
         </view>
       </scroll-view>
 
-      <view class="comment-sheet__input-bar">
+      <view class="comment-sheet__input-bar" @touchmove.stop.prevent>
         <input
           class="comment-sheet__input"
           :value="draft"
@@ -68,6 +68,13 @@ const authStore = useAuthStore()
 
 const draft = ref('')
 const sending = ref(false)
+
+// 小程序端 scroll-view 必须有显式高度才能滚动；按窗口高度算一次固定像素高度
+const sys = uni.getSystemInfoSync()
+const listHeight = Math.max(
+  160,
+  Math.round(sys.windowHeight * 0.72 - 56 - 66 - (sys.safeAreaInsets?.bottom ?? 0)),
+)
 
 const comments = computed(() => checkinStore.commentsMap[props.checkinId] || [])
 const currentUserId = computed(() => authStore.user?.id)
@@ -156,7 +163,7 @@ const formatTime = (dateString: string) => {
   bottom: 0;
   display: flex;
   flex-direction: column;
-  max-height: 72vh;
+  overflow: hidden;
   background: $md-surface;
   border-radius: $md-shape-lg $md-shape-lg 0 0;
   transform: translateY(100%);
@@ -166,6 +173,7 @@ const formatTime = (dateString: string) => {
   transform: translateY(0);
 }
 .comment-sheet__head {
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -186,10 +194,6 @@ const formatTime = (dateString: string) => {
   color: $md-on-surface-variant;
 }
 .comment-sheet__list {
-  flex: 1;
-  min-height: 0;
-  overflow: hidden;
-  overflow-x: hidden;
   padding: $md-space-2 $md-space-4;
   box-sizing: border-box;
 }
@@ -251,6 +255,7 @@ const formatTime = (dateString: string) => {
   color: $md-error;
 }
 .comment-sheet__input-bar {
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   gap: $md-space-3;
