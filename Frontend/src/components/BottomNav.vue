@@ -8,7 +8,14 @@
       <img src="/src/icon/地图.svg" alt="地图" class="nav-icon" />
       <span>地图</span>
     </div>
-    <div class="add-btn" @click="handleAdd"></div>
+
+    <!-- 中间发布按钮 -->
+    <div class="add-wrap">
+      <button class="add-btn" @click="handleAdd" aria-label="发布打卡">
+        <span class="add-icon">＋</span>
+      </button>
+    </div>
+
     <div class="nav-item" @click="navigateTo('garden')" :class="{ active: currentRoute === 'garden' }">
       <img src="/src/icon/花园.svg" alt="花园" class="nav-icon" />
       <span>花园</span>
@@ -45,12 +52,12 @@ const handleAdd = () => {
   left: 0;
   right: 0;
   width: 100%;
-  height: 60px;
+  height: 62px;
   display: flex;
   align-items: center;
   justify-content: space-around;
-  border-top: 1px solid rgba(0, 0, 0, 0.08);
-  background: rgba(255, 255, 255, 0.96);
+  border-top: 1px solid rgba(0, 0, 0, 0.07);
+  background: rgba(255, 255, 255, 0.97);
   z-index: 1300;
   box-shadow: 0 -2px 16px rgba(0, 0, 0, 0.06);
 }
@@ -89,44 +96,43 @@ const handleAdd = () => {
   filter: none;
 }
 
-.add-btn {
-  width: 70px;
-  height: 70px;
-  border-radius: 50%;
-  background-color: #ffffff;
-  border: 2px solid #4caf50;
-  box-shadow: 0 8px 22px rgba(76, 175, 80, 0.22);
+/* 中间按钮容器 */
+.add-wrap {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   position: relative;
-  top: -15px;
+}
+
+/* 发布按钮：比左右图标稍大，轻微上浮 */
+.add-btn {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: linear-gradient(145deg, #5cba60, #3a7d44);
+  border: none;
+  box-shadow: 0 4px 18px rgba(58, 125, 68, 0.38);
   cursor: pointer;
-  transition: transform 0.2s ease, background-color 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  top: -10px;
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
 }
 
-.add-btn::before,
-.add-btn::after {
-  content: '';
-  position: absolute;
-  background-color: #4caf50;
+.add-btn:active {
+  transform: translateY(-1px) scale(0.95);
+  box-shadow: 0 2px 10px rgba(58, 125, 68, 0.3);
 }
 
-.add-btn::before {
-  width: 30px;
-  height: 4px;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-}
-
-.add-btn::after {
-  width: 4px;
-  height: 30px;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-}
-
-.add-btn:hover {
-  transform: translateY(-3px);
-  background-color: #f4fff4;
+.add-icon {
+  color: white;
+  font-size: 1.6rem;
+  line-height: 1;
+  font-weight: 300;
+  pointer-events: none;
+  margin-top: -1px;
 }
 </style>

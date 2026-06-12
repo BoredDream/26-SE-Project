@@ -64,41 +64,9 @@
       }
     }
   ],
-  "tabBar": {
-    "color": "#6d7f66",
-    "selectedColor": "#338a3f",
-    "backgroundColor": "#ffffff",
-    "borderStyle": "black",
-    "list": [
-      {
-        "pagePath": "pages/home/home",
-        "text": "主页",
-        "iconPath": "static/icon/home.png",
-        "selectedIconPath": "static/icon/home-active.png"
-      },
-      {
-        "pagePath": "pages/map/map",
-        "text": "地图",
-        "iconPath": "static/icon/map.png",
-        "selectedIconPath": "static/icon/map-active.png"
-      },
-      {
-        "pagePath": "pages/garden/garden",
-        "text": "花园",
-        "iconPath": "static/icon/garden.png",
-        "selectedIconPath": "static/icon/garden-active.png"
-      },
-      {
-        "pagePath": "pages/profile/profile",
-        "text": "我的",
-        "iconPath": "static/icon/profile.png",
-        "selectedIconPath": "static/icon/profile-active.png"
-      }
-    ]
-  },
   "globalStyle": {
     "navigationBarTextStyle": "black",
-    "navigationBarBackgroundColor": "#F8F8F8",
-    "backgroundColor": "#F8F8F8"
+    "navigationBarBackgroundColor": "#f6fbf2",
+    "backgroundColor": "#f6fbf2"
   }
 }

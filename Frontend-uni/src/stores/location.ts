@@ -10,12 +10,13 @@ export const useLocationStore = defineStore('location', () => {
   const isLoading = ref(false)
   const error = ref<string | null>(null)
 
+  const MIN_LOCATIONS = 5
   const loadLocations = async () => {
     isLoading.value = true
     error.value = null
     try {
       const response = await api.locations.getList()
-      locations.value = response.data?.length ? response.data : mockLocations
+      locations.value = response.data?.length >= MIN_LOCATIONS ? response.data : mockLocations
     } catch (err) {
       locations.value = mockLocations
       error.value = err instanceof Error ? err.message : '加载位置失败'
@@ -36,16 +37,6 @@ export const useLocationStore = defineStore('location', () => {
     }
   }
 
-  const updateLocationStatus = async (id: number, status: number) => {
-    try {
-      await api.locations.updateStatus(id, status)
-      console.log(`位置 ${id} 状态已更新为 ${status}`)
-    } catch (err) {
-      error.value = err instanceof Error ? err.message : '更新状态失败'
-      throw err
-    }
-  }
-
   return {
     locations,
     currentLocation,
@@ -53,6 +44,5 @@ export const useLocationStore = defineStore('location', () => {
     error,
     loadLocations,
     getLocationById,
-    updateLocationStatus,
   }
 })

@@ -6,11 +6,9 @@ import { mockCheckins, mockUser } from '@/services/mockData'
 
 export const useCheckinStore = defineStore('checkin', () => {
   const checkins = ref<Checkin[]>([])
+  const commentsMap = ref<Record<number, Comment[]>>({})
   const isLoading = ref(false)
   const error = ref<string | null>(null)
-  // 评论缓存：key 为 checkinId，value 为评论列表
-  const commentsMap = ref<Record<number, Comment[]>>({})
-  const loadingComments = ref<Record<number, boolean>>({})
 
   const loadCheckins = async () => {
     isLoading.value = true
@@ -26,7 +24,7 @@ export const useCheckinStore = defineStore('checkin', () => {
     }
   }
 
-  const createCheckin = async (data: { location_id: number; content: string; images: string[]; flower_species?: string }) => {
+  const createCheckin = async (data: { location_id: number; content: string; images: string[]; bloom_report?: string; flower_species?: string }) => {
     const createdAt = new Date().toISOString()
     const payload: Checkin = {
       id: Date.now(),
@@ -35,8 +33,8 @@ export const useCheckinStore = defineStore('checkin', () => {
       content: data.content,
       images: data.images,
       likes_count: 0,
-      dislikes_count: 0,
       comments_count: 0,
+      liked: false,
       created_at: createdAt,
       updated_at: createdAt,
       user: mockUser,
@@ -46,8 +44,20 @@ export const useCheckinStore = defineStore('checkin', () => {
         location_id: data.location_id,
         content: data.content,
         images: data.images,
+        bloom_report: data.bloom_report,
       })
       checkins.value.unshift(response.data)
+      const res = response.data as any
+      const newTitles: any[] = res.newly_granted_titles || []
+      const newAchievements: any[] = res.newly_granted_achievements || []
+      for (const t of newTitles) {
+        uni.showToast({ title: `🎖️ 解锁称号：${t.name}`, icon: 'none', duration: 2500 })
+        await new Promise(r => setTimeout(r, 500))
+      }
+      for (const a of newAchievements) {
+        uni.showToast({ title: `🏅 解锁成就：${a.name || a.description}`, icon: 'none', duration: 2500 })
+        await new Promise(r => setTimeout(r, 500))
+      }
       return response.data
     } catch (err) {
       checkins.value.unshift(payload)
@@ -58,120 +68,83 @@ export const useCheckinStore = defineStore('checkin', () => {
 
   const likeCheckin = async (id: number) => {
     const checkin = checkins.value.find(c => c.id === id)
-    // 乐观更新：先切换点赞状态
-    if (checkin) {
-      checkin.likes_count += 1
-    }
+    if (!checkin) return
+    const wasLiked = !!checkin.liked
+    checkin.liked = !wasLiked
+    checkin.likes_count = Math.max(0, checkin.likes_count + (wasLiked ? -1 : 1))
     try {
       const res = await api.checkins.like(id)
-      // 成功后使用后端返回的实际数据
-      if (checkin && res.data) {
+      if (res.data) {
         checkin.likes_count = res.data.likes_count
-        checkin.dislikes_count = res.data.dislikes_count
+        checkin.liked = res.data.liked
       }
     } catch (err) {
-      // 失败后回滚
-      if (checkin) {
-        checkin.likes_count -= 1
-      }
+      // 保留乐观结果，离线/Mock 场景下点赞仍可见
       error.value = err instanceof Error ? err.message : '点赞失败'
-      throw err
     }
   }
 
-  const dislikeCheckin = async (id: number) => {
-    const checkin = checkins.value.find(c => c.id === id)
-    // 乐观更新：先切换点踩状态
-    if (checkin) {
-      checkin.dislikes_count = (checkin.dislikes_count || 0) + 1
-    }
-    try {
-      const res = await api.checkins.dislike(id)
-      // 成功后使用后端返回的实际数据
-      if (checkin && res.data) {
-        checkin.likes_count = res.data.likes_count
-        checkin.dislikes_count = res.data.dislikes_count
-      }
-    } catch (err) {
-      // 失败后回滚
-      if (checkin) {
-        checkin.dislikes_count = Math.max(0, (checkin.dislikes_count || 1) - 1)
-      }
-      error.value = err instanceof Error ? err.message : '点踩失败'
-      throw err
-    }
-  }
-
-  const reportCheckin = async (id: number, reason: string) => {
-    try {
-      await api.checkins.report(id, reason)
-    } catch (err) {
-      error.value = err instanceof Error ? err.message : '举报失败'
-      throw err
-    }
-  }
-
-  // 评论相关方法
   const loadComments = async (checkinId: number) => {
-    loadingComments.value[checkinId] = true
     try {
-      const response = await api.checkins.getComments(checkinId)
-      commentsMap.value[checkinId] = response.data || []
+      const res = await api.checkins.getComments(checkinId)
+      commentsMap.value[checkinId] = res.data || []
     } catch (err) {
-      commentsMap.value[checkinId] = []
+      commentsMap.value[checkinId] = commentsMap.value[checkinId] || []
       error.value = err instanceof Error ? err.message : '加载评论失败'
-    } finally {
-      loadingComments.value[checkinId] = false
     }
+    const checkin = checkins.value.find(c => c.id === checkinId)
+    if (checkin) checkin.comments_count = commentsMap.value[checkinId].length
+    return commentsMap.value[checkinId]
   }
 
   const addComment = async (checkinId: number, content: string) => {
+    const text = content.trim()
+    if (!text) return
+    let comment: Comment
     try {
-      const response = await api.checkins.addComment(checkinId, content)
-      if (!commentsMap.value[checkinId]) {
-        commentsMap.value[checkinId] = []
-      }
-      commentsMap.value[checkinId].push(response.data)
-      // 更新 checkin 的评论数
-      const checkin = checkins.value.find(c => c.id === checkinId)
-      if (checkin) {
-        checkin.comments_count = (checkin.comments_count || 0) + 1
-      }
-      return response.data
+      const res = await api.checkins.addComment(checkinId, text)
+      comment = res.data
     } catch (err) {
-      error.value = err instanceof Error ? err.message : '添加评论失败'
-      throw err
+      // 离线/Mock 兜底：本地生成评论
+      error.value = err instanceof Error ? err.message : '评论失败'
+      comment = {
+        id: Date.now(),
+        checkin_id: checkinId,
+        user_id: mockUser.id,
+        content: text,
+        created_at: new Date().toISOString(),
+        user: { id: mockUser.id, nickname: mockUser.nickname, avatar_url: mockUser.avatar_url },
+      }
     }
+    const list = commentsMap.value[checkinId] || (commentsMap.value[checkinId] = [])
+    list.unshift(comment)
+    const checkin = checkins.value.find(c => c.id === checkinId)
+    if (checkin) checkin.comments_count = list.length
+    return comment
   }
 
   const deleteComment = async (checkinId: number, commentId: number) => {
     try {
       await api.checkins.deleteComment(checkinId, commentId)
-      if (commentsMap.value[checkinId]) {
-        commentsMap.value[checkinId] = commentsMap.value[checkinId].filter(c => c.id !== commentId)
-      }
-      // 更新 checkin 的评论数
-      const checkin = checkins.value.find(c => c.id === checkinId)
-      if (checkin) {
-        checkin.comments_count = Math.max(0, (checkin.comments_count || 1) - 1)
-      }
     } catch (err) {
       error.value = err instanceof Error ? err.message : '删除评论失败'
-      throw err
+    }
+    const list = commentsMap.value[checkinId]
+    if (list) {
+      commentsMap.value[checkinId] = list.filter(c => c.id !== commentId)
+      const checkin = checkins.value.find(c => c.id === checkinId)
+      if (checkin) checkin.comments_count = commentsMap.value[checkinId].length
     }
   }
 
   return {
     checkins,
+    commentsMap,
     isLoading,
     error,
-    commentsMap,
-    loadingComments,
     loadCheckins,
     createCheckin,
     likeCheckin,
-    dislikeCheckin,
-    reportCheckin,
     loadComments,
     addComment,
     deleteComment,

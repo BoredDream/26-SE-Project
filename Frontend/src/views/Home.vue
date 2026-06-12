@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="home-page">
     <div class="home-scroll" ref="scrollRef" @scroll="onScroll">
       <section class="hero-card">
@@ -82,7 +82,7 @@
                 :key="index"
                 class="post-image-item"
               >
-                <img :src="normalizeImageUrl(image)" alt="动态图片" />
+                <img :src="image" alt="动态图片" />
               </div>
             </div>
             <div class="post-footer">
@@ -90,21 +90,8 @@
                 花种：{{ locationSpecies(post.location_id) }}
               </button>
               <div class="post-actions-row">
-                <button
-                  class="action-button like-btn"
-                  :class="{ liked: post.liked }"
-                  @click="likePost(post.id)"
-                >
-                  👍 {{ post.likes_count || 0 }}
-                </button>
-                <button
-                  class="action-button dislike-btn"
-                  :class="{ disliked: post.disliked }"
-                  @click="dislikePost(post.id)"
-                >
-                  👎 {{ post.dislikes_count || 0 }}
-                </button>
-                <button class="action-button comment-btn" @click="openCommentModal(post)">
+                <button class="action-button" @click="likePost(post.id)">点赞</button>
+                <button class="action-button comment-btn" @click="openComments(post)">
                   💬 {{ post.comments_count || 0 }}
                 </button>
               </div>
@@ -121,60 +108,21 @@
       </section>
     </div>
 
-    <!-- 评论弹窗 -->
-    <div class="comment-overlay" v-if="showCommentModal" @click.self="closeCommentModal">
-      <div class="comment-modal">
-        <div class="comment-modal-header">
-          <h3>评论 ({{ commentTarget?.comments_count || 0 }})</h3>
-          <button class="close-btn" @click="closeCommentModal">✕</button>
-        </div>
-        <div class="comment-list" ref="commentListRef">
-          <div v-if="loadingComments" class="comment-loading">加载中...</div>
-          <div v-else-if="comments.length === 0" class="comment-empty">暂无评论，快来抢沙发吧~</div>
-          <div v-for="comment in comments" :key="comment.id" class="comment-item">
-            <div class="comment-avatar">{{ comment.user?.nickname?.[0] || '匿' }}</div>
-            <div class="comment-body">
-              <div class="comment-user">{{ comment.user?.nickname || '匿名用户' }}</div>
-              <div class="comment-content">{{ comment.content }}</div>
-              <div class="comment-time">{{ formatTime(comment.created_at) }}</div>
-            </div>
-            <button
-              v-if="comment.user_id === currentUserId"
-              class="comment-delete"
-              @click="removeComment(comment.id)"
-            >删除</button>
-          </div>
-        </div>
-        <div class="comment-input-area">
-          <input
-            v-model="commentText"
-            class="comment-input"
-            placeholder="写下你的评论..."
-            @keyup.enter="submitComment"
-          />
-          <button
-            class="comment-submit"
-            :disabled="!commentText.trim()"
-            @click="submitComment"
-          >发送</button>
-        </div>
-      </div>
-    </div>
-
-    <button class="back-to-top" v-if="showBackToTop" @click="scrollToTop">返回顶部</button>
+    <button class="back-to-top" v-if="showBackToTop" @click="scrollToTop" aria-label="返回顶部">↑</button>
     <BottomNav />
+    <CommentSheet :postId="commentPostId" :visible="commentVisible" @close="commentVisible = false" />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import BottomNav from '../components/BottomNav.vue'
+import CommentSheet from '../components/CommentSheet.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useLocationStore } from '@/stores/location'
 import { useCheckinStore } from '@/stores/checkin'
-import type { Location, Checkin, Comment } from '@/services/api'
-import { normalizeImageUrl } from '@/services/api'
+import type { Location, Checkin } from '@/services/api'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -186,17 +134,13 @@ const carouselIntervalId = ref<number | null>(null)
 const sortOption = ref<'time' | 'hot'>('time')
 const visibleCount = ref(10)
 const showBackToTop = ref(false)
+const commentVisible = ref(false)
+const commentPostId = ref(0)
 const carouselPhotos = [
-  'https://images.unsplash.com/photo-1493246507139-91e8fad9978e?auto=format&fit=crop&w=900&q=80',
-  'https://images.unsplash.com/photo-1501004318641-b39e6451bec6?auto=format&fit=crop&w=900&q=80',
-  'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=900&q=80',
+  '/carousel/1.png',
+  '/carousel/2.jpg',
+  '/carousel/3.jpg',
 ]
-
-// 评论弹窗状态
-const showCommentModal = ref(false)
-const commentTarget = ref<Checkin | null>(null)
-const commentText = ref('')
-const commentListRef = ref<HTMLElement | null>(null)
 
 const recommendationList = computed(() => {
   return locationStore.locations.slice(0, 3)
@@ -213,15 +157,9 @@ const sortedPosts = computed<Checkin[]>(() => {
 const visiblePosts = computed(() => sortedPosts.value.slice(0, visibleCount.value))
 const canLoadMore = computed(() => visibleCount.value < sortedPosts.value.length)
 
-const currentUserId = computed(() => authStore.user?.id || 0)
-const comments = computed<Comment[]>(() => {
-  if (!commentTarget.value) return []
-  return checkinStore.commentsMap[commentTarget.value.id] || []
-})
-const loadingComments = computed(() => {
-  if (!commentTarget.value) return false
-  return checkinStore.loadingComments[commentTarget.value.id] || false
-})
+const todayCheckins = computed(() => checkinStore.checkins.length)
+const totalFlowers = computed(() => locationStore.locations.length)
+const userLevel = computed(() => authStore.user?.level || 1)
 
 const formatStatus = (status: string) => {
   if (!status) {
@@ -291,42 +229,9 @@ const dislikePost = (id: number) => {
   checkinStore.dislikeCheckin(id)
 }
 
-// 评论弹窗方法
-const openCommentModal = async (post: Checkin) => {
-  commentTarget.value = post
-  showCommentModal.value = true
-  await checkinStore.loadComments(post.id)
-}
-
-const closeCommentModal = () => {
-  showCommentModal.value = false
-  commentTarget.value = null
-  commentText.value = ''
-}
-
-const submitComment = async () => {
-  if (!commentText.value.trim() || !commentTarget.value) return
-  try {
-    await checkinStore.addComment(commentTarget.value.id, commentText.value.trim())
-    commentText.value = ''
-    // 滚动到底部
-    setTimeout(() => {
-      if (commentListRef.value) {
-        commentListRef.value.scrollTop = commentListRef.value.scrollHeight
-      }
-    }, 100)
-  } catch (err) {
-    console.error('评论失败:', err)
-  }
-}
-
-const removeComment = async (commentId: number) => {
-  if (!commentTarget.value) return
-  try {
-    await checkinStore.deleteComment(commentTarget.value.id, commentId)
-  } catch (err) {
-    console.error('删除评论失败:', err)
-  }
+const openComments = (post: any) => {
+  commentPostId.value = post.id
+  commentVisible.value = true
 }
 
 const getImageGridClass = (count: number) => {
@@ -637,209 +542,13 @@ onUnmounted(() => {
   background: #ffffff;
   color: #4a6d43;
   border-radius: 16px;
-  padding: 8px 12px;
+  padding: 10px 14px;
   cursor: pointer;
-  font-size: 13px;
-  transition: all 0.2s;
-}
-
-.action-button:hover {
-  background: #f0f8f0;
-}
-
-.like-btn.liked {
-  background: #fff0f0;
-  border-color: #ff9e9e;
-  color: #e53935;
-}
-
-.dislike-btn.disliked {
-  background: #f0f0ff;
-  border-color: #9e9eff;
-  color: #5c6bc0;
 }
 
 .comment-info {
   color: #6b7b61;
   font-size: 13px;
-}
-
-/* 评论弹窗样式 */
-.comment-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.45);
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  z-index: 1400;
-}
-
-.comment-modal {
-  background: white;
-  border-radius: 20px 20px 0 0;
-  width: 100%;
-  max-width: 500px;
-  max-height: 70vh;
-  display: flex;
-  flex-direction: column;
-  animation: slideUp 0.25s ease-out;
-}
-
-@keyframes slideUp {
-  from { transform: translateY(100%); }
-  to { transform: translateY(0); }
-}
-
-.comment-modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 16px 20px;
-  border-bottom: 1px solid #eef3ee;
-}
-
-.comment-modal-header h3 {
-  margin: 0;
-  color: #2b5130;
-  font-size: 16px;
-}
-
-.close-btn {
-  border: none;
-  background: #f0f5f0;
-  color: #5a7a5a;
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  cursor: pointer;
-  font-size: 16px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.comment-list {
-  flex: 1;
-  overflow-y: auto;
-  padding: 12px 20px;
-  min-height: 120px;
-  max-height: 40vh;
-}
-
-.comment-loading,
-.comment-empty {
-  text-align: center;
-  color: #8a9e8a;
-  padding: 32px 0;
-  font-size: 14px;
-}
-
-.comment-item {
-  display: flex;
-  gap: 10px;
-  padding: 12px 0;
-  border-bottom: 1px solid #f0f5f0;
-}
-
-.comment-item:last-child {
-  border-bottom: none;
-}
-
-.comment-avatar {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  background: #d9efda;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #3f6a3e;
-  font-weight: 700;
-  font-size: 14px;
-  flex-shrink: 0;
-}
-
-.comment-body {
-  flex: 1;
-  min-width: 0;
-}
-
-.comment-user {
-  font-weight: 600;
-  color: #2b5130;
-  font-size: 13px;
-}
-
-.comment-content {
-  color: #4a6146;
-  font-size: 14px;
-  margin: 4px 0;
-  line-height: 1.5;
-  word-break: break-word;
-}
-
-.comment-time {
-  color: #8a9e8a;
-  font-size: 11px;
-}
-
-.comment-delete {
-  border: none;
-  background: transparent;
-  color: #c0392b;
-  font-size: 12px;
-  cursor: pointer;
-  padding: 4px 8px;
-  border-radius: 8px;
-  flex-shrink: 0;
-  align-self: flex-start;
-}
-
-.comment-delete:hover {
-  background: #fff0f0;
-}
-
-.comment-input-area {
-  display: flex;
-  gap: 10px;
-  padding: 12px 20px;
-  border-top: 1px solid #eef3ee;
-  background: #fafcfa;
-}
-
-.comment-input {
-  flex: 1;
-  border: 1px solid #d4e2d4;
-  border-radius: 20px;
-  padding: 10px 16px;
-  font-size: 14px;
-  outline: none;
-  background: white;
-  color: #2b5130;
-}
-
-.comment-input:focus {
-  border-color: #81c784;
-}
-
-.comment-submit {
-  border: none;
-  background: #4caf50;
-  color: white;
-  border-radius: 20px;
-  padding: 10px 20px;
-  font-size: 14px;
-  cursor: pointer;
-  white-space: nowrap;
-}
-
-.comment-submit:disabled {
-  background: #b8d8b8;
-  cursor: not-allowed;
 }
 
 .load-more {
@@ -864,14 +573,29 @@ onUnmounted(() => {
 
 .back-to-top {
   position: fixed;
-  right: 18px;
-  bottom: 86px;
+  right: 16px;
+  bottom: 80px;
+  width: 40px;
+  height: 40px;
   border: none;
-  background: #4caf50;
+  background: rgba(58, 125, 68, 0.88);
   color: white;
-  padding: 12px 16px;
-  border-radius: 999px;
+  border-radius: 50%;
   cursor: pointer;
-  box-shadow: 0 18px 34px rgba(76, 175, 80, 0.22);
+  font-size: 1.1rem;
+  display: grid;
+  place-items: center;
+  box-shadow: 0 4px 14px rgba(58, 125, 68, 0.28);
+  backdrop-filter: blur(4px);
+  transition: background 0.15s;
+}
+
+.back-to-top:active {
+  background: rgba(42, 100, 53, 0.95);
+}
+
+.comment-btn {
+  background: #f1fbf2;
+  color: #3b6c3a;
 }
 </style>

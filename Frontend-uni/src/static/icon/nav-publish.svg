@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+  <!-- 钢笔/笔尖（白色版本，配火漆红圆形背景） -->
+  <path d="M16.2 3.6 L 20.4 7.8 L 9 19.2 L 4.2 20 L 4.8 15.2 L 16.2 3.6 Z"
+        fill="none" stroke="#FAF8F5" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/>
+  <line x1="14.1" y1="5.7" x2="18.3" y2="9.9" stroke="#FAF8F5" stroke-width="1.5" stroke-linecap="round"/>
+  <line x1="6" y1="16.4" x2="7.7" y2="18.1" stroke="#FAF8F5" stroke-width="1.4" stroke-linecap="round"/>
+</svg>

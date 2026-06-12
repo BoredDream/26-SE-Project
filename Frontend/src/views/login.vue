@@ -8,79 +8,18 @@
 
       <div v-if="isLoading" class="loading">
         <div class="spinner"></div>
-        <p>{{ isRegister ? '注册中...' : '登录中...' }}</p>
+        <p>登录中...</p>
       </div>
 
-      <div v-else>
-        <div v-if="error" class="error-message">
-          {{ error }}
-        </div>
+      <div v-else-if="error" class="error-message">
+        {{ error }}
+      </div>
 
-        <div class="login-content">
-          <!-- 登录模式 -->
-          <template v-if="!isRegister">
-            <div class="form-group">
-              <input
-                v-model="username"
-                type="text"
-                placeholder="用户名"
-                class="input-field"
-                @keyup.enter="handleLogin"
-              />
-            </div>
-            <div class="form-group">
-              <input
-                v-model="password"
-                type="password"
-                placeholder="密码"
-                class="input-field"
-                @keyup.enter="handleLogin"
-              />
-            </div>
-            <button @click="handleLogin" class="login-btn" :disabled="isLoading || !username || !password">
-              登录
-            </button>
-            <div class="switch-mode">
-              <span>还没有账号？</span>
-              <button @click="switchToRegister" class="link-btn">立即注册</button>
-            </div>
-          </template>
-
-          <!-- 注册模式 -->
-          <template v-else>
-            <div class="form-group">
-              <input
-                v-model="registerUsername"
-                type="text"
-                placeholder="用户名"
-                class="input-field"
-              />
-            </div>
-            <div class="form-group">
-              <input
-                v-model="registerPassword"
-                type="password"
-                placeholder="密码"
-                class="input-field"
-              />
-            </div>
-            <div class="form-group">
-              <input
-                v-model="registerNickname"
-                type="text"
-                placeholder="昵称"
-                class="input-field"
-              />
-            </div>
-            <button @click="handleRegister" class="login-btn" :disabled="isLoading || !registerUsername || !registerPassword || !registerNickname">
-              注册
-            </button>
-            <div class="switch-mode">
-              <span>已有账号？</span>
-              <button @click="switchToLogin" class="link-btn">返回登录</button>
-            </div>
-          </template>
-        </div>
+      <div v-else class="login-content">
+        <!-- 演示模式按钮 -->
+        <button @click="handleDemoLogin" class="demo-login-btn" :disabled="isLoading">
+          演示模式
+        </button>
       </div>
     </div>
   </div>
@@ -97,133 +36,51 @@ const authStore = useAuthStore()
 
 const isLoading = ref(false)
 const error = ref<string | null>(null)
-const isRegister = ref(false)
-
-// 登录表单
-const username = ref('')
-const password = ref('')
-
-// 注册表单
-const registerUsername = ref('')
-const registerPassword = ref('')
-const registerNickname = ref('')
 
 // 检查是否已登录
 onMounted(async () => {
   if (authStore.isAuthenticated) {
+    // 如果已登录，直接跳转到首页
     router.push('/home')
     return
   }
 
+  // 尝试从本地存储恢复用户状态
   await authStore.loadUser()
   if (authStore.isAuthenticated) {
     router.push('/home')
   }
 })
 
-const switchToRegister = () => {
-  isRegister.value = true
-  error.value = null
-}
-
-const switchToLogin = () => {
-  isRegister.value = false
-  error.value = null
-}
-
-// 账号密码登录
-const handleLogin = async () => {
-  if (!username.value || !password.value) return
+// 演示模式登录
+const handleDemoLogin = async () => {
   isLoading.value = true
   error.value = null
 
   try {
-    const response = await api.post<{
-      token: string
-      user: {
-        id: number
-        username: string
-        nickname: string
-        avatar_url: string
-        role: string
-        level: number
-        exp: number
-        total_checkins: number
-      }
-    }>('/v1/auth/login', {
-      mode: 'password',
-      username: username.value,
-      password: password.value
-    })
+    // 使用演示token
+    const demoToken = 'demo_token_' + Date.now()
+    authStore.token = demoToken
 
-    const { token: newToken, user: userData } = response.data
+    // 设置API客户端token
+    api.setToken(demoToken)
 
-    authStore.token = newToken
+    // 设置演示用户数据
     authStore.user = {
-      id: userData.id,
-      openid: '',
-      nickname: userData.nickname,
-      avatar: userData.avatar_url,
-      level: userData.level,
-      exp: userData.exp,
-      total_checkins: userData.total_checkins,
+      id: 1,
+      openid: 'demo_openid',
+      nickname: '花园探索者',
+      avatar: '',
+      level: 8,
+      exp: 1250,
+      total_checkins: 47,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     }
-    api.setToken(newToken)
 
     router.push('/home')
-  } catch (err: any) {
-    error.value = err?.message || '用户名或密码错误'
-  } finally {
-    isLoading.value = false
-  }
-}
-
-// 注册
-const handleRegister = async () => {
-  if (!registerUsername.value || !registerPassword.value || !registerNickname.value) return
-  isLoading.value = true
-  error.value = null
-
-  try {
-    const response = await api.post<{
-      token: string
-      user: {
-        id: number
-        username: string
-        nickname: string
-        avatar_url: string
-        role: string
-        level: number
-        exp: number
-        total_checkins: number
-      }
-    }>('/v1/auth/register', {
-      username: registerUsername.value,
-      password: registerPassword.value,
-      nickname: registerNickname.value
-    })
-
-    const { token: newToken, user: userData } = response.data
-
-    authStore.token = newToken
-    authStore.user = {
-      id: userData.id,
-      openid: '',
-      nickname: userData.nickname,
-      avatar: userData.avatar_url,
-      level: userData.level,
-      exp: userData.exp,
-      total_checkins: userData.total_checkins,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    }
-    api.setToken(newToken)
-
-    router.push('/home')
-  } catch (err: any) {
-    error.value = err?.message || '注册失败'
+  } catch (err) {
+    error.value = '演示模式启动失败'
   } finally {
     isLoading.value = false
   }
@@ -306,34 +163,9 @@ const handleRegister = async () => {
   text-align: center;
 }
 
-.form-group {
-  margin-bottom: 15px;
-}
-
-.input-field {
+.demo-login-btn {
   width: 100%;
-  padding: 14px 16px;
-  border: 2px solid #e0e0e0;
-  border-radius: 12px;
-  font-size: 1rem;
-  outline: none;
-  transition: border-color 0.3s ease;
-  box-sizing: border-box;
-  background: #fafafa;
-}
-
-.input-field:focus {
-  border-color: #4CAF50;
-  background: white;
-}
-
-.input-field::placeholder {
-  color: #aaa;
-}
-
-.login-btn {
-  width: 100%;
-  padding: 14px 20px;
+  padding: 15px 20px;
   border: none;
   border-radius: 12px;
   font-size: 1.1rem;
@@ -341,41 +173,28 @@ const handleRegister = async () => {
   cursor: pointer;
   transition: all 0.3s ease;
   margin-bottom: 15px;
-  background: linear-gradient(135deg, #4CAF50, #388E3C);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: linear-gradient(135deg, #FF9800, #F57C00);
   color: white;
 }
 
-.login-btn:hover:not(:disabled) {
-  background: linear-gradient(135deg, #388E3C, #2E7D32);
+.demo-login-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #E68900, #EF6C00);
   transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(76, 175, 80, 0.3);
+  box-shadow: 0 8px 20px rgba(255, 152, 0, 0.3);
 }
 
-.login-btn:disabled {
-  opacity: 0.5;
+.demo-login-btn:disabled {
+  opacity: 0.6;
   cursor: not-allowed;
   transform: none;
 }
 
-.switch-mode {
-  margin-top: 10px;
-  color: #666;
-  font-size: 0.9rem;
-}
-
-.link-btn {
-  background: none;
-  border: none;
-  color: #4CAF50;
-  font-size: 0.9rem;
-  font-weight: 600;
-  cursor: pointer;
-  padding: 0;
-  text-decoration: underline;
-}
-
-.link-btn:hover {
-  color: #388E3C;
+.demo-icon {
+  font-size: 1.5rem;
 }
 
 @keyframes fadeIn {

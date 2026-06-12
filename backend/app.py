@@ -1,26 +1,28 @@
-from flask import Flask, render_template, jsonify
+from flask import Flask, render_template
 from flask_migrate import Migrate
 from flask_cors import CORS
 from config import Config
 from extensions import db, api, jwt
 
 # 导入模型和路由
-from models import User, Flower, Place, FlowerPlace, Checkin, Achievement, Title
+from models import User, Flower, Place, FlowerPlace, Checkin, Comment, Like, Achievement, Title, Subscription, Notification
 from routes import (
     AuthRegister, AuthLogin, UserMe,
     FlowerList, FlowerDetail, FlowerBloomStatus,
     LocationList, LocationDetail, MapFlowers, MapFilter,
-    CheckinList, CheckinDetail, CheckinLikeResource, CheckinDislikeResource, FlowerCheckins, LocationCheckins,
+    CheckinList, CheckinDetail, CheckinLike, CheckinComments, CommentDetail,
+    FlowerCheckins, LocationCheckins,
     AchievementList, UserAchievements, UserTitles,
-    UploadResource,
-    CheckinCommentList, CheckinCommentDetail
+    FlowerSubscription, UserSubscriptions,
+    UserNotifications, NotificationRead, NotificationsReadAll,
+    UploadResource
 )
 
 app = Flask(__name__)
 app.config.from_object(Config)
 
-# CORS 允许所有来源（开发环境）
-CORS(app, resources={r"/v1/*": {"origins": "*"}})
+# CORS 允许本地开发来源
+CORS(app, resources={r"/v1/*": {"origins": ["http://localhost:5173", "http://127.0.0.1:5173", "http://localhost:3000"]}})
 
 db.init_app(app)
 jwt.init_app(app)
@@ -39,44 +41,23 @@ api.add_resource(MapFlowers, '/v1/map/flowers')
 api.add_resource(MapFilter, '/v1/map/filter')
 api.add_resource(CheckinList, '/v1/checkins')
 api.add_resource(CheckinDetail, '/v1/checkins/<int:id>')
-api.add_resource(CheckinLikeResource, '/v1/checkins/<int:id>/like')
-api.add_resource(CheckinDislikeResource, '/v1/checkins/<int:id>/dislike')
+api.add_resource(CheckinLike, '/v1/checkins/<int:id>/like')
+api.add_resource(CheckinComments, '/v1/checkins/<int:id>/comments')
+api.add_resource(CommentDetail, '/v1/checkins/<int:id>/comments/<int:comment_id>')
 api.add_resource(FlowerCheckins, '/v1/flowers/<int:id>/checkins')
 api.add_resource(LocationCheckins, '/v1/locations/<int:id>/checkins')
 api.add_resource(AchievementList, '/v1/achievements')
 api.add_resource(UserAchievements, '/v1/users/me/achievements')
 api.add_resource(UserTitles, '/v1/users/me/titles')
+api.add_resource(FlowerSubscription, '/v1/flowers/<int:id>/subscribe')
+api.add_resource(UserSubscriptions, '/v1/users/me/subscriptions')
+api.add_resource(UserNotifications, '/v1/users/me/notifications')
+api.add_resource(NotificationRead, '/v1/notifications/<int:id>/read')
+api.add_resource(NotificationsReadAll, '/v1/notifications/read-all')
 api.add_resource(UploadResource, '/v1/upload')
-api.add_resource(CheckinCommentList, '/v1/checkins/<int:checkin_id>/comments')
-api.add_resource(CheckinCommentDetail, '/v1/checkins/<int:checkin_id>/comments/<int:comment_id>')
 
 # 初始化API
 api.init_app(app)
-
-# 全局错误处理器：确保所有 HTTP 错误返回 JSON 而非 HTML
-@app.errorhandler(400)
-def bad_request(error):
-    return jsonify({'code': 400, 'message': str(error), 'data': None}), 400
-
-@app.errorhandler(401)
-def unauthorized(error):
-    return jsonify({'code': 401, 'message': str(error), 'data': None}), 401
-
-@app.errorhandler(403)
-def forbidden(error):
-    return jsonify({'code': 403, 'message': str(error), 'data': None}), 403
-
-@app.errorhandler(404)
-def not_found(error):
-    return jsonify({'code': 404, 'message': str(error), 'data': None}), 404
-
-@app.errorhandler(405)
-def method_not_allowed(error):
-    return jsonify({'code': 405, 'message': str(error), 'data': None}), 405
-
-@app.errorhandler(500)
-def internal_error(error):
-    return jsonify({'code': 500, 'message': 'Internal server error', 'data': None}), 500
 
 # 根前端页面
 @app.route('/')

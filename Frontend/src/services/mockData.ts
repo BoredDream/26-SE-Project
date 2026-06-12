@@ -1,5 +1,13 @@
 import type { Achievement, Checkin, Location, User } from '@/services/api'
 
+export interface Comment {
+  id: number
+  post_id: number
+  user: Pick<User, 'id' | 'nickname' | 'avatar'>
+  content: string
+  created_at: string
+}
+
 export const mockUser: User = {
   id: 1,
   openid: 'demo_openid',
@@ -31,11 +39,11 @@ export const mockLocations: Location[] = [
   },
   {
     id: 2,
-    name: '绿意百合角',
-    description: '白色百合静静绽放于园区一角，适合静享自然。',
+    name: '格桑花坡',
+    description: '幸福之花格桑花随风摇曳，寓意吉祥美好。',
     latitude: '30.4703',
     longitude: '114.3634',
-    flower_species: '百合',
+    flower_species: '格桑花',
     bloom_status: '预计7天开放',
     historical_bloom_start: '04月05日',
     historical_bloom_end: '04月20日',
@@ -47,14 +55,14 @@ export const mockLocations: Location[] = [
   },
   {
     id: 3,
-    name: '阳光向日葵田',
-    description: '金黄向日葵在阳光下微笑，活力满满。',
+    name: '油菜花田',
+    description: '金黄油菜花在阳光下铺展，春意盎然。',
     latitude: '30.4720',
     longitude: '114.3586',
-    flower_species: '向日葵',
+    flower_species: '油菜花',
     bloom_status: '含苞待放',
-    historical_bloom_start: '05月01日',
-    historical_bloom_end: '05月15日',
+    historical_bloom_start: '03月15日',
+    historical_bloom_end: '04月05日',
     cover_image: 'https://images.unsplash.com/photo-1501004318641-b39e6451bec6?auto=format&fit=crop&w=720&q=80',
     checkin_count: 22,
     status_updated_at: new Date().toISOString(),
@@ -63,14 +71,14 @@ export const mockLocations: Location[] = [
   },
   {
     id: 4,
-    name: '浓香牡丹园',
-    description: '红紫色牡丹盛开时，花香浓郁而典雅。',
+    name: '玉兰花园',
+    description: '玉兰花洁白如玉，清香宜人，春日最早盛开的花之一。',
     latitude: '30.4680',
     longitude: '114.3601',
-    flower_species: '牡丹',
+    flower_species: '玉兰花',
     bloom_status: '盛开中',
-    historical_bloom_start: '04月15日',
-    historical_bloom_end: '04月28日',
+    historical_bloom_start: '03月01日',
+    historical_bloom_end: '03月20日',
     cover_image: 'https://images.unsplash.com/photo-1495320521277-0f12c5c221c2?auto=format&fit=crop&w=720&q=80',
     checkin_count: 51,
     status_updated_at: new Date().toISOString(),
@@ -79,16 +87,32 @@ export const mockLocations: Location[] = [
   },
   {
     id: 5,
-    name: '清香兰花苑',
-    description: '兰花幽香在清风中若隐若现，充满东方雅意。',
+    name: '梨花溪畔',
+    description: '梨花如雪，清风过处花瓣飞舞，如诗如画。',
     latitude: '30.4710',
     longitude: '114.3625',
-    flower_species: '兰花',
+    flower_species: '梨花',
     bloom_status: '预计5天开放',
-    historical_bloom_start: '04月08日',
-    historical_bloom_end: '04月25日',
+    historical_bloom_start: '03月20日',
+    historical_bloom_end: '04月05日',
     cover_image: 'https://images.unsplash.com/photo-1464207551237-040338b17096?auto=format&fit=crop&w=720&q=80',
     checkin_count: 17,
+    status_updated_at: new Date().toISOString(),
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  },
+  {
+    id: 6,
+    name: '大金鸡菊坡地',
+    description: '大金鸡菊金黄色花朵覆盖山坡，夏日里分外耀眼。',
+    latitude: '30.4698',
+    longitude: '114.3612',
+    flower_species: '大金鸡菊',
+    bloom_status: '含苞待放',
+    historical_bloom_start: '05月10日',
+    historical_bloom_end: '06月30日',
+    cover_image: 'https://images.unsplash.com/photo-1490750967868-88df5691cc98?auto=format&fit=crop&w=720&q=80',
+    checkin_count: 11,
     status_updated_at: new Date().toISOString(),
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
@@ -200,6 +224,47 @@ export const mockCheckins: Checkin[] = [
     updated_at: new Date().toISOString(),
     user: mockUser,
   }
+]
+
+const u2 = { id: 2, nickname: '花间一壶酒', avatar: '' }
+const u3 = { id: 3, nickname: '绿叶边', avatar: '' }
+const u4 = { id: 4, nickname: '秋水伊人', avatar: '' }
+const u5 = { id: 5, nickname: '春风十里', avatar: '' }
+const u6 = { id: 6, nickname: '山间清泉', avatar: '' }
+
+const ago = (minutes: number) => new Date(Date.now() - minutes * 60000).toISOString()
+
+export const mockComments: Comment[] = [
+  // Post 101 — 3条
+  { id: 1, post_id: 101, user: u2, content: '太美了！春天的樱花径每年都要来一次。', created_at: ago(25) },
+  { id: 2, post_id: 101, user: u3, content: '这个角度拍出来真好看，下次带相机去。', created_at: ago(60) },
+  { id: 3, post_id: 101, user: u4, content: '花瓣飘落的时候最有意境了。', created_at: ago(180) },
+
+  // Post 102 — 6条
+  { id: 4, post_id: 102, user: u3, content: '玉兰花园的光线真的很好！', created_at: ago(30) },
+  { id: 5, post_id: 102, user: u5, content: '白色花瓣看着很清净，心情舒畅。', created_at: ago(90) },
+  { id: 6, post_id: 102, user: u6, content: '这个打卡地点加入收藏了，计划下周去。', created_at: ago(150) },
+  { id: 7, post_id: 102, user: u2, content: '牡丹和玉兰哪个先开呀？', created_at: ago(240) },
+  { id: 8, post_id: 102, user: u4, content: '花香飘得很远，路过就能闻到。', created_at: ago(360) },
+  { id: 9, post_id: 102, user: u3, content: '好想去！最近天气这么好正是时候。', created_at: ago(480) },
+
+  // Post 103 — 2条
+  { id: 10, post_id: 103, user: u5, content: '格桑花坡的视野真的很开阔。', created_at: ago(45) },
+  { id: 11, post_id: 103, user: u6, content: '幸福之花，名字就很美。', created_at: ago(200) },
+
+  // Post 104 — 9条
+  { id: 12, post_id: 104, user: u2, content: '油菜花田金灿灿的，每年都过来看。', created_at: ago(20) },
+  { id: 13, post_id: 104, user: u3, content: '这片油菜花好像比去年大了一圈！', created_at: ago(55) },
+  { id: 14, post_id: 104, user: u5, content: '蜜蜂特别多，空气里都是花蜜香。', created_at: ago(100) },
+  { id: 15, post_id: 104, user: u6, content: '拍照的时候注意逆光，效果更好。', created_at: ago(180) },
+  { id: 16, post_id: 104, user: u4, content: '下次早点去，人少光线也好。', created_at: ago(260) },
+  { id: 17, post_id: 104, user: u2, content: '带娃去玩，孩子特别开心！', created_at: ago(380) },
+  { id: 18, post_id: 104, user: u3, content: '花期还有多久呀？想约朋友来。', created_at: ago(500) },
+  { id: 19, post_id: 104, user: u5, content: '停车方便吗？打算自驾过去。', created_at: ago(620) },
+  { id: 20, post_id: 104, user: u6, content: '记得带防晒，太阳有点晒。', created_at: ago(720) },
+
+  // Post 105 — 1条
+  { id: 21, post_id: 105, user: u4, content: '梨花开了！清香真的很宜人。', created_at: ago(70) },
 ]
 
 export const mockAchievements: Achievement[] = [

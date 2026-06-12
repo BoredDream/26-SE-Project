@@ -1,40 +1,52 @@
 <template>
-  <view class="navigation-page">
-    <view class="nav-header">
-      <button class="back-btn" @click="goBack">返回</button>
-      <text class="nav-title">导航到 {{ targetName }}</text>
-    </view>
+  <view class="nav">
+    <md-app-bar :title="`导航 · ${targetName}`" show-back @back="goBack" />
 
     <!-- #ifdef H5 -->
-    <view id="nav-map-container" class="nav-map-box"></view>
+    <view id="nav-map-container" class="nav__map"></view>
     <!-- #endif -->
     <!-- #ifdef MP-WEIXIN -->
-    <map id="nav-map-mp" class="nav-map-box" :latitude="targetLat" :longitude="targetLng" :scale="15" :markers="navMarkers" :polyline="polyline"></map>
+    <map
+      id="nav-map-mp"
+      class="nav__map"
+      :latitude="targetLat"
+      :longitude="targetLng"
+      :scale="15"
+      :markers="navMarkers"
+      :polyline="polyline"
+      show-location
+    ></map>
     <!-- #endif -->
 
-    <view class="nav-info">
-      <view class="route-summary">
-        <view class="summary-item">
-          <text class="label">距离：</text>
-          <text class="value">{{ routeDistance }}</text>
+    <md-card class="nav__info">
+      <!-- #ifdef MP-WEIXIN -->
+      <text v-if="userAddress" class="nav__address">📍 您在：{{ userAddress }}</text>
+      <!-- #endif -->
+      <view class="nav__row">
+        <view class="nav__metric">
+          <text class="nav__metric-label">距离</text>
+          <text class="nav__metric-value">{{ routeDistance || '—' }}</text>
         </view>
-        <view class="summary-item">
-          <text class="label">预计时间：</text>
-          <text class="value">{{ routeTime }}</text>
+        <view class="nav__divider"></view>
+        <view class="nav__metric">
+          <text class="nav__metric-label">预计步行</text>
+          <text class="nav__metric-value">{{ routeTime || '—' }}</text>
         </view>
       </view>
-    </view>
+    </md-card>
   </view>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
+import { walkingRoute, reverseGeocode } from '@/services/tencent-map-api'
 
 const targetName = ref('目标位置')
 const targetLng = ref(0)
 const targetLat = ref(0)
 const userLocation = ref<{ lng: number; lat: number } | null>(null)
+const userAddress = ref('')
 const routeDistance = ref('')
 const routeTime = ref('')
 const navMarkers = ref<any[]>([])
@@ -43,12 +55,10 @@ const polyline = ref<any[]>([])
 let mapInstance: any = null
 let driving: any = null
 
-const goBack = () => {
-  uni.navigateBack()
-}
+const goBack = () => uni.navigateBack()
 
 onLoad((query: any) => {
-  targetName.value = query?.name || '目标位置'
+  targetName.value = decodeURIComponent(query?.name || '目标位置')
   targetLng.value = parseFloat(query?.lng) || 0
   targetLat.value = parseFloat(query?.lat) || 0
   if (query?.userLng && query?.userLat) {
@@ -62,20 +72,30 @@ onMounted(async () => {
     goBack()
     return
   }
+
   // #ifdef MP-WEIXIN
   navMarkers.value = [
-    { id: 1, latitude: targetLat.value, longitude: targetLng.value, title: targetName.value }
+    {
+      id: 1,
+      latitude: targetLat.value,
+      longitude: targetLng.value,
+      title: targetName.value,
+      iconPath: '/static/icon/marker-default.svg',
+      width: 40,
+      height: 48,
+      anchor: { x: 0.5, y: 1 },
+      callout: {
+        content: targetName.value,
+        color: '#3a5a40',
+        fontSize: 13,
+        borderRadius: 8,
+        bgColor: '#faf8f5',
+        padding: 6,
+        display: 'ALWAYS',
+      },
+    },
   ]
-  polyline.value = [{
-    points: [
-      { latitude: userLocation.value?.lat || 30.4714, longitude: userLocation.value?.lng || 114.3645 },
-      { latitude: targetLat.value, longitude: targetLng.value }
-    ],
-    color: '#4CAF50',
-    width: 4
-  }]
-  routeDistance.value = '直线距离'
-  routeTime.value = '请步行前往'
+  await mpGetLocationAndRoute()
   // #endif
 
   // #ifdef H5
@@ -90,12 +110,62 @@ onMounted(async () => {
   // #endif
 })
 
+// ── 小程序端：定位 → 逆地址解析 → 步行路线 ───────────────────────────────────
+
+const mpGetLocationAndRoute = async () => {
+  return new Promise<void>((resolve) => {
+    uni.getLocation({
+      type: 'gcj02',
+      success: async (pos) => {
+        userLocation.value = { lng: pos.longitude, lat: pos.latitude }
+        // 逆地址解析：显示用户当前街道
+        reverseGeocode(pos.latitude, pos.longitude)
+          .then((addr) => { userAddress.value = addr })
+          .catch(() => {})
+        await mpPlanWalkingRoute(pos.latitude, pos.longitude)
+        resolve()
+      },
+      fail: async () => {
+        userLocation.value = { lng: 114.3645, lat: 30.4714 }
+        await mpPlanWalkingRoute(30.4714, 114.3645)
+        resolve()
+      },
+    })
+  })
+}
+
+const mpPlanWalkingRoute = async (fromLat: number, fromLng: number) => {
+  try {
+    const result = await walkingRoute(fromLat, fromLng, targetLat.value, targetLng.value)
+    polyline.value = [{ points: result.points, color: '#3a5a40', width: 5, borderColor: '#c8dfb8', borderWidth: 1 }]
+    routeDistance.value = formatDistance(result.distance)
+    routeTime.value = formatTime(result.duration)
+  } catch (err) {
+    console.error('[导航] 路线规划失败:', err)
+    polyline.value = [
+      {
+        points: [
+          { latitude: fromLat, longitude: fromLng },
+          { latitude: targetLat.value, longitude: targetLng.value },
+        ],
+        color: '#4CAF50',
+        width: 4,
+        dottedLine: true,
+      },
+    ]
+    routeDistance.value = '直线参考'
+    routeTime.value = '步行前往'
+  }
+}
+
+// ── H5 端：高德地图 ───────────────────────────────────────────────────────────
+
 const initMap = async () => {
   const AMapLoader = (await import('@amap/amap-jsapi-loader')).default
   const AMap = await AMapLoader.load({
     key: 'f3ebc39f2c1ffa41660503eff25b13d1',
     version: '2.0',
-    plugins: ['AMap.Driving']
+    plugins: ['AMap.Driving'],
   })
   mapInstance = new AMap.Map('nav-map-container', { zoom: 15, center: [targetLng.value, targetLat.value] })
   driving = new AMap.Driving({ map: mapInstance, panel: false })
@@ -105,14 +175,14 @@ const getCurrentPosition = async () => {
   return new Promise<void>((resolve) => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
-        (position) => {
-          userLocation.value = { lng: position.coords.longitude, lat: position.coords.latitude }
+        (pos) => {
+          userLocation.value = { lng: pos.coords.longitude, lat: pos.coords.latitude }
           resolve()
         },
         () => {
           userLocation.value = { lng: 114.3645, lat: 30.4714 }
           resolve()
-        }
+        },
       )
     } else {
       userLocation.value = { lng: 114.3645, lat: 30.4714 }
@@ -123,20 +193,24 @@ const getCurrentPosition = async () => {
 
 const planRoute = async () => {
   if (!userLocation.value || !driving) return
-  const startLngLat = [userLocation.value.lng, userLocation.value.lat]
-  const endLngLat = [targetLng.value, targetLat.value]
-  driving.search(startLngLat, endLngLat, (status: string, result: any) => {
-    if (status === 'complete') {
-      const route = result.routes[0]
-      if (route) {
-        routeDistance.value = formatDistance(route.distance)
-        routeTime.value = formatTime(route.time)
+  driving.search(
+    [userLocation.value.lng, userLocation.value.lat],
+    [targetLng.value, targetLat.value],
+    (status: string, result: any) => {
+      if (status === 'complete') {
+        const route = result.routes[0]
+        if (route) {
+          routeDistance.value = formatDistance(route.distance)
+          routeTime.value = formatTime(route.time)
+        }
+      } else {
+        uni.showToast({ title: '路径规划失败', icon: 'none' })
       }
-    } else {
-      uni.showToast({ title: '路径规划失败', icon: 'none' })
-    }
-  })
+    },
+  )
 }
+
+// ── 格式化工具 ────────────────────────────────────────────────────────────────
 
 const formatDistance = (distance: number) => {
   if (distance < 1000) return `${Math.round(distance)} 米`
@@ -151,15 +225,51 @@ const formatTime = (time: number) => {
 }
 </script>
 
-<style scoped>
-.navigation-page { display: flex; flex-direction: column; height: 100vh; background: #f5f5f5; }
-.nav-header { display: flex; align-items: center; padding: 16px 20px; background: #ffffff; border-bottom: 1px solid #e0e0e0; }
-.back-btn { background: none; border: none; font-size: 16px; color: #4CAF50; margin-right: 16px; }
-.nav-title { font-size: 18px; color: #333; }
-.nav-map-box { flex: 1; width: 100%; min-height: 400px; }
-.nav-info { padding: 16px 20px; background: #ffffff; border-top: 1px solid #e0e0e0; }
-.route-summary { display: flex; justify-content: space-between; gap: 20px; }
-.summary-item { display: flex; flex-direction: column; align-items: center; }
-.label { font-size: 14px; color: #666; margin-bottom: 4px; }
-.value { font-size: 16px; font-weight: bold; color: #333; }
+<style scoped lang="scss">
+.nav {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background: $md-background;
+}
+.nav__map {
+  flex: 1;
+  width: 100%;
+  min-height: 360px;
+}
+.nav__info {
+  margin: $md-space-4;
+}
+.nav__address {
+  display: block;
+  font-size: 11px;
+  color: $md-on-surface-variant;
+  margin-bottom: $md-space-3;
+  padding-bottom: $md-space-2;
+  border-bottom: 1px dashed $md-outline-variant;
+}
+.nav__row {
+  display: flex;
+  align-items: center;
+}
+.nav__metric {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.nav__metric-label {
+  @include md-type('body-small');
+  color: $md-on-surface-variant;
+}
+.nav__metric-value {
+  margin-top: $md-space-1;
+  @include md-type('title-medium');
+  color: $md-on-surface;
+}
+.nav__divider {
+  width: 1px;
+  height: 32px;
+  background: $md-outline-variant;
+}
 </style>

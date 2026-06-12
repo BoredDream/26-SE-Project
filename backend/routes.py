@@ -1,11 +1,14 @@
 import os
 from extensions import api, db, jwt
 from flask_restful import Resource, reqparse
-from models import User, Flower, Place, FlowerPlace, Checkin, CheckinLike as CheckinLikeModel, CheckinComment, Achievement, Title, BloomStatus
+from models import User, Flower, Place, FlowerPlace, Checkin, Comment, Like, Achievement, Title, BloomStatus, Subscription, Notification
 from flask import request, url_for
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
 from werkzeug.utils import secure_filename
 from datetime import datetime
+from services.title_service import check_and_grant_titles, get_current_title
+from services.achievement_service import check_and_grant_achievements
+from services.notification_service import notify_subscribers_on_bloom_change
 
 # 通用响应包装
 def success(data=None, message='ok', code=200):
@@ -13,6 +16,26 @@ def success(data=None, message='ok', code=200):
 
 def error(message, code=400):
     return {'code': code, 'message': message, 'data': None}, code
+
+def _serialize_title(t):
+    return {
+        'id': t.id,
+        'name': t.name,
+        'description': t.description,
+        'requirement': t.requirement,
+    }
+
+def _user_brief(user):
+    """帖子/评论里嵌套的 user 简版，附带当前称号。"""
+    if user is None:
+        return None
+    current = get_current_title(user)
+    return {
+        'id': user.id,
+        'nickname': user.nickname,
+        'avatar_url': user.avatar_url,
+        'current_title': _serialize_title(current) if current else None,
+    }
 
 # 用户相关API
 class AuthRegister(Resource):
@@ -47,6 +70,7 @@ class AuthRegister(Resource):
             return error('User already exists', 400)
 
         user = User(
+            openid='manual_' + username,
             username=username,
             nickname=nickname,
             avatar_url=avatar_url
@@ -85,6 +109,7 @@ class AuthLogin(Resource):
             demo_user = User.query.filter_by(username='demo_user').first()
             if not demo_user:
                 demo_user = User(
+                    openid='demo_openid',
                     username='demo_user',
                     nickname='花园探索者',
                     avatar_url=''
@@ -142,6 +167,7 @@ class UserMe(Resource):
         user = User.query.get(current_user_id)
         if not user:
             return error('User not found', 404)
+        current = get_current_title(user)
         return success({
             'id': user.id,
             'nickname': user.nickname,
@@ -151,7 +177,8 @@ class UserMe(Resource):
             'exp': 0,
             'total_checkins': len(user.checkins),
             'achievements': [a.description for a in user.achievements],
-            'titles': [t.description for t in user.titles]
+            'titles': [_serialize_title(t) for t in user.titles],
+            'current_title': _serialize_title(current) if current else None,
         })
 
     @jwt_required()
@@ -226,6 +253,29 @@ class FlowerBloomStatus(Resource):
             'historical_bloom_end': flower.historical_bloom_end
         })
 
+    @jwt_required()
+    def put(self, id):
+        """更新花卉花期；若进入 blooming / budding，给所有订阅者发站内通知。"""
+        flower = Flower.query.get(id)
+        if not flower:
+            return error('Flower not found', 404)
+        parser = reqparse.RequestParser()
+        parser.add_argument('bloom_status', required=True)
+        args = parser.parse_args()
+        try:
+            new_status = BloomStatus(args['bloom_status'])
+        except ValueError:
+            return error('Invalid bloom_status', 400)
+        old_status = flower.bloom_status
+        flower.bloom_status = new_status
+        db.session.commit()
+        notified = notify_subscribers_on_bloom_change(flower, old_status, new_status)
+        return success({
+            'id': flower.id,
+            'bloom_status': new_status.value,
+            'notified_subscribers': notified,
+        })
+
 # 地点与地图相关API（术语统一为 location，但内部仍用 Place）
 class LocationList(Resource):
     def get(self):
@@ -237,35 +287,28 @@ class LocationList(Resource):
             places = flower.places
         else:
             places = Place.query.all()
+
         result = []
         for p in places:
-            # 获取该地点关联的花卉信息
-            flower_places = FlowerPlace.query.filter_by(place_id=p.id).all()
-            flower_species = None
-            bloom_status = None
-            cover_image = None
-            checkin_count = 0
-            if flower_places:
-                fp = flower_places[0]
-                flower = Flower.query.get(fp.flower_id)
-                if flower:
-                    flower_species = flower.species
-                    bloom_status = flower.bloom_status.value if flower.bloom_status else None
-                    cover_image = flower.cover_image
-                # 统计该地点的打卡数
-                checkin_count = Checkin.query.filter(
-                    Checkin.flower_place_id.in_([fpp.id for fpp in flower_places])
-                ).count()
+            # 优先选 species 匹配 place.name 前缀的 flower（处理同一 place 被多次 upsert 导致的多关联）
+            name_prefix = (p.name or '').split('·')[0]
+            flower = next((f for f in p.flowers if f.species == name_prefix), None) \
+                or (p.flowers[0] if p.flowers else None)
+            fps = FlowerPlace.query.filter_by(place_id=p.id).all()
+            checkin_count = sum(len(fp.checkins) for fp in fps)
             result.append({
                 'id': p.id,
                 'name': p.name,
                 'description': p.description,
                 'latitude': float(p.latitude),
                 'longitude': float(p.longitude),
-                'flower_species': flower_species,
-                'bloom_status': bloom_status,
-                'cover_image': cover_image,
-                'checkin_count': checkin_count
+                'flower_id': flower.id if flower else None,
+                'flower_species': flower.species if flower else '',
+                'bloom_status': flower.bloom_status.value if flower and flower.bloom_status else '',
+                'historical_bloom_start': flower.historical_bloom_start if flower else None,
+                'historical_bloom_end': flower.historical_bloom_end if flower else None,
+                'cover_image': flower.cover_image if flower else '',
+                'checkin_count': checkin_count,
             })
         return success(result)
 
@@ -331,6 +374,14 @@ UPLOAD_FOLDER = 'uploads'
 if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
 
+def _comments_count(checkin_id):
+    return Comment.query.filter_by(checkin_id=checkin_id).count()
+
+def _liked_by(checkin_id, user_id):
+    if not user_id:
+        return False
+    return Like.query.filter_by(checkin_id=checkin_id, user_id=int(user_id)).first() is not None
+
 class CheckinList(Resource):
     @jwt_required()
     def post(self):
@@ -347,18 +398,20 @@ class CheckinList(Resource):
         if not flower_place:
             return error('Invalid location_id', 400)
 
-        bloom_report_val = args.get('bloom_report', 'blooming')
-        if bloom_report_val is None:
-            bloom_report_val = 'blooming'
         checkin = Checkin(
             user_id=user_id,
             flower_place_id=flower_place.id,
-            bloom_report=BloomStatus(bloom_report_val),
+            bloom_report=BloomStatus(args.get('bloom_report', 'blooming')),
             content=args.get('content', ''),
             images=args.get('images', [])
         )
         db.session.add(checkin)
         db.session.commit()
+
+        user = User.query.get(user_id)
+        newly_granted_titles = check_and_grant_titles(user)
+        newly_granted_achievements = check_and_grant_achievements(user)
+
         return success({
             'id': checkin.id,
             'user_id': checkin.user_id,
@@ -368,10 +421,19 @@ class CheckinList(Resource):
             'content': checkin.content,
             'images': checkin.images,
             'likes_count': checkin.likes_count,
-            'created_at': checkin.created_at.isoformat()
+            'comments_count': 0,
+            'liked': False,
+            'created_at': checkin.created_at.isoformat(),
+            'newly_granted_titles': [_serialize_title(t) for t in newly_granted_titles],
+            'newly_granted_achievements': [
+                {'id': a.id, 'name': a.name, 'description': a.description}
+                for a in newly_granted_achievements
+            ],
         }, 'Checkin created successfully', 201)
 
+    @jwt_required(optional=True)
     def get(self):
+        current_user_id = get_jwt_identity()
         start_time = request.args.get('start_time')
         end_time = request.args.get('end_time')
         status = request.args.get('status')
@@ -394,37 +456,29 @@ class CheckinList(Resource):
         result = []
         for c in checkins:
             fp = FlowerPlace.query.get(c.flower_place_id)
-            user = User.query.get(c.user_id)
             place = Place.query.get(fp.place_id) if fp else None
-            flower = Flower.query.get(fp.flower_id) if fp else None
+            author = User.query.get(c.user_id)
             result.append({
                 'id': c.id,
                 'user_id': c.user_id,
+                'user': _user_brief(author),
                 'flower_place_id': c.flower_place_id,
                 'location_id': fp.place_id if fp else None,
+                'place_name': place.name if place else None,
                 'bloom_report': c.bloom_report.value,
                 'content': c.content,
                 'images': c.images,
                 'likes_count': c.likes_count,
-                'dislikes_count': c.dislikes_count,
-                'comments_count': c.comments_count or 0,
-                'created_at': c.created_at.isoformat(),
-                'updated_at': c.created_at.isoformat(),
-                'user': {
-                    'id': user.id,
-                    'nickname': user.nickname,
-                    'avatar': user.avatar_url
-                } if user else None,
-                'location': {
-                    'id': place.id,
-                    'name': place.name,
-                    'flower_species': flower.species if flower else None
-                } if place else None
+                'comments_count': _comments_count(c.id),
+                'liked': _liked_by(c.id, current_user_id),
+                'created_at': c.created_at.isoformat()
             })
         return success(result)
 
 class CheckinDetail(Resource):
+    @jwt_required(optional=True)
     def get(self, id):
+        current_user_id = get_jwt_identity()
         checkin = Checkin.query.get(id)
         if not checkin:
             return error('Checkin not found', 404)
@@ -434,11 +488,7 @@ class CheckinDetail(Resource):
         place = Place.query.get(flower_place.place_id) if flower_place else None
         return success({
             'id': checkin.id,
-            'user': {
-                'id': user.id,
-                'nickname': user.nickname,
-                'avatar_url': user.avatar_url
-            },
+            'user': _user_brief(user),
             'flower': {
                 'id': flower.id,
                 'species': flower.species
@@ -453,113 +503,86 @@ class CheckinDetail(Resource):
             'content': checkin.content,
             'images': checkin.images,
             'likes_count': checkin.likes_count,
+            'comments_count': _comments_count(checkin.id),
+            'liked': _liked_by(checkin.id, current_user_id),
             'created_at': checkin.created_at.isoformat()
         })
 
-class CheckinLikeResource(Resource):
+class CheckinLike(Resource):
     @jwt_required()
-    def post(self, id):
-        """点赞/取消点赞（切换式）"""
-        current_user_id = get_jwt_identity()
+    def put(self, id):
+        user_id = int(get_jwt_identity())
         checkin = Checkin.query.get(id)
         if not checkin:
             return error('Checkin not found', 404)
-
-        # 查找已有的点赞记录
-        existing_like = CheckinLikeModel.query.filter_by(
-            user_id=current_user_id,
-            checkin_id=id,
-            is_like=True
-        ).first()
-
-        if existing_like:
-            # 已点赞 → 取消点赞
-            db.session.delete(existing_like)
+        existing = Like.query.filter_by(checkin_id=id, user_id=user_id).first()
+        if existing:
+            db.session.delete(existing)
             checkin.likes_count = max(0, (checkin.likes_count or 0) - 1)
-            db.session.commit()
-            return success({
-                'likes_count': checkin.likes_count,
-                'dislikes_count': checkin.dislikes_count,
-                'liked': False
-            })
+            liked = False
         else:
-            # 未点赞 → 检查是否点过踩，如果是则先移除点踩
-            existing_dislike = CheckinLikeModel.query.filter_by(
-                user_id=current_user_id,
-                checkin_id=id,
-                is_like=False
-            ).first()
-            if existing_dislike:
-                db.session.delete(existing_dislike)
-                checkin.dislikes_count = max(0, (checkin.dislikes_count or 0) - 1)
-
-            # 添加点赞记录
-            like_record = CheckinLikeModel(
-                user_id=current_user_id,
-                checkin_id=id,
-                is_like=True
-            )
-            db.session.add(like_record)
+            db.session.add(Like(checkin_id=id, user_id=user_id))
             checkin.likes_count = (checkin.likes_count or 0) + 1
-            db.session.commit()
-            return success({
-                'likes_count': checkin.likes_count,
-                'dislikes_count': checkin.dislikes_count,
-                'liked': True
-            })
+            liked = True
+        db.session.commit()
+        return success({'likes_count': checkin.likes_count, 'liked': liked})
 
-
-class CheckinDislikeResource(Resource):
-    @jwt_required()
-    def post(self, id):
-        """点踩/取消点踩（切换式）"""
-        current_user_id = get_jwt_identity()
+class CheckinComments(Resource):
+    def get(self, id):
         checkin = Checkin.query.get(id)
         if not checkin:
             return error('Checkin not found', 404)
-
-        # 查找已有的点踩记录
-        existing_dislike = CheckinLikeModel.query.filter_by(
-            user_id=current_user_id,
-            checkin_id=id,
-            is_like=False
-        ).first()
-
-        if existing_dislike:
-            # 已点踩 → 取消点踩
-            db.session.delete(existing_dislike)
-            checkin.dislikes_count = max(0, (checkin.dislikes_count or 0) - 1)
-            db.session.commit()
-            return success({
-                'likes_count': checkin.likes_count,
-                'dislikes_count': checkin.dislikes_count,
-                'disliked': False
+        comments = Comment.query.filter_by(checkin_id=id).order_by(Comment.created_at.desc()).all()
+        result = []
+        for c in comments:
+            author = User.query.get(c.user_id)
+            result.append({
+                'id': c.id,
+                'checkin_id': c.checkin_id,
+                'user_id': c.user_id,
+                'content': c.content,
+                'created_at': c.created_at.isoformat(),
+                'user': _user_brief(author),
             })
-        else:
-            # 未点踩 → 检查是否点过赞，如果是则先移除点赞
-            existing_like = CheckinLikeModel.query.filter_by(
-                user_id=current_user_id,
-                checkin_id=id,
-                is_like=True
-            ).first()
-            if existing_like:
-                db.session.delete(existing_like)
-                checkin.likes_count = max(0, checkin.likes_count - 1)
+        return success(result)
 
-            # 添加点踩记录
-            dislike_record = CheckinLikeModel(
-                user_id=current_user_id,
-                checkin_id=id,
-                is_like=False
-            )
-            db.session.add(dislike_record)
-            checkin.dislikes_count = (checkin.dislikes_count or 0) + 1
-            db.session.commit()
-            return success({
-                'likes_count': checkin.likes_count,
-                'dislikes_count': checkin.dislikes_count,
-                'disliked': True
-            })
+    @jwt_required()
+    def post(self, id):
+        user_id = int(get_jwt_identity())
+        checkin = Checkin.query.get(id)
+        if not checkin:
+            return error('Checkin not found', 404)
+        parser = reqparse.RequestParser()
+        parser.add_argument('content', required=True)
+        args = parser.parse_args()
+        content = (args['content'] or '').strip()
+        if not content:
+            return error('Comment content is required', 400)
+        comment = Comment(checkin_id=id, user_id=user_id, content=content)
+        db.session.add(comment)
+        db.session.commit()
+        author = User.query.get(user_id)
+        return success({
+            'id': comment.id,
+            'checkin_id': comment.checkin_id,
+            'user_id': comment.user_id,
+            'content': comment.content,
+            'created_at': comment.created_at.isoformat(),
+            'user': _user_brief(author),
+        }, 'Comment created successfully', 201)
+
+class CommentDetail(Resource):
+    @jwt_required()
+    def delete(self, id, comment_id):
+        user_id = int(get_jwt_identity())
+        comment = Comment.query.filter_by(id=comment_id, checkin_id=id).first()
+        if not comment:
+            return error('Comment not found', 404)
+        if comment.user_id != user_id:
+            return error('Not allowed to delete this comment', 403)
+        db.session.delete(comment)
+        db.session.commit()
+        return success(None, 'Comment deleted')
 
 class FlowerCheckins(Resource):
     def get(self, id):
@@ -629,10 +652,93 @@ class UserTitles(Resource):
         user = User.query.get(current_user_id)
         if not user:
             return error('User not found', 404)
-        return success([{
-            'id': t.id,
-            'description': t.description
-        } for t in user.titles])
+        return success([_serialize_title(t) for t in user.titles])
+
+# 订阅与通知相关API
+class FlowerSubscription(Resource):
+    @jwt_required()
+    def post(self, id):
+        user_id = int(get_jwt_identity())
+        flower = Flower.query.get(id)
+        if not flower:
+            return error('Flower not found', 404)
+        existing = Subscription.query.filter_by(user_id=user_id, flower_id=id).first()
+        if existing:
+            return success({'subscribed': True}, 'Already subscribed')
+        db.session.add(Subscription(user_id=user_id, flower_id=id))
+        db.session.commit()
+        return success({'subscribed': True}, 'Subscribed', 201)
+
+    @jwt_required()
+    def delete(self, id):
+        user_id = int(get_jwt_identity())
+        sub = Subscription.query.filter_by(user_id=user_id, flower_id=id).first()
+        if not sub:
+            return success({'subscribed': False}, 'Not subscribed')
+        db.session.delete(sub)
+        db.session.commit()
+        return success({'subscribed': False}, 'Unsubscribed')
+
+class UserSubscriptions(Resource):
+    @jwt_required()
+    def get(self):
+        user_id = int(get_jwt_identity())
+        subs = Subscription.query.filter_by(user_id=user_id).all()
+        result = []
+        for s in subs:
+            f = Flower.query.get(s.flower_id)
+            if not f:
+                continue
+            result.append({
+                'flower_id': f.id,
+                'species': f.species,
+                'cover_image': f.cover_image,
+                'bloom_status': f.bloom_status.value if f.bloom_status else None,
+                'subscribed_at': s.created_at.isoformat() if s.created_at else None,
+            })
+        return success(result)
+
+class UserNotifications(Resource):
+    @jwt_required()
+    def get(self):
+        user_id = int(get_jwt_identity())
+        unread_only = request.args.get('unread') == '1'
+        query = Notification.query.filter_by(user_id=user_id)
+        if unread_only:
+            query = query.filter_by(is_read=False)
+        notes = query.order_by(Notification.created_at.desc()).all()
+        unread_count = Notification.query.filter_by(user_id=user_id, is_read=False).count()
+        return success({
+            'unread_count': unread_count,
+            'items': [{
+                'id': n.id,
+                'flower_id': n.flower_id,
+                'type': n.type,
+                'title': n.title,
+                'body': n.body,
+                'is_read': n.is_read,
+                'created_at': n.created_at.isoformat() if n.created_at else None,
+            } for n in notes],
+        })
+
+class NotificationRead(Resource):
+    @jwt_required()
+    def put(self, id):
+        user_id = int(get_jwt_identity())
+        note = Notification.query.filter_by(id=id, user_id=user_id).first()
+        if not note:
+            return error('Notification not found', 404)
+        note.is_read = True
+        db.session.commit()
+        return success({'id': id, 'is_read': True})
+
+class NotificationsReadAll(Resource):
+    @jwt_required()
+    def put(self):
+        user_id = int(get_jwt_identity())
+        Notification.query.filter_by(user_id=user_id, is_read=False).update({'is_read': True})
+        db.session.commit()
+        return success({'all_read': True})
 
 # 文件上传
 class UploadResource(Resource):
@@ -648,88 +754,5 @@ class UploadResource(Resource):
         filename = f"{name}_{int(datetime.utcnow().timestamp())}{ext}"
         file_path = os.path.join(UPLOAD_FOLDER, filename)
         file.save(file_path)
-        file_url = f'/uploads/{filename}'
+        file_url = url_for('uploads', filename=filename, _external=True)
         return success({'url': file_url}, 'Upload successful', 201)
-
-
-# 评论相关API
-class CheckinCommentList(Resource):
-    """获取打卡的评论列表"""
-    def get(self, checkin_id):
-        checkin = Checkin.query.get(checkin_id)
-        if not checkin:
-            return error('Checkin not found', 404)
-        comments = CheckinComment.query.filter_by(checkin_id=checkin_id).order_by(CheckinComment.created_at.asc()).all()
-        return success([{
-            'id': c.id,
-            'user_id': c.user_id,
-            'checkin_id': c.checkin_id,
-            'content': c.content,
-            'created_at': c.created_at.isoformat(),
-            'user': {
-                'id': c.user.id,
-                'nickname': c.user.nickname,
-                'avatar_url': c.user.avatar_url
-            } if c.user else None
-        } for c in comments])
-
-    @jwt_required()
-    def post(self, checkin_id):
-        """添加评论"""
-        current_user_id = get_jwt_identity()
-        checkin = Checkin.query.get(checkin_id)
-        if not checkin:
-            return error('Checkin not found', 404)
-
-        parser = reqparse.RequestParser()
-        parser.add_argument('content', required=True, help='Content is required')
-        args = parser.parse_args()
-
-        content = args['content'].strip()
-        if not content:
-            return error('Content cannot be empty', 400)
-
-        comment = CheckinComment(
-            user_id=current_user_id,
-            checkin_id=checkin_id,
-            content=content
-        )
-        db.session.add(comment)
-        checkin.comments_count = (checkin.comments_count or 0) + 1
-        db.session.commit()
-
-        user = User.query.get(current_user_id)
-        return success({
-            'id': comment.id,
-            'user_id': comment.user_id,
-            'checkin_id': comment.checkin_id,
-            'content': comment.content,
-            'created_at': comment.created_at.isoformat(),
-            'user': {
-                'id': user.id,
-                'nickname': user.nickname,
-                'avatar_url': user.avatar_url
-            } if user else None
-        }, 'Comment created successfully', 201)
-
-
-class CheckinCommentDetail(Resource):
-    @jwt_required()
-    def delete(self, checkin_id, comment_id):
-        """删除评论（仅评论作者或管理员可删除）"""
-        current_user_id = get_jwt_identity()
-        user = User.query.get(current_user_id)
-        comment = CheckinComment.query.get(comment_id)
-        if not comment:
-            return error('Comment not found', 404)
-        if comment.checkin_id != checkin_id:
-            return error('Comment does not belong to this checkin', 400)
-        if comment.user_id != current_user_id and (not user or user.role != UserRole.ADMIN):
-            return error('Permission denied', 403)
-
-        checkin = Checkin.query.get(checkin_id)
-        db.session.delete(comment)
-        if checkin:
-            checkin.comments_count = max(0, (checkin.comments_count or 1) - 1)
-        db.session.commit()
-        return success(message='Comment deleted successfully')

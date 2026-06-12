@@ -3,6 +3,7 @@ export interface Marker {
   latitude: number
   longitude: number
   title: string
+  species?: string
 }
 
 export interface MapAdapter {
@@ -16,10 +17,18 @@ export interface MapAdapter {
 
 // #ifdef H5
 import { createH5Adapter } from './map.h5'
-export const createMapAdapter: () => MapAdapter = createH5Adapter
 // #endif
-
 // #ifdef MP-WEIXIN
 import { createMpAdapter } from './map.mp'
-export const createMapAdapter: () => MapAdapter = createMpAdapter
 // #endif
+
+// 条件编译保证每个平台只保留一个分支赋值
+let createMapAdapter: () => MapAdapter
+// #ifdef H5
+createMapAdapter = createH5Adapter
+// #endif
+// #ifdef MP-WEIXIN
+createMapAdapter = createMpAdapter
+// #endif
+
+export { createMapAdapter }

@@ -15,9 +15,9 @@ class BloomStatus(enum.Enum):
 class User(db.Model):
     __tablename__ = 'users'
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    # 注意: openid 列在 MySQL 中不存在，已移除
-    username = db.Column(db.String(50), unique=True, nullable=True)
-    password_hash = db.Column(db.String(128), nullable=True)
+    openid = db.Column(db.String(64), unique=True, nullable=False)
+    username = db.Column(db.String(64), unique=True, nullable=True)
+    password_hash = db.Column(db.String(256), nullable=True)
     nickname = db.Column(db.String(50), nullable=False)
     avatar_url = db.Column(db.String(500))
     role = db.Column(db.Enum(UserRole), default=UserRole.USER)
@@ -29,8 +29,7 @@ class User(db.Model):
 
     def set_password(self, password):
         from werkzeug.security import generate_password_hash
-        # 使用 pbkdf2:sha256 以兼容 MySQL varchar(128) 列
-        self.password_hash = generate_password_hash(password, method='pbkdf2:sha256')
+        self.password_hash = generate_password_hash(password)
 
     def check_password(self, password):
         from werkzeug.security import check_password_hash
@@ -76,45 +75,37 @@ class Checkin(db.Model):
     content = db.Column(db.Text)
     images = db.Column(db.JSON)
     likes_count = db.Column(db.Integer, default=0)
-    dislikes_count = db.Column(db.Integer, default=0)
-    comments_count = db.Column(db.Integer, default=0)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    likes = db.relationship('CheckinLike', backref='checkin', lazy='dynamic', cascade='all, delete-orphan')
-    comments = db.relationship('CheckinComment', backref='checkin', lazy='dynamic', cascade='all, delete-orphan', order_by='CheckinComment.created_at.desc()')
-
-
-class CheckinLike(db.Model):
-    """用户点赞/点踩记录表，防止重复操作"""
-    __tablename__ = 'checkin_likes'
-    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    checkin_id = db.Column(db.Integer, db.ForeignKey('checkins.id'), nullable=False)
-    is_like = db.Column(db.Boolean, nullable=False, comment='True=点赞, False=点踩')
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-    __table_args__ = (db.UniqueConstraint('user_id', 'checkin_id', name='uq_user_checkin_like'),)
-
-
-class CheckinComment(db.Model):
-    """打卡评论表"""
-    __tablename__ = 'checkin_comments'
+class Comment(db.Model):
+    __tablename__ = 'comments'
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     checkin_id = db.Column(db.Integer, db.ForeignKey('checkins.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     content = db.Column(db.Text, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-    user = db.relationship('User', backref='comments', lazy=True)
+class Like(db.Model):
+    __tablename__ = 'likes'
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    checkin_id = db.Column(db.Integer, db.ForeignKey('checkins.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    __table_args__ = (db.UniqueConstraint('checkin_id', 'user_id', name='uq_like_checkin_user'),)
 
 class Achievement(db.Model):
     __tablename__ = 'achievements'
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    name = db.Column(db.String(64), nullable=True)
     description = db.Column(db.Text, nullable=False)
+    requirement = db.Column(db.Integer, nullable=False, default=0)
 
 class Title(db.Model):
     __tablename__ = 'titles'
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    name = db.Column(db.String(64), nullable=False, unique=True)
     description = db.Column(db.Text, nullable=False)
+    requirement = db.Column(db.Integer, nullable=False, default=0)
 
 achievements_users = db.Table('achievements_users',
     db.Column('id', db.Integer, primary_key=True, autoincrement=True),
@@ -127,3 +118,22 @@ titles_users = db.Table('titles_users',
     db.Column('titles_id', db.Integer, db.ForeignKey('titles.id'), nullable=False),
     db.Column('user_id', db.Integer, db.ForeignKey('users.id'), nullable=False)
 )
+
+class Subscription(db.Model):
+    __tablename__ = 'subscriptions'
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    flower_id = db.Column(db.Integer, db.ForeignKey('flowers.id'), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    __table_args__ = (db.UniqueConstraint('user_id', 'flower_id', name='uq_subscription_user_flower'),)
+
+class Notification(db.Model):
+    __tablename__ = 'notifications'
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    flower_id = db.Column(db.Integer, db.ForeignKey('flowers.id'), nullable=True)
+    type = db.Column(db.String(32), nullable=False)  # bloom_start / bud_start
+    title = db.Column(db.String(128), nullable=False)
+    body = db.Column(db.Text)
+    is_read = db.Column(db.Boolean, default=False, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)

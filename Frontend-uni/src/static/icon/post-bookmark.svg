@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+  <!-- 书签形小标记，对应"品类·xxx" -->
+  <path d="M6 3 L 18 3 L 18 21 L 12 17.2 L 6 21 Z"
+        fill="none" stroke="#3A5A40" stroke-width="1.8" stroke-linejoin="round"/>
+</svg>
