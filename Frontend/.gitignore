@@ -1,1 +1,15 @@
 node_modules
+
+# 构建产物
+dist/
+
+# Playwright 测试产物
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+
+# 本地环境
+.env.local
+*.log
+.DS_Store

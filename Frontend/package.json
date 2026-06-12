@@ -9,20 +9,22 @@
     "build": "vite build",
     "build:h5": "vite build",
     "preview": "vite preview",
-    "type-check": "vue-tsc --build"
+    "type-check": "vue-tsc --build",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:report": "playwright show-report"
   },
   "dependencies": {
     "@amap/amap-jsapi-loader": "^1.0.1",
     "@amap/amap-jsapi-types": "^0.0.15",
     "pinia": "^3.0.4",
-    "three": "^0.183.2",
     "vue": "^3.5.29",
     "vue-router": "^4.6.4"
   },
   "devDependencies": {
+    "@playwright/test": "^1.60.0",
     "@tsconfig/node24": "^24.0.4",
     "@types/node": "^24.11.0",
-    "@types/three": "^0.183.1",
     "@vitejs/plugin-vue": "^5.0.0",
     "@vue/tsconfig": "^0.8.1",
     "npm-run-all2": "^8.0.4",
